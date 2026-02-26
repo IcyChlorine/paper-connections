@@ -1,1 +1,2 @@
-pref("extensions.make-it-red.intensity", 30);
+pref("extensions.paper-relations.intensity", 30);
+

@@ -1,8 +1,17 @@
-# CODEX Quick Notes (Read Every Session)
+# Session Start Requirement (Mandatory)
+- First read this file and provide exactly 5 bullet-point takeaways.
+- Do not perform any code changes before finishing the 5-point summary.
+
+# AGENTS Quick Notes (Read Every Session)
 
 ## Scope
 - Target: Zotero 7 plugin in `src-2.0`.
 - Current direction: paper relations plugin (not color demo behavior).
+- Naming baseline: use `paper-relations` consistently (id, file names, build artifact names, update config keys).
+
+## Docs
+- Feature record: `doc/current-features.md`.
+- Before implementing new features, read the feature record to avoid duplicate work.
 
 ## Commit Rule
 - Auto-commit stable milestone results.
@@ -23,4 +32,5 @@
 ## Token/Time Saving
 - Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
 - Avoid re-discovering DOM structure from screenshots repeatedly; use official extension APIs where possible.
+- When renaming plugin identity, run a repo-wide search for old identifiers before build.
 - Keep this file concise and update only with repeatable pitfalls.
