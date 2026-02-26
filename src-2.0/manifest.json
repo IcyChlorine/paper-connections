@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "Make It Red",
 	"version": "2.0",
-	"description": "Makes everything red",
+	"description": "Paper relations plugin prototype for Zotero 7",
 	"homepage_url": "https://github.com/zotero/make-it-red",
 	"applications": {
 		"zotero": {

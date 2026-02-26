@@ -1,2 +1,5 @@
-make-it-red-green-instead =
-    .label = Make It Green Instead
+make-it-red-relations-header =
+    .label = Paper Relations
+
+make-it-red-relations-sidenav =
+    .tooltiptext = Paper Relations

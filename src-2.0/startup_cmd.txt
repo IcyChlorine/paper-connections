@@ -1,0 +1,3 @@
+# program installation path
+$ .\zotero.exe --jsdebugger -p develop -purgecache
+# jsdebugger for the extra toolkit F12-like window

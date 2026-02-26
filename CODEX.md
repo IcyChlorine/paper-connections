@@ -1,23 +1,26 @@
-# CODEX Startup Notes (Read First)
+# CODEX Quick Notes (Read Every Session)
 
-## Current Goal
-- Project base: Zotero official sample plugin `make-it-red`.
-- Long-term goal: build a Zotero plugin for paper relation recording and visualization.
-- Confirmed immediate task: change sample effect from "make text red" to "make text green", then build `.xpi`.
+## Scope
+- Target: Zotero 7 plugin in `src-2.0`.
+- Current direction: paper relations plugin (not color demo behavior).
 
-## Environment and Scope
-- Current Zotero version: 7.
-- Main source folder for Zotero 7 in this repo: `src-2.0`.
-- Build tool from README: `make-zips` (run at repo root).
+## Commit Rule
+- Auto-commit stable milestone results.
+- If progress is still uncertain, do not commit yet; commit after decisions are fixed.
 
-## Working Lessons
-- Use collaborative mode: Codex handles code and scripts; user handles local GUI install/verification and shares logs/screenshots.
-- For data operations, prefer Zotero API. Do not write Zotero SQLite DB directly.
-- Use `libraryID + itemKey` as stable identifiers for relations to avoid title-change breakage.
-- Build MVP first, then add compatibility and performance layers.
-- Suggested first relation types: `cites | extends | contradicts | related`.
+## High-Value Lessons
+- For item pane extension, use `Zotero.ItemPaneManager.registerSection()`. Do not manually append panes to parent layout.
+- For custom item pane sections, always define both `header` and `sidenav` with valid `l10nID` and icons.
+- Keep `onRender` lightweight. Put heavy work in `onAsyncRender` if needed.
+- Use `item.id` / `item.key` / `libraryID + itemKey` as stable identifiers; never use title as identity.
+- For data writes, use Zotero APIs. Do not write Zotero SQLite directly.
 
-## Collaboration Rules
-- On every new session, read this file and `zotero-plugin-assessment.md` first.
-- After changes, provide directly testable outputs: artifact paths, validation steps, known limits.
-- If work needs system paths, real Zotero profile access, or GUI interaction, clearly mark which steps the user must run locally.
+## Build and Packaging
+- Build with `make-zips` from repo root.
+- `make-zips` uses whitelist packaging for `src-2.0`; temp files inside `src-2.0` are not packaged.
+- If shell permission issues occur on Windows sandbox, run `C:\\Program Files\\Git\\bin\\bash.exe ./make-zips`.
+
+## Token/Time Saving
+- Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
+- Avoid re-discovering DOM structure from screenshots repeatedly; use official extension APIs where possible.
+- Keep this file concise and update only with repeatable pitfalls.

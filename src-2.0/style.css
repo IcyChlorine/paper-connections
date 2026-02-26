@@ -1,11 +1,3 @@
-.row {
-	color: green;
-}
-
-.row:hover {
-	text-shadow: 0 0 6px beige;
-}
-
-window[data-green-instead] .row {
-	color: green;
+item-pane-custom-section[data-pane="make-it-red-relations"] [data-type="body"] {
+	line-height: 1.45;
 }
