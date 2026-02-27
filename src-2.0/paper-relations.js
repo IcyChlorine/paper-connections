@@ -225,7 +225,6 @@ PaperRelations = {
 		canvas.id = "paper-relations-graph-canvas";
 
 		let svg = doc.createElementNS(SVG_NS, "svg");
-		svg.setAttribute("viewBox", "0 0 1000 420");
 
 		let defs = doc.createElementNS(SVG_NS, "defs");
 		let marker = doc.createElementNS(SVG_NS, "marker");
@@ -240,15 +239,60 @@ PaperRelations = {
 		arrowPath.setAttribute("fill", "#4b6073");
 		marker.appendChild(arrowPath);
 		defs.appendChild(marker);
+
+		let boardFill = doc.createElementNS(SVG_NS, "linearGradient");
+		boardFill.setAttribute("id", "paper-relations-board-fill");
+		boardFill.setAttribute("x1", "0");
+		boardFill.setAttribute("y1", "0");
+		boardFill.setAttribute("x2", "0");
+		boardFill.setAttribute("y2", "1");
+		let boardFillStart = doc.createElementNS(SVG_NS, "stop");
+		boardFillStart.setAttribute("offset", "0%");
+		boardFillStart.setAttribute("stop-color", "#ffffff");
+		let boardFillEnd = doc.createElementNS(SVG_NS, "stop");
+		boardFillEnd.setAttribute("offset", "100%");
+		boardFillEnd.setAttribute("stop-color", "#f5f8fb");
+		boardFill.append(boardFillStart, boardFillEnd);
+		defs.appendChild(boardFill);
+
+		let gridPattern = doc.createElementNS(SVG_NS, "pattern");
+		gridPattern.setAttribute("id", "paper-relations-grid-pattern");
+		gridPattern.setAttribute("patternUnits", "userSpaceOnUse");
+		gridPattern.setAttribute("x", "0");
+		gridPattern.setAttribute("y", "0");
+		gridPattern.setAttribute("width", "24");
+		gridPattern.setAttribute("height", "24");
+		let gridPath = doc.createElementNS(SVG_NS, "path");
+		gridPath.setAttribute("d", "M24 0 H0 V24");
+		gridPath.setAttribute("fill", "none");
+		gridPath.setAttribute("stroke", "rgba(120, 140, 160, 0.18)");
+		gridPath.setAttribute("stroke-width", "1");
+		gridPattern.appendChild(gridPath);
+		defs.appendChild(gridPattern);
 		svg.appendChild(defs);
 
 		let viewport = doc.createElementNS(SVG_NS, "g");
 		viewport.setAttribute("id", "paper-relations-graph-viewport");
+		let boardGroup = doc.createElementNS(SVG_NS, "g");
+		boardGroup.setAttribute("class", "paper-relations-board");
+		let boardBase = doc.createElementNS(SVG_NS, "rect");
+		boardBase.setAttribute("class", "paper-relations-board-base");
+		boardBase.setAttribute("x", "-5000");
+		boardBase.setAttribute("y", "-5000");
+		boardBase.setAttribute("width", "10000");
+		boardBase.setAttribute("height", "10000");
+		let boardGrid = doc.createElementNS(SVG_NS, "rect");
+		boardGrid.setAttribute("class", "paper-relations-board-grid");
+		boardGrid.setAttribute("x", "-5000");
+		boardGrid.setAttribute("y", "-5000");
+		boardGrid.setAttribute("width", "10000");
+		boardGrid.setAttribute("height", "10000");
+		boardGroup.append(boardBase, boardGrid);
 		let edgesGroup = doc.createElementNS(SVG_NS, "g");
 		edgesGroup.setAttribute("class", "paper-relations-edges");
 		let nodesGroup = doc.createElementNS(SVG_NS, "g");
 		nodesGroup.setAttribute("class", "paper-relations-nodes");
-		viewport.append(edgesGroup, nodesGroup);
+		viewport.append(boardGroup, edgesGroup, nodesGroup);
 		svg.appendChild(viewport);
 		canvas.appendChild(svg);
 
@@ -298,12 +342,12 @@ PaperRelations = {
 	createInitialGraphModel() {
 		return {
 			nodes: [
-				{ id: "n0", label: "Central Paper", x: 20, y: 150, width: 220, height: 60, kind: "root" },
-				{ id: "n1", label: "Method Line A", x: 360, y: 60, width: 220, height: 60, kind: "leaf" },
-				{ id: "n2", label: "Method Line B", x: 360, y: 240, width: 220, height: 60, kind: "leaf" },
-				{ id: "n3", label: "Follow-up A1", x: 700, y: 30, width: 220, height: 60, kind: "leaf" },
-				{ id: "n4", label: "Follow-up A2", x: 700, y: 140, width: 220, height: 60, kind: "leaf" },
-				{ id: "n5", label: "Follow-up B1", x: 700, y: 255, width: 220, height: 60, kind: "leaf" },
+				{ id: "n0", label: "Central Paper", x: 20, y: 150, width: 190, height: 50, kind: "root" },
+				{ id: "n1", label: "Method Line A", x: 300, y: 60, width: 190, height: 50, kind: "leaf" },
+				{ id: "n2", label: "Method Line B", x: 300, y: 240, width: 190, height: 50, kind: "leaf" },
+				{ id: "n3", label: "Follow-up A1", x: 580, y: 30, width: 190, height: 50, kind: "leaf" },
+				{ id: "n4", label: "Follow-up A2", x: 580, y: 140, width: 190, height: 50, kind: "leaf" },
+				{ id: "n5", label: "Follow-up B1", x: 580, y: 255, width: 190, height: 50, kind: "leaf" },
 			],
 			edges: [
 				{ from: "n0", to: "n1" },
@@ -346,8 +390,8 @@ PaperRelations = {
 			let rect = doc.createElementNS(SVG_NS, "rect");
 			rect.setAttribute("width", String(node.width));
 			rect.setAttribute("height", String(node.height));
-			rect.setAttribute("rx", "14");
-			rect.setAttribute("ry", "14");
+			rect.setAttribute("rx", "12");
+			rect.setAttribute("ry", "12");
 
 			let text = doc.createElementNS(SVG_NS, "text");
 			text.setAttribute("x", String(node.width / 2));
