@@ -11,6 +11,15 @@ PaperRelations = {
 
 	graphStates: null,
 	selectionSectionListeners: null,
+	selectionItemsByWindow: null,
+	syncedSettingsLoadedLibraries: null,
+
+	storeSettingKey: "paper-relations.graph.v1",
+	storeSchemaVersion: 1,
+	nodeDefaultWidth: 190,
+	nodeDefaultHeight: 50,
+	nodeGapX: 240,
+	nodeGapY: 96,
 
 	init({ id, version, rootURI }) {
 		if (this.initialized) return;
@@ -19,11 +28,357 @@ PaperRelations = {
 		this.rootURI = rootURI;
 		this.graphStates = new WeakMap();
 		this.selectionSectionListeners = new WeakMap();
+		this.selectionItemsByWindow = new WeakMap();
+		this.syncedSettingsLoadedLibraries = new Set();
 		this.initialized = true;
 	},
 
 	log(msg) {
 		Zotero.debug("Paper Relations: " + msg);
+	},
+
+	cloneJSON(value) {
+		return JSON.parse(JSON.stringify(value));
+	},
+
+	now() {
+		return Date.now();
+	},
+
+	generateID(prefix) {
+		let randomPart = Math.random().toString(36).slice(2, 8);
+		return `${prefix}_${this.now()}_${randomPart}`;
+	},
+
+	getItemRef(libraryID, itemKey) {
+		return `${libraryID}/${itemKey}`;
+	},
+
+	getItemTitle(item) {
+		if (!item) return "";
+		let displayTitle = typeof item.getDisplayTitle === "function" ? item.getDisplayTitle() : "";
+		return item.getField("title") || displayTitle || item.key || "(untitled)";
+	},
+
+	createEmptyStore() {
+		return {
+			schemaVersion: this.storeSchemaVersion,
+			topics: {},
+			itemTopicIndex: {},
+		};
+	},
+
+	normalizeStore(rawStore) {
+		let store = rawStore && typeof rawStore === "object" ? this.cloneJSON(rawStore) : this.createEmptyStore();
+		if (!store || typeof store !== "object") {
+			return this.createEmptyStore();
+		}
+		if (!store.schemaVersion) store.schemaVersion = this.storeSchemaVersion;
+		if (!store.topics || typeof store.topics !== "object") store.topics = {};
+		if (!store.itemTopicIndex || typeof store.itemTopicIndex !== "object") store.itemTopicIndex = {};
+
+		for (let topicID of Object.keys(store.topics)) {
+			let topic = store.topics[topicID];
+			if (!topic || typeof topic !== "object") {
+				delete store.topics[topicID];
+				continue;
+			}
+			topic.id = topic.id || topicID;
+			topic.nodes = topic.nodes && typeof topic.nodes === "object" ? topic.nodes : {};
+			topic.edges = topic.edges && typeof topic.edges === "object" ? topic.edges : {};
+		}
+
+		for (let itemRef of Object.keys(store.itemTopicIndex)) {
+			let topicIDs = store.itemTopicIndex[itemRef];
+			if (!Array.isArray(topicIDs)) {
+				delete store.itemTopicIndex[itemRef];
+				continue;
+			}
+			store.itemTopicIndex[itemRef] = topicIDs.filter((id) => !!store.topics[id]);
+			if (!store.itemTopicIndex[itemRef].length) {
+				delete store.itemTopicIndex[itemRef];
+			}
+		}
+
+		return store;
+	},
+
+	async ensureSyncedSettingsLoaded(libraryID) {
+		if (!libraryID) {
+			throw new Error("Invalid libraryID");
+		}
+		if (this.syncedSettingsLoadedLibraries.has(libraryID)) return;
+		await Zotero.SyncedSettings.loadAll(libraryID);
+		this.syncedSettingsLoadedLibraries.add(libraryID);
+	},
+
+	async loadStore(libraryID) {
+		await this.ensureSyncedSettingsLoaded(libraryID);
+		let raw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
+		return this.normalizeStore(raw);
+	},
+
+	async saveStore(libraryID, store) {
+		let normalized = this.normalizeStore(store);
+		await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, normalized);
+		return normalized;
+	},
+
+	getTopicsSorted(store) {
+		return Object.values(store.topics).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+	},
+
+	getTopicNodeByItemRef(topic, itemRef) {
+		for (let node of Object.values(topic.nodes)) {
+			if (this.getItemRef(node.libraryID, node.itemKey) === itemRef) {
+				return node;
+			}
+		}
+		return null;
+	},
+
+	updateItemTopicIndexForTopic(store, topic) {
+		for (let itemRef of Object.keys(store.itemTopicIndex)) {
+			store.itemTopicIndex[itemRef] = store.itemTopicIndex[itemRef].filter((id) => id !== topic.id);
+			if (!store.itemTopicIndex[itemRef].length) delete store.itemTopicIndex[itemRef];
+		}
+
+		for (let node of Object.values(topic.nodes)) {
+			let itemRef = this.getItemRef(node.libraryID, node.itemKey);
+			if (!store.itemTopicIndex[itemRef]) store.itemTopicIndex[itemRef] = [];
+			if (!store.itemTopicIndex[itemRef].includes(topic.id)) {
+				store.itemTopicIndex[itemRef].push(topic.id);
+			}
+		}
+	},
+
+	async listTopics(libraryID) {
+		let store = await this.loadStore(libraryID);
+		return this.getTopicsSorted(store);
+	},
+
+	async getTopic(libraryID, topicID) {
+		let store = await this.loadStore(libraryID);
+		return store.topics[topicID] ? this.cloneJSON(store.topics[topicID]) : null;
+	},
+
+	async getTopicsForItem(libraryID, itemKey) {
+		let store = await this.loadStore(libraryID);
+		let itemRef = this.getItemRef(libraryID, itemKey);
+		let topicIDs = store.itemTopicIndex[itemRef] || [];
+		return topicIDs.map((id) => store.topics[id]).filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+	},
+
+	async createTopic(libraryID, { name, centerItem }) {
+		let store = await this.loadStore(libraryID);
+		let topicID = this.generateID("topic");
+		let now = this.now();
+		let topic = {
+			id: topicID,
+			libraryID,
+			name: (name || "Untitled Topic").trim() || "Untitled Topic",
+			createdAt: now,
+			updatedAt: now,
+			nodes: {},
+			edges: {},
+		};
+
+		store.topics[topicID] = topic;
+
+		if (centerItem) {
+			await this.addNode(libraryID, topicID, {
+				itemKey: centerItem.key,
+				title: this.getItemTitle(centerItem),
+				shortLabel: "",
+				x: 80,
+				y: 120,
+			}, { store, skipSave: true });
+		}
+
+		topic.updatedAt = this.now();
+		this.updateItemTopicIndexForTopic(store, topic);
+		await this.saveStore(libraryID, store);
+		return this.cloneJSON(topic);
+	},
+
+	async updateTopic(libraryID, topicID, patch) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic) return null;
+		if (patch?.name !== undefined) {
+			topic.name = (patch.name || "").trim() || topic.name;
+		}
+		topic.updatedAt = this.now();
+		await this.saveStore(libraryID, store);
+		return this.cloneJSON(topic);
+	},
+
+	async deleteTopic(libraryID, topicID) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic) return false;
+		delete store.topics[topicID];
+		for (let itemRef of Object.keys(store.itemTopicIndex)) {
+			store.itemTopicIndex[itemRef] = store.itemTopicIndex[itemRef].filter((id) => id !== topicID);
+			if (!store.itemTopicIndex[itemRef].length) delete store.itemTopicIndex[itemRef];
+		}
+		await this.saveStore(libraryID, store);
+		return true;
+	},
+
+	computeAutoNodePosition(topic) {
+		let count = Object.keys(topic.nodes).length;
+		if (!count) {
+			return { x: 80, y: 120 };
+		}
+		let cols = 3;
+		let col = count % cols;
+		let row = Math.floor(count / cols);
+		return {
+			x: 80 + col * this.nodeGapX,
+			y: 80 + row * this.nodeGapY,
+		};
+	},
+
+	async addNode(libraryID, topicID, nodeInput, options = {}) {
+		let { store = null, skipSave = false } = options;
+		let localStore = store || await this.loadStore(libraryID);
+		let topic = localStore.topics[topicID];
+		if (!topic) return null;
+		let itemRef = this.getItemRef(libraryID, nodeInput.itemKey);
+		let existing = this.getTopicNodeByItemRef(topic, itemRef);
+		if (existing) return this.cloneJSON(existing);
+
+		let pos = Number.isFinite(nodeInput.x) && Number.isFinite(nodeInput.y)
+			? { x: nodeInput.x, y: nodeInput.y }
+			: this.computeAutoNodePosition(topic);
+
+		let nodeID = this.generateID("node");
+		let node = {
+			id: nodeID,
+			libraryID,
+			itemKey: nodeInput.itemKey,
+			title: nodeInput.title || nodeInput.itemKey,
+			shortLabel: nodeInput.shortLabel || "",
+			note: nodeInput.note || "",
+			x: pos.x,
+			y: pos.y,
+			createdAt: this.now(),
+			updatedAt: this.now(),
+		};
+		topic.nodes[nodeID] = node;
+		topic.updatedAt = this.now();
+		this.updateItemTopicIndexForTopic(localStore, topic);
+		if (!skipSave) {
+			await this.saveStore(libraryID, localStore);
+		}
+		return this.cloneJSON(node);
+	},
+
+	async updateNode(libraryID, topicID, nodeID, patch) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic || !topic.nodes[nodeID]) return null;
+		let node = topic.nodes[nodeID];
+		let keys = ["shortLabel", "note", "x", "y", "title"];
+		for (let key of keys) {
+			if (patch?.[key] !== undefined) {
+				node[key] = patch[key];
+			}
+		}
+		node.updatedAt = this.now();
+		topic.updatedAt = this.now();
+		this.updateItemTopicIndexForTopic(store, topic);
+		await this.saveStore(libraryID, store);
+		return this.cloneJSON(node);
+	},
+
+	async removeNode(libraryID, topicID, nodeID) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic || !topic.nodes[nodeID]) return false;
+		delete topic.nodes[nodeID];
+		for (let edgeID of Object.keys(topic.edges)) {
+			let edge = topic.edges[edgeID];
+			if (edge.fromNodeID === nodeID || edge.toNodeID === nodeID) {
+				delete topic.edges[edgeID];
+			}
+		}
+		topic.updatedAt = this.now();
+		this.updateItemTopicIndexForTopic(store, topic);
+		await this.saveStore(libraryID, store);
+		return true;
+	},
+
+	async listNodes(libraryID, topicID) {
+		let topic = await this.getTopic(libraryID, topicID);
+		if (!topic) return [];
+		return Object.values(topic.nodes);
+	},
+
+	async addEdge(libraryID, topicID, edgeInput) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic) return null;
+		if (!topic.nodes[edgeInput.fromNodeID] || !topic.nodes[edgeInput.toNodeID]) return null;
+
+		for (let edge of Object.values(topic.edges)) {
+			if (
+				edge.fromNodeID === edgeInput.fromNodeID &&
+				edge.toNodeID === edgeInput.toNodeID &&
+				(edge.type || "related") === (edgeInput.type || "related")
+			) {
+				return this.cloneJSON(edge);
+			}
+		}
+
+		let edgeID = this.generateID("edge");
+		let edge = {
+			id: edgeID,
+			fromNodeID: edgeInput.fromNodeID,
+			toNodeID: edgeInput.toNodeID,
+			type: edgeInput.type || "related",
+			note: edgeInput.note || "",
+			createdAt: this.now(),
+			updatedAt: this.now(),
+		};
+		topic.edges[edgeID] = edge;
+		topic.updatedAt = this.now();
+		await this.saveStore(libraryID, store);
+		return this.cloneJSON(edge);
+	},
+
+	async updateEdge(libraryID, topicID, edgeID, patch) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic || !topic.edges[edgeID]) return null;
+		let edge = topic.edges[edgeID];
+		let keys = ["type", "note"];
+		for (let key of keys) {
+			if (patch?.[key] !== undefined) {
+				edge[key] = patch[key];
+			}
+		}
+		edge.updatedAt = this.now();
+		topic.updatedAt = this.now();
+		await this.saveStore(libraryID, store);
+		return this.cloneJSON(edge);
+	},
+
+	async removeEdge(libraryID, topicID, edgeID) {
+		let store = await this.loadStore(libraryID);
+		let topic = store.topics[topicID];
+		if (!topic || !topic.edges[edgeID]) return false;
+		delete topic.edges[edgeID];
+		topic.updatedAt = this.now();
+		await this.saveStore(libraryID, store);
+		return true;
+	},
+
+	async listEdges(libraryID, topicID) {
+		let topic = await this.getTopic(libraryID, topicID);
+		if (!topic) return [];
+		return Object.values(topic.edges);
 	},
 
 	registerItemPaneSections() {
@@ -46,12 +401,18 @@ PaperRelations = {
 				l10nID: "paper-relations-relations-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/related.svg",
 			},
-			onItemChange: ({ item, setEnabled, setSectionSummary }) => {
+			onItemChange: ({ doc, item, setEnabled, setSectionSummary }) => {
 				setEnabled(!!item);
 				setSectionSummary(item ? `Item: ${item.key}` : "");
+				if (doc?.defaultView) {
+					this.selectionItemsByWindow.set(doc.defaultView, item || null);
+					this.handlePrimaryItemChanged(doc.defaultView, item).catch((error) => Zotero.logError(error));
+				}
 			},
 			onRender: ({ doc, body, item }) => {
 				body.replaceChildren();
+				let win = doc.defaultView;
+				this.selectionItemsByWindow.set(win, item || null);
 
 				const title = doc.createElementNS(XHTML_NS, "div");
 				title.textContent = "Paper Relations";
@@ -59,7 +420,7 @@ PaperRelations = {
 				title.style.marginBottom = "8px";
 
 				const desc = doc.createElementNS(XHTML_NS, "div");
-				desc.textContent = "This pane is the control/summary area for relation editing and graph operations.";
+				desc.textContent = "Topic graph data and operations";
 				desc.style.marginBottom = "8px";
 
 				const list = doc.createElementNS(XHTML_NS, "ul");
@@ -69,12 +430,26 @@ PaperRelations = {
 				const row1 = doc.createElementNS(XHTML_NS, "li");
 				row1.textContent = `Current Zotero item key: ${item?.key || "-"}`;
 				const row2 = doc.createElementNS(XHTML_NS, "li");
-				row2.textContent = "Relation types: cites / extends / contradicts / related";
+				let summary = this.getGraphContextSummary(win);
+				row2.textContent = summary.topicLabel;
 				const row3 = doc.createElementNS(XHTML_NS, "li");
-				row3.textContent = "Graph interactions: wheel zoom, drag canvas, drag selected node";
+				row3.textContent = summary.topicStatus;
 
 				list.append(row1, row2, row3);
-				body.append(title, desc, list);
+
+				const buttonWrap = doc.createElementNS(XHTML_NS, "div");
+				buttonWrap.className = "paper-relations-pane-actions";
+				const createTopicBtn = doc.createElementNS(XHTML_NS, "button");
+				createTopicBtn.type = "button";
+				createTopicBtn.className = "paper-relations-create-topic-btn";
+				createTopicBtn.textContent = "Create topic from selected paper";
+				createTopicBtn.disabled = !item;
+				createTopicBtn.addEventListener("click", () => {
+					this.promptCreateTopicFromItem(win, item).catch((error) => Zotero.logError(error));
+				});
+				buttonWrap.appendChild(createTopicBtn);
+
+				body.append(title, desc, list, buttonWrap);
 			},
 		});
 
@@ -213,13 +588,35 @@ PaperRelations = {
 		pane.id = "paper-relations-graph-pane";
 		pane.setAttribute("height", "250");
 
+		let toolbar = doc.createElementNS(XHTML_NS, "div");
+		toolbar.id = "paper-relations-graph-toolbar";
+
+		let titleWrap = doc.createElementNS(XHTML_NS, "div");
+		titleWrap.id = "paper-relations-graph-title-wrap";
+
 		let header = doc.createElementNS(XHTML_NS, "div");
 		header.id = "paper-relations-graph-header";
-		header.textContent = "Paper Relation Graph (Placeholder)";
+		header.textContent = "Paper Relation Graph";
 
 		let subheader = doc.createElementNS(XHTML_NS, "div");
 		subheader.id = "paper-relations-graph-subheader";
-		subheader.textContent = "Wheel: zoom | Drag blank space: pan | Click/select node, then drag node";
+		subheader.textContent = "Select an item to load topic graph";
+
+		titleWrap.append(header, subheader);
+
+		let controls = doc.createElementNS(XHTML_NS, "div");
+		controls.id = "paper-relations-graph-controls";
+		let pinLabel = doc.createElementNS(XHTML_NS, "label");
+		pinLabel.id = "paper-relations-pin-label";
+		let pinCheckbox = doc.createElementNS(XHTML_NS, "input");
+		pinCheckbox.type = "checkbox";
+		pinCheckbox.id = "paper-relations-pin-checkbox";
+		let pinText = doc.createElementNS(XHTML_NS, "span");
+		pinText.textContent = "Pinned";
+		pinLabel.append(pinCheckbox, pinText);
+		controls.appendChild(pinLabel);
+
+		toolbar.append(titleWrap, controls);
 
 		let canvas = doc.createElementNS(XHTML_NS, "div");
 		canvas.id = "paper-relations-graph-canvas";
@@ -296,21 +693,31 @@ PaperRelations = {
 		svg.appendChild(viewport);
 		canvas.appendChild(svg);
 
-		pane.append(header, subheader, canvas);
+		pane.append(toolbar, canvas);
 		itemsContainer.append(splitter, pane);
 
 		this.storeAddedElement(splitter);
 		this.storeAddedElement(pane);
 
-		let model = this.createInitialGraphModel();
 		let state = {
 			window,
+			canvas,
+			header,
+			subheader,
+			pinCheckbox,
 			svg,
 			viewport,
 			edgesGroup,
 			nodesGroup,
-			nodes: model.nodes,
-			edges: model.edges,
+			nodes: [],
+			edges: [],
+			activeTopicID: null,
+			activeLibraryID: null,
+			activeTopicName: "",
+			isTemporaryTopic: false,
+			pinSelection: false,
+			activeItemKey: null,
+			activeItemLibraryID: null,
 			selectedNodeID: null,
 			scale: 1,
 			panX: 40,
@@ -327,36 +734,298 @@ PaperRelations = {
 			mousedown: (event) => this.onGraphMouseDown(window, event),
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
+			dragover: (event) => this.onGraphDragOver(window, event),
+			drop: (event) => this.onGraphDrop(window, event),
+			dragleave: (event) => this.onGraphDragLeave(window, event),
+			pinchange: () => this.onPinCheckboxChange(window),
 		};
 
 		svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
 		svg.addEventListener("mousedown", state.handlers.mousedown);
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
+		canvas.addEventListener("dragover", state.handlers.dragover);
+		canvas.addEventListener("drop", state.handlers.drop);
+		canvas.addEventListener("dragleave", state.handlers.dragleave);
+		pinCheckbox.addEventListener("change", state.handlers.pinchange);
 
 		this.graphStates.set(window, state);
 		this.renderGraph(window);
+		this.refreshGraphChrome(window);
+		this.notifyGraphSelectionChanged(window);
+
+		let selectedItem = this.getCurrentSelectedItem(window);
+		if (selectedItem) {
+			this.selectionItemsByWindow.set(window, selectedItem);
+			this.handlePrimaryItemChanged(window, selectedItem).catch((error) => Zotero.logError(error));
+		}
+	},
+
+	getCurrentSelectedItem(window) {
+		let selected = window.ZoteroPane?.getSelectedItems?.();
+		if (!selected || !selected.length) return null;
+		return selected[0] || null;
+	},
+
+	getGraphContextSummary(window) {
+		let state = this.graphStates.get(window);
+		if (!state) {
+			return {
+				topicLabel: "Topic: (graph pane not ready)",
+				topicStatus: "Pin: off",
+			};
+		}
+
+		let label = "Topic: -";
+		if (state.activeTopicName) {
+			label = `Topic: ${state.activeTopicName}`;
+			if (state.isTemporaryTopic) {
+				label += " (temporary)";
+			}
+		}
+
+		let status = state.isTemporaryTopic
+			? "Temporary topic is not saved. Use the button to create a real topic."
+			: (state.activeTopicID ? `Topic ID: ${state.activeTopicID}` : "No topic loaded");
+		status += state.pinSelection ? " | Pin: on" : " | Pin: off";
+		return { topicLabel: label, topicStatus: status };
+	},
+
+	refreshGraphChrome(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+
+		let summary = this.getGraphContextSummary(window);
+		state.header.textContent = summary.topicLabel.replace(/^Topic:\s*/, "");
+		state.subheader.textContent = summary.topicStatus;
+		state.pinCheckbox.checked = !!state.pinSelection;
+		if (state.isTemporaryTopic) {
+			state.canvas.classList.add("paper-relations-temporary-topic");
+		}
+		else {
+			state.canvas.classList.remove("paper-relations-temporary-topic");
+		}
+	},
+
+	onPinCheckboxChange(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.pinSelection = !!state.pinCheckbox.checked;
+		this.refreshGraphChrome(window);
+	},
+
+	async handlePrimaryItemChanged(window, item, options = {}) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+
+		let force = !!options.force;
+		if (!item) {
+			if (!state.pinSelection || force) {
+				state.activeTopicID = null;
+				state.activeLibraryID = null;
+				state.activeTopicName = "";
+				state.activeItemKey = null;
+				state.activeItemLibraryID = null;
+				state.isTemporaryTopic = false;
+				state.nodes = [];
+				state.edges = [];
+				state.selectedNodeID = null;
+				this.renderGraph(window);
+			}
+			this.refreshGraphChrome(window);
+			this.notifyGraphSelectionChanged(window);
+			return;
+		}
+
+		let itemLibraryID = item.libraryID || Zotero.Libraries.userLibraryID;
+		state.activeItemKey = item.key;
+		state.activeItemLibraryID = itemLibraryID;
+
+		if (state.pinSelection && !force) {
+			this.refreshGraphChrome(window);
+			return;
+		}
+
+		let topics = await this.getTopicsForItem(itemLibraryID, item.key);
+		if (topics.length) {
+			this.applyTopicToGraphState(window, topics[0], item);
+		}
+		else {
+			this.applyTemporaryTopicForItem(window, item);
+		}
+		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
 	},
 
-	createInitialGraphModel() {
-		return {
-			nodes: [
-				{ id: "n0", label: "Central Paper", x: 20, y: 150, width: 190, height: 50, kind: "root" },
-				{ id: "n1", label: "Method Line A", x: 300, y: 60, width: 190, height: 50, kind: "leaf" },
-				{ id: "n2", label: "Method Line B", x: 300, y: 240, width: 190, height: 50, kind: "leaf" },
-				{ id: "n3", label: "Follow-up A1", x: 580, y: 30, width: 190, height: 50, kind: "leaf" },
-				{ id: "n4", label: "Follow-up A2", x: 580, y: 140, width: 190, height: 50, kind: "leaf" },
-				{ id: "n5", label: "Follow-up B1", x: 580, y: 255, width: 190, height: 50, kind: "leaf" },
-			],
-			edges: [
-				{ from: "n0", to: "n1" },
-				{ from: "n0", to: "n2" },
-				{ from: "n1", to: "n3" },
-				{ from: "n1", to: "n4" },
-				{ from: "n2", to: "n5" },
-			],
-		};
+	applyTopicToGraphState(window, topic, selectedItem = null) {
+		let state = this.graphStates.get(window);
+		if (!state || !topic) return;
+
+		let selectedItemRef = selectedItem ? this.getItemRef(selectedItem.libraryID, selectedItem.key) : null;
+		let nodes = Object.values(topic.nodes).map((node) => {
+			let itemRef = this.getItemRef(node.libraryID, node.itemKey);
+			return {
+				id: node.id,
+				itemKey: node.itemKey,
+				libraryID: node.libraryID,
+				title: node.title || node.itemKey,
+				label: node.shortLabel || node.title || node.itemKey,
+				x: Number.isFinite(node.x) ? node.x : 80,
+				y: Number.isFinite(node.y) ? node.y : 120,
+				width: this.nodeDefaultWidth,
+				height: this.nodeDefaultHeight,
+				kind: selectedItemRef && selectedItemRef === itemRef ? "root" : "leaf",
+			};
+		});
+
+		let edges = Object.values(topic.edges)
+			.filter((edge) => topic.nodes[edge.fromNodeID] && topic.nodes[edge.toNodeID])
+			.map((edge) => ({
+				id: edge.id,
+				from: edge.fromNodeID,
+				to: edge.toNodeID,
+				type: edge.type || "related",
+			}));
+
+		state.nodes = nodes;
+		state.edges = edges;
+		state.activeTopicID = topic.id;
+		state.activeLibraryID = topic.libraryID;
+		state.activeTopicName = topic.name || "Untitled Topic";
+		state.isTemporaryTopic = false;
+		state.selectedNodeID = null;
+		if (selectedItemRef) {
+			let selectedNode = nodes.find((node) => this.getItemRef(node.libraryID, node.itemKey) === selectedItemRef);
+			if (selectedNode) {
+				state.selectedNodeID = selectedNode.id;
+			}
+		}
+		this.renderGraph(window);
+	},
+
+	applyTemporaryTopicForItem(window, item) {
+		let state = this.graphStates.get(window);
+		if (!state || !item) return;
+		let title = this.getItemTitle(item);
+		let nodeID = `temp_${item.libraryID}_${item.key}`;
+		state.nodes = [{
+			id: nodeID,
+			itemKey: item.key,
+			libraryID: item.libraryID,
+			title,
+			label: title,
+			x: 120,
+			y: 100,
+			width: this.nodeDefaultWidth,
+			height: this.nodeDefaultHeight,
+			kind: "root",
+		}];
+		state.edges = [];
+		state.activeTopicID = null;
+		state.activeLibraryID = item.libraryID;
+		state.activeTopicName = title;
+		state.isTemporaryTopic = true;
+		state.selectedNodeID = nodeID;
+		this.renderGraph(window);
+	},
+
+	async promptCreateTopicFromItem(window, explicitItem = null) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let item = explicitItem || this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+		if (!item) return;
+
+		let defaultName = this.getItemTitle(item);
+		let topicName = { value: defaultName };
+		let confirmed = Services.prompt.prompt(
+			window,
+			"Create Topic",
+			"Topic name:",
+			topicName,
+			null,
+			null,
+		);
+		if (!confirmed) return;
+
+		let topic = await this.createTopic(item.libraryID, {
+			name: topicName.value || defaultName,
+			centerItem: item,
+		});
+		this.applyTopicToGraphState(window, topic, item);
+		this.refreshGraphChrome(window);
+		this.notifyGraphSelectionChanged(window);
+	},
+
+	canDataTransferContainZoteroItems(dataTransfer) {
+		if (!dataTransfer) return false;
+		let types = dataTransfer.types;
+		if (!types) return false;
+		if (typeof types.contains === "function") {
+			return types.contains("zotero/item");
+		}
+		return Array.from(types).includes("zotero/item");
+	},
+
+	parseDraggedItemIDs(dataTransfer) {
+		if (!dataTransfer) return [];
+		let raw = dataTransfer.getData("zotero/item");
+		if (!raw) return [];
+		return String(raw)
+			.split(",")
+			.map((value) => parseInt(value, 10))
+			.filter((value) => Number.isInteger(value) && value > 0);
+	},
+
+	onGraphDragOver(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (!this.canDataTransferContainZoteroItems(event.dataTransfer)) return;
+		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
+		event.preventDefault();
+		event.dataTransfer.dropEffect = "copy";
+		state.canvas.classList.add("paper-relations-drop-active");
+	},
+
+	onGraphDragLeave(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (!event.currentTarget?.contains(event.relatedTarget)) {
+			state.canvas.classList.remove("paper-relations-drop-active");
+		}
+	},
+
+	async onGraphDrop(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.canvas.classList.remove("paper-relations-drop-active");
+		if (!this.canDataTransferContainZoteroItems(event.dataTransfer)) return;
+		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
+
+		event.preventDefault();
+		let itemIDs = this.parseDraggedItemIDs(event.dataTransfer);
+		if (!itemIDs.length) return;
+
+		let added = false;
+		for (let itemID of itemIDs) {
+			let item = await Zotero.Items.getAsync(itemID);
+			if (!item || !item.isRegularItem?.()) continue;
+			if (item.libraryID !== state.activeLibraryID) continue;
+			let exists = state.nodes.some((node) => node.itemKey === item.key && node.libraryID === item.libraryID);
+			if (exists) continue;
+			let node = await this.addNode(state.activeLibraryID, state.activeTopicID, {
+				itemKey: item.key,
+				title: this.getItemTitle(item),
+			});
+			if (node) added = true;
+		}
+
+		if (!added) return;
+		let updatedTopic = await this.getTopic(state.activeLibraryID, state.activeTopicID);
+		if (!updatedTopic) return;
+		let selectedItem = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+		this.applyTopicToGraphState(window, updatedTopic, selectedItem);
+		this.refreshGraphChrome(window);
+		this.notifyGraphSelectionChanged(window);
 	},
 
 	renderGraph(window) {
@@ -386,16 +1055,18 @@ PaperRelations = {
 			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}`);
 			group.setAttribute("data-node-id", node.id);
 			group.setAttribute("transform", `translate(${node.x},${node.y})`);
+			let width = Number.isFinite(node.width) ? node.width : this.nodeDefaultWidth;
+			let height = Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight;
 
 			let rect = doc.createElementNS(SVG_NS, "rect");
-			rect.setAttribute("width", String(node.width));
-			rect.setAttribute("height", String(node.height));
+			rect.setAttribute("width", String(width));
+			rect.setAttribute("height", String(height));
 			rect.setAttribute("rx", "12");
 			rect.setAttribute("ry", "12");
 
 			let text = doc.createElementNS(SVG_NS, "text");
-			text.setAttribute("x", String(node.width / 2));
-			text.setAttribute("y", String(node.height / 2));
+			text.setAttribute("x", String(width / 2));
+			text.setAttribute("y", String(height / 2));
 			text.setAttribute("text-anchor", "middle");
 			text.setAttribute("dominant-baseline", "middle");
 			text.textContent = node.label;
@@ -408,10 +1079,13 @@ PaperRelations = {
 	},
 
 	buildBezierPath(fromNode, toNode) {
-		let startX = fromNode.x + fromNode.width;
-		let startY = fromNode.y + fromNode.height / 2;
+		let fromWidth = Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth;
+		let fromHeight = Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight;
+		let toHeight = Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight;
+		let startX = fromNode.x + fromWidth;
+		let startY = fromNode.y + fromHeight / 2;
 		let endX = toNode.x;
-		let endY = toNode.y + toNode.height / 2;
+		let endY = toNode.y + toHeight / 2;
 
 		let dx = endX - startX;
 		let direction = dx === 0 ? 1 : Math.sign(dx);
@@ -512,8 +1186,25 @@ PaperRelations = {
 	onGraphMouseUp(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		let dragMode = state.dragMode;
+		let dragNodeID = state.dragNodeID;
 		state.dragMode = null;
 		state.dragNodeID = null;
+		if (
+			dragMode === "node" &&
+			dragNodeID &&
+			state.activeTopicID &&
+			state.activeLibraryID &&
+			!state.isTemporaryTopic
+		) {
+			let node = state.nodes.find((n) => n.id === dragNodeID);
+			if (node) {
+				this.updateNode(state.activeLibraryID, state.activeTopicID, dragNodeID, {
+					x: node.x,
+					y: node.y,
+				}).catch((error) => Zotero.logError(error));
+			}
+		}
 	},
 
 	selectGraphNode(window, nodeID) {
@@ -580,8 +1271,13 @@ PaperRelations = {
 			state.svg.removeEventListener("mousedown", state.handlers.mousedown);
 			window.removeEventListener("mousemove", state.handlers.mousemove);
 			window.removeEventListener("mouseup", state.handlers.mouseup);
+			state.canvas.removeEventListener("dragover", state.handlers.dragover);
+			state.canvas.removeEventListener("drop", state.handlers.drop);
+			state.canvas.removeEventListener("dragleave", state.handlers.dragleave);
+			state.pinCheckbox.removeEventListener("change", state.handlers.pinchange);
 		}
 		this.graphStates.delete(window);
+		this.selectionItemsByWindow.delete(window);
 
 		let doc = window.document;
 		for (let id of this.addedElementIDs) {
