@@ -32,10 +32,12 @@
   - Mouse wheel zoom (zoom around cursor position).
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
-  - Drag selected node to move it and persist position to storage.
+  - Drag selected node with 24px magnetic snap-to-grid and persist snapped position to storage.
 - Node rendering improvements
-  - Multi-line title wrapping with overflow truncation.
+  - Node width adapts by title length within a wider range to reduce excessive wrapping.
+  - Multi-line title wrapping prefers word boundaries; if forced to split a long word, adds hyphen.
   - Dynamic node height based on wrapped lines.
+  - Line spacing increased by about 10% for better readability.
   - Reduced corner radius and tighter spacing.
 
 ## Data Layer

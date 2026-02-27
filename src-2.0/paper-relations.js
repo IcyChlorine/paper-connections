@@ -17,13 +17,16 @@ PaperRelations = {
 
 	storeSettingKey: "paper-relations.graph.v1",
 	storeSchemaVersion: 1,
-	nodeDefaultWidth: 190,
+	nodeDefaultWidth: 208,
+	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,
-	nodeGapX: 240,
+	nodeGapX: 288,
 	nodeGapY: 96,
-	nodeLineHeight: 16,
+	nodeLineHeight: 17.6,
 	nodeLabelMaxLines: 3,
+	nodeWidthTargetLines: 2,
 	nodeTextPaddingX: 18,
+	nodeSnapGridSize: 24,
 
 	init({ id, version, rootURI }) {
 		if (this.initialized) return;
@@ -82,43 +85,136 @@ PaperRelations = {
 		return out;
 	},
 
+	getTextUnits(text) {
+		let units = 0;
+		for (let ch of String(text || "")) {
+			units += this.getLabelCharUnits(ch);
+		}
+		return units;
+	},
+
+	clampNodeWidth(width) {
+		if (!Number.isFinite(width)) return this.nodeDefaultWidth;
+		return Math.max(this.nodeDefaultWidth, Math.min(this.nodeMaxWidth, Math.round(width)));
+	},
+
+	getNodeWidthForLabel(label) {
+		let text = String(label || "").trim();
+		if (!text) return this.nodeDefaultWidth;
+		let totalUnits = Math.max(8, this.getTextUnits(text));
+		let targetUnitsPerLine = Math.max(14, Math.ceil(totalUnits / this.nodeWidthTargetLines));
+		let suggested = targetUnitsPerLine * 8 + this.nodeTextPaddingX * 2;
+		return this.clampNodeWidth(suggested);
+	},
+
+	splitWordWithHyphen(word, maxUnits) {
+		let token = String(word || "");
+		if (!token) return { head: "", tail: "" };
+		let totalUnits = this.getTextUnits(token);
+		if (totalUnits <= maxUnits) {
+			return { head: token, tail: "" };
+		}
+		let isWordLike = /^[A-Za-z0-9][A-Za-z0-9'._-]*$/.test(token);
+		let headUnits = isWordLike ? Math.max(1, maxUnits - 1) : maxUnits;
+		let head = this.cropLineToUnits(token, headUnits);
+		if (!head) {
+			head = token[0];
+		}
+		let tail = token.slice(head.length);
+		if (isWordLike && tail) {
+			head += "-";
+		}
+		return { head, tail };
+	},
+
+	snapValueToGrid(value) {
+		if (!Number.isFinite(value)) return value;
+		let step = this.nodeSnapGridSize;
+		if (!Number.isFinite(step) || step <= 1) return value;
+		return Math.round(value / step) * step;
+	},
+
+	snapPointToGrid(point) {
+		let x = Number.isFinite(point?.x) ? point.x : 0;
+		let y = Number.isFinite(point?.y) ? point.y : 0;
+		return {
+			x: this.snapValueToGrid(x),
+			y: this.snapValueToGrid(y),
+		};
+	},
+
 	wrapNodeLabel(label, width) {
 		let text = String(label || "").trim();
 		if (!text) return ["(untitled)"];
 		let usableWidth = Math.max(48, width - this.nodeTextPaddingX * 2);
 		let maxUnitsPerLine = Math.max(6, Math.floor(usableWidth / 8));
+		let words = text.replace(/\r/g, "").split(/\s+/).filter(Boolean);
+		if (!words.length) return ["(untitled)"];
 		let lines = [];
 		let current = "";
 		let currentUnits = 0;
+		let overflow = false;
 
-		for (let ch of text) {
-			if (ch === "\n") {
-				if (current) lines.push(current);
-				current = "";
-				currentUnits = 0;
+		while (words.length) {
+			if (lines.length >= this.nodeLabelMaxLines) {
+				overflow = true;
+				break;
+			}
+
+			let word = words[0];
+			let wordUnits = this.getTextUnits(word);
+
+			if (!current) {
+				if (wordUnits <= maxUnitsPerLine) {
+					current = word;
+					currentUnits = wordUnits;
+					words.shift();
+					continue;
+				}
+				let split = this.splitWordWithHyphen(word, maxUnitsPerLine);
+				lines.push(split.head);
+				if (split.tail) {
+					words[0] = split.tail;
+				}
+				else {
+					words.shift();
+				}
 				continue;
 			}
-			let u = this.getLabelCharUnits(ch);
-			if (currentUnits + u > maxUnitsPerLine) {
-				lines.push(current || ch);
-				current = current ? ch : "";
-				currentUnits = current ? u : 0;
+
+			let nextUnits = currentUnits + 1 + wordUnits;
+			if (nextUnits <= maxUnitsPerLine) {
+				current += ` ${word}`;
+				currentUnits = nextUnits;
+				words.shift();
 			}
 			else {
-				current += ch;
-				currentUnits += u;
+				lines.push(current);
+				current = "";
+				currentUnits = 0;
 			}
-			if (lines.length >= this.nodeLabelMaxLines) break;
 		}
-		if (lines.length < this.nodeLabelMaxLines && current) {
+
+		if (current) {
+			if (lines.length < this.nodeLabelMaxLines) {
+				lines.push(current);
+			}
+			else {
+				overflow = true;
+			}
+		}
+		if (words.length) {
+			overflow = true;
+		}
+		if (!lines.length) {
 			lines.push(current);
 		}
 
-		let consumed = lines.join("");
-		if (consumed.length < text.length && lines.length) {
+		if (overflow && lines.length) {
 			let lastIndex = Math.min(lines.length, this.nodeLabelMaxLines) - 1;
 			let maxLastUnits = Math.max(2, maxUnitsPerLine - 3);
-			let cropped = this.cropLineToUnits(lines[lastIndex], maxLastUnits);
+			let lastLine = lines[lastIndex].replace(/[-\s]+$/, "");
+			let cropped = this.cropLineToUnits(lastLine, maxLastUnits);
 			lines[lastIndex] = `${cropped}...`;
 		}
 
@@ -294,16 +390,21 @@ PaperRelations = {
 
 	computeAutoNodePosition(topic) {
 		let count = Object.keys(topic.nodes).length;
+		let baseX = this.nodeSnapGridSize * 3;
+		let baseY = this.nodeSnapGridSize * 5;
 		if (!count) {
-			return { x: 80, y: 120 };
+			return {
+				x: baseX,
+				y: baseY,
+			};
 		}
 		let cols = 3;
 		let col = count % cols;
 		let row = Math.floor(count / cols);
-		return {
-			x: 80 + col * this.nodeGapX,
-			y: 80 + row * this.nodeGapY,
-		};
+		return this.snapPointToGrid({
+			x: baseX + col * this.nodeGapX,
+			y: baseY + row * this.nodeGapY,
+		});
 	},
 
 	async addNode(libraryID, topicID, nodeInput, options = {}) {
@@ -318,6 +419,7 @@ PaperRelations = {
 		let pos = Number.isFinite(nodeInput.x) && Number.isFinite(nodeInput.y)
 			? { x: nodeInput.x, y: nodeInput.y }
 			: this.computeAutoNodePosition(topic);
+		let snappedPos = this.snapPointToGrid(pos);
 
 		let nodeID = this.generateID("node");
 		let node = {
@@ -327,8 +429,8 @@ PaperRelations = {
 			title: nodeInput.title || nodeInput.itemKey,
 			shortLabel: nodeInput.shortLabel || "",
 			note: nodeInput.note || "",
-			x: pos.x,
-			y: pos.y,
+			x: snappedPos.x,
+			y: snappedPos.y,
 			createdAt: this.now(),
 			updatedAt: this.now(),
 		};
@@ -346,11 +448,19 @@ PaperRelations = {
 		let topic = store.topics[topicID];
 		if (!topic || !topic.nodes[nodeID]) return null;
 		let node = topic.nodes[nodeID];
-		let keys = ["shortLabel", "note", "x", "y", "title"];
+		let keys = ["shortLabel", "note", "title"];
 		for (let key of keys) {
 			if (patch?.[key] !== undefined) {
 				node[key] = patch[key];
 			}
+		}
+		if (patch?.x !== undefined || patch?.y !== undefined) {
+			let snapped = this.snapPointToGrid({
+				x: patch?.x !== undefined ? patch.x : node.x,
+				y: patch?.y !== undefined ? patch.y : node.y,
+			});
+			node.x = snapped.x;
+			node.y = snapped.y;
 		}
 		node.updatedAt = this.now();
 		topic.updatedAt = this.now();
@@ -739,14 +849,15 @@ PaperRelations = {
 		defs.appendChild(boardFill);
 
 		let gridPattern = doc.createElementNS(SVG_NS, "pattern");
+		let gridSize = this.nodeSnapGridSize;
 		gridPattern.setAttribute("id", "paper-relations-grid-pattern");
 		gridPattern.setAttribute("patternUnits", "userSpaceOnUse");
 		gridPattern.setAttribute("x", "0");
 		gridPattern.setAttribute("y", "0");
-		gridPattern.setAttribute("width", "24");
-		gridPattern.setAttribute("height", "24");
+		gridPattern.setAttribute("width", String(gridSize));
+		gridPattern.setAttribute("height", String(gridSize));
 		let gridPath = doc.createElementNS(SVG_NS, "path");
-		gridPath.setAttribute("d", "M24 0 H0 V24");
+		gridPath.setAttribute("d", `M${gridSize} 0 H0 V${gridSize}`);
 		gridPath.setAttribute("fill", "none");
 		gridPath.setAttribute("stroke", "rgba(120, 140, 160, 0.18)");
 		gridPath.setAttribute("stroke-width", "1");
@@ -810,6 +921,8 @@ PaperRelations = {
 			panY: 26,
 			dragMode: null,
 			dragNodeID: null,
+			dragNodeRawX: null,
+			dragNodeRawY: null,
 			lastClientX: 0,
 			lastClientY: 0,
 			handlers: null,
@@ -972,7 +1085,7 @@ PaperRelations = {
 				label: node.shortLabel || node.title || node.itemKey,
 				x: Number.isFinite(node.x) ? node.x : 80,
 				y: Number.isFinite(node.y) ? node.y : 120,
-				width: this.nodeDefaultWidth,
+				width: this.getNodeWidthForLabel(node.shortLabel || node.title || node.itemKey),
 				height: this.nodeDefaultHeight,
 				kind: selectedItemRef && selectedItemRef === itemRef ? "root" : "leaf",
 			};
@@ -1016,7 +1129,7 @@ PaperRelations = {
 			label: title,
 			x: 120,
 			y: 100,
-			width: this.nodeDefaultWidth,
+			width: this.getNodeWidthForLabel(title),
 			height: this.nodeDefaultHeight,
 			kind: "root",
 		}];
@@ -1166,7 +1279,7 @@ PaperRelations = {
 		nodesGroup.replaceChildren();
 
 		for (let node of nodes) {
-			let width = Number.isFinite(node.width) ? node.width : this.nodeDefaultWidth;
+			let width = Number.isFinite(node.width) ? this.clampNodeWidth(node.width) : this.getNodeWidthForLabel(node.label);
 			let minHeight = Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight;
 			let labelLines = this.wrapNodeLabel(node.label, width);
 			let textBlockHeight = labelLines.length * this.nodeLineHeight;
@@ -1296,10 +1409,17 @@ PaperRelations = {
 		let nodeElem = event.target.closest("[data-node-id]");
 		state.dragMode = nodeElem ? "node" : "pan";
 		state.dragNodeID = nodeElem ? nodeElem.getAttribute("data-node-id") : null;
+		state.dragNodeRawX = null;
+		state.dragNodeRawY = null;
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
 
 		if (state.dragNodeID) {
+			let node = state.nodes.find((n) => n.id === state.dragNodeID);
+			if (node) {
+				state.dragNodeRawX = Number.isFinite(node.x) ? node.x : 0;
+				state.dragNodeRawY = Number.isFinite(node.y) ? node.y : 0;
+			}
 			this.selectGraphNode(window, state.dragNodeID);
 		}
 		else {
@@ -1324,8 +1444,18 @@ PaperRelations = {
 		else if (state.dragMode === "node" && state.dragNodeID) {
 			let node = state.nodes.find((n) => n.id === state.dragNodeID);
 			if (node) {
-				node.x += dx / state.scale;
-				node.y += dy / state.scale;
+				if (!Number.isFinite(state.dragNodeRawX) || !Number.isFinite(state.dragNodeRawY)) {
+					state.dragNodeRawX = Number.isFinite(node.x) ? node.x : 0;
+					state.dragNodeRawY = Number.isFinite(node.y) ? node.y : 0;
+				}
+				state.dragNodeRawX += dx / state.scale;
+				state.dragNodeRawY += dy / state.scale;
+				let snapped = this.snapPointToGrid({
+					x: state.dragNodeRawX,
+					y: state.dragNodeRawY,
+				});
+				node.x = snapped.x;
+				node.y = snapped.y;
 				this.renderGraph(window);
 				this.notifyGraphSelectionChanged(window);
 			}
@@ -1343,6 +1473,8 @@ PaperRelations = {
 		let dragNodeID = state.dragNodeID;
 		state.dragMode = null;
 		state.dragNodeID = null;
+		state.dragNodeRawX = null;
+		state.dragNodeRawY = null;
 		if (
 			dragMode === "node" &&
 			dragNodeID &&
@@ -1352,6 +1484,13 @@ PaperRelations = {
 		) {
 			let node = state.nodes.find((n) => n.id === dragNodeID);
 			if (node) {
+				let snapped = this.snapPointToGrid({
+					x: node.x,
+					y: node.y,
+				});
+				node.x = snapped.x;
+				node.y = snapped.y;
+				this.renderGraph(window);
 				this.updateNode(state.activeLibraryID, state.activeTopicID, dragNodeID, {
 					x: node.x,
 					y: node.y,
