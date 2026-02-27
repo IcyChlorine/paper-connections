@@ -1,5 +1,5 @@
-item-pane-custom-section[data-pane="paper-relations-relations"] [data-type="body"],
-item-pane-custom-section[data-pane="paper-relations-relations-selection"] [data-type="body"] {
+item-pane-custom-section[data-pane="paper-relations-topic-context-section"] [data-type="body"],
+item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [data-type="body"] {
 	line-height: 1.45;
 }
 

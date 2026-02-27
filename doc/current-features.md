@@ -7,14 +7,14 @@
 - Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
 
 ## Implemented Features
-- Right item-pane custom section: `Paper Relations`
+- Right item-pane custom section: `Topic Context Section`
   - Shows current item key and active graph context summary.
   - Provides `Create topic from selected paper` button.
   - Provides `Remove topic` button with confirm dialog (enabled only when active saved topic exists).
-- Right item-pane custom section: `Graph Selection`
+- Right item-pane custom section: `Selection Debug Section`
   - Shows selected graph node label/id.
   - Shows incoming and outgoing linked nodes for debug.
-- Middle-bottom graph pane under item list
+- Middle-bottom `Relation Graph Workspace` under item list
   - Resizable with splitter (top edge drag).
   - Grid board and nodes pan together.
   - Pane resize does not auto-scale graph objects.

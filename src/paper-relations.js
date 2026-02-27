@@ -5,13 +5,13 @@ PaperRelations = {
 	initialized: false,
 	addedElementIDs: [],
 
-	customSectionID: "paper-relations-relations",
-	selectionSectionID: "paper-relations-relations-selection",
+	topicContextSectionID: "paper-relations-topic-context-section",
+	selectionDebugSectionID: "paper-relations-selection-debug-section",
 	sectionRegistered: false,
 
 	graphStates: null,
-	selectionSectionListeners: null,
-	relationSectionListeners: null,
+	selectionDebugSectionListeners: null,
+	topicContextSectionListeners: null,
 	selectionItemsByWindow: null,
 	syncedSettingsLoadedLibraries: null,
 
@@ -34,8 +34,8 @@ PaperRelations = {
 		this.version = version;
 		this.rootURI = rootURI;
 		this.graphStates = new WeakMap();
-		this.selectionSectionListeners = new WeakMap();
-		this.relationSectionListeners = new WeakMap();
+		this.selectionDebugSectionListeners = new WeakMap();
+		this.topicContextSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
 		this.initialized = true;
@@ -592,27 +592,27 @@ PaperRelations = {
 		const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 		Zotero.ItemPaneManager.registerSection({
-			paneID: this.customSectionID,
+			paneID: this.topicContextSectionID,
 			pluginID: this.id,
 			header: {
-				l10nID: "paper-relations-relations-header",
+				l10nID: "paper-relations-topic-context-header",
 				icon: "chrome://zotero/skin/itempane/16/related.svg",
 			},
 			sidenav: {
-				l10nID: "paper-relations-relations-sidenav",
+				l10nID: "paper-relations-topic-context-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/related.svg",
 			},
 			onInit: ({ doc, body, refresh }) => {
 				let win = doc.defaultView;
 				let listener = () => refresh();
 				win.addEventListener("paper-relations:graph-context-changed", listener);
-				this.relationSectionListeners.set(body, { win, listener });
+				this.topicContextSectionListeners.set(body, { win, listener });
 			},
 			onDestroy: ({ body }) => {
-				let data = this.relationSectionListeners.get(body);
+				let data = this.topicContextSectionListeners.get(body);
 				if (!data) return;
 				data.win.removeEventListener("paper-relations:graph-context-changed", data.listener);
-				this.relationSectionListeners.delete(body);
+				this.topicContextSectionListeners.delete(body);
 			},
 			onItemChange: ({ doc, item, setEnabled, setSectionSummary }) => {
 				setEnabled(!!item);
@@ -628,12 +628,12 @@ PaperRelations = {
 				this.selectionItemsByWindow.set(win, item || null);
 
 				const title = doc.createElementNS(XHTML_NS, "div");
-				title.textContent = "Paper Relations";
+				title.textContent = "Topic Context";
 				title.style.fontWeight = "700";
 				title.style.marginBottom = "8px";
 
 				const desc = doc.createElementNS(XHTML_NS, "div");
-				desc.textContent = "Topic graph data and operations";
+				desc.textContent = "Topic context and actions";
 				desc.style.marginBottom = "8px";
 
 				const list = doc.createElementNS(XHTML_NS, "ul");
@@ -675,45 +675,45 @@ PaperRelations = {
 		});
 
 		Zotero.ItemPaneManager.registerSection({
-			paneID: this.selectionSectionID,
+			paneID: this.selectionDebugSectionID,
 			pluginID: this.id,
 			header: {
-				l10nID: "paper-relations-selection-header",
+				l10nID: "paper-relations-selection-debug-header",
 				icon: "chrome://zotero/skin/itempane/16/info.svg",
 			},
 			sidenav: {
-				l10nID: "paper-relations-selection-sidenav",
+				l10nID: "paper-relations-selection-debug-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/info.svg",
 			},
 			onInit: ({ doc, body, refresh }) => {
 				let win = doc.defaultView;
 				let listener = () => refresh();
 				win.addEventListener("paper-relations:graph-selection-changed", listener);
-				this.selectionSectionListeners.set(body, { win, listener });
+				this.selectionDebugSectionListeners.set(body, { win, listener });
 			},
 			onDestroy: ({ body }) => {
-				let data = this.selectionSectionListeners.get(body);
+				let data = this.selectionDebugSectionListeners.get(body);
 				if (!data) return;
 				data.win.removeEventListener("paper-relations:graph-selection-changed", data.listener);
-				this.selectionSectionListeners.delete(body);
+				this.selectionDebugSectionListeners.delete(body);
 			},
 			onItemChange: ({ item, setEnabled, setSectionSummary }) => {
 				setEnabled(!!item);
-				setSectionSummary("Graph Selection");
+				setSectionSummary("Selection Debug");
 			},
 			onRender: ({ doc, body }) => {
 				body.replaceChildren();
 				let info = this.getGraphSelectionInfo(doc.defaultView);
 
 				const title = doc.createElementNS(XHTML_NS, "div");
-				title.textContent = "Graph Selection Debug";
+				title.textContent = "Selection Debug";
 				title.style.fontWeight = "700";
 				title.style.marginBottom = "8px";
 				body.appendChild(title);
 
 				if (!info) {
 					const empty = doc.createElementNS(XHTML_NS, "div");
-					empty.textContent = "No graph node selected. Click a node in the lower graph panel.";
+					empty.textContent = "No graph node selected. Click a node in the Relation Graph Workspace.";
 					body.appendChild(empty);
 					return;
 				}
@@ -763,8 +763,8 @@ PaperRelations = {
 	unregisterItemPaneSections() {
 		if (!this.sectionRegistered) return;
 		if (!Zotero.ItemPaneManager?.unregisterSection) return;
-		Zotero.ItemPaneManager.unregisterSection(this.customSectionID);
-		Zotero.ItemPaneManager.unregisterSection(this.selectionSectionID);
+		Zotero.ItemPaneManager.unregisterSection(this.topicContextSectionID);
+		Zotero.ItemPaneManager.unregisterSection(this.selectionDebugSectionID);
 		this.sectionRegistered = false;
 	},
 
@@ -817,7 +817,7 @@ PaperRelations = {
 
 		let header = doc.createElementNS(XHTML_NS, "div");
 		header.id = "paper-relations-graph-header";
-		header.textContent = "Paper Relation Graph";
+		header.textContent = "Relation Graph Workspace";
 
 		let subheader = doc.createElementNS(XHTML_NS, "div");
 		subheader.id = "paper-relations-graph-subheader";

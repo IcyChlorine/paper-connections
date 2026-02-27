@@ -1,12 +1,12 @@
-paper-relations-relations-header =
-    .label = Paper Relations
+paper-relations-topic-context-header =
+    .label = Topic Context
 
-paper-relations-relations-sidenav =
-    .tooltiptext = Paper Relations
+paper-relations-topic-context-sidenav =
+    .tooltiptext = Topic Context
 
-paper-relations-selection-header =
-    .label = Graph Selection
+paper-relations-selection-debug-header =
+    .label = Selection Debug
 
-paper-relations-selection-sidenav =
-    .tooltiptext = Graph Selection
+paper-relations-selection-debug-sidenav =
+    .tooltiptext = Selection Debug
 

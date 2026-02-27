@@ -97,6 +97,10 @@ Implemented in `src/paper-relations.js`.
 
 ## 5. Frontend integration (current behavior)
 
+- UI surfaces:
+  - `Topic Context Section`: right item-pane custom section for context and topic actions.
+  - `Selection Debug Section`: right item-pane custom section for selected-node debug info.
+  - `Relation Graph Workspace`: middle graph pane/canvas for graph interaction.
 - Selection-driven context loader:
   - `handlePrimaryItemChanged(window, item, options)`
   - If item has topics: load latest-updated topic.

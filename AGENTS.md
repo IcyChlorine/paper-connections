@@ -9,6 +9,11 @@
 - Current direction: paper relations plugin (not color demo behavior).
 - Naming baseline: use `paper-relations` consistently (id, file names, build artifact names, update config keys).
 
+## UI Terminology
+- `Topic Context Section`: right item-pane custom section with context summary and create/remove topic actions.
+- `Selection Debug Section`: right item-pane custom section showing selected node details for debug.
+- `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
+
 ## Development Docs Index (Read in Order)
 - Session summary (latest): `doc/session-2026-02-27a-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
