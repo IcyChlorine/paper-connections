@@ -134,12 +134,31 @@ PaperRelations = {
 		return Math.round(value / step) * step;
 	},
 
-	snapPointToGrid(point) {
+	getNodeRenderMetrics(nodeInput = {}) {
+		let label = String(nodeInput?.label || "").trim();
+		let width = Number.isFinite(nodeInput?.width)
+			? this.clampNodeWidth(nodeInput.width)
+			: this.getNodeWidthForLabel(label);
+		let minHeight = Number.isFinite(nodeInput?.height) ? nodeInput.height : this.nodeDefaultHeight;
+		let labelLines = this.wrapNodeLabel(label, width);
+		let textBlockHeight = labelLines.length * this.nodeLineHeight;
+		let height = Math.max(minHeight, textBlockHeight + 16);
+		return {
+			width,
+			height,
+			labelLines,
+		};
+	},
+
+	snapNodePositionToGrid(point, nodeInput = {}) {
 		let x = Number.isFinite(point?.x) ? point.x : 0;
 		let y = Number.isFinite(point?.y) ? point.y : 0;
+		let metrics = this.getNodeRenderMetrics(nodeInput);
+		let centerX = x + metrics.width / 2;
+		let centerY = y + metrics.height / 2;
 		return {
-			x: this.snapValueToGrid(x),
-			y: this.snapValueToGrid(y),
+			x: this.snapValueToGrid(centerX) - metrics.width / 2,
+			y: this.snapValueToGrid(centerY) - metrics.height / 2,
 		};
 	},
 
@@ -401,10 +420,10 @@ PaperRelations = {
 		let cols = 3;
 		let col = count % cols;
 		let row = Math.floor(count / cols);
-		return this.snapPointToGrid({
+		return {
 			x: baseX + col * this.nodeGapX,
 			y: baseY + row * this.nodeGapY,
-		});
+		};
 	},
 
 	async addNode(libraryID, topicID, nodeInput, options = {}) {
@@ -419,7 +438,10 @@ PaperRelations = {
 		let pos = Number.isFinite(nodeInput.x) && Number.isFinite(nodeInput.y)
 			? { x: nodeInput.x, y: nodeInput.y }
 			: this.computeAutoNodePosition(topic);
-		let snappedPos = this.snapPointToGrid(pos);
+		let nodeLabel = nodeInput.shortLabel || nodeInput.title || nodeInput.itemKey;
+		let snappedPos = this.snapNodePositionToGrid(pos, {
+			label: nodeLabel,
+		});
 
 		let nodeID = this.generateID("node");
 		let node = {
@@ -455,9 +477,12 @@ PaperRelations = {
 			}
 		}
 		if (patch?.x !== undefined || patch?.y !== undefined) {
-			let snapped = this.snapPointToGrid({
+			let nodeLabel = node.shortLabel || node.title || node.itemKey;
+			let snapped = this.snapNodePositionToGrid({
 				x: patch?.x !== undefined ? patch.x : node.x,
 				y: patch?.y !== undefined ? patch.y : node.y,
+			}, {
+				label: nodeLabel,
 			});
 			node.x = snapped.x;
 			node.y = snapped.y;
@@ -1279,11 +1304,10 @@ PaperRelations = {
 		nodesGroup.replaceChildren();
 
 		for (let node of nodes) {
-			let width = Number.isFinite(node.width) ? this.clampNodeWidth(node.width) : this.getNodeWidthForLabel(node.label);
-			let minHeight = Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight;
-			let labelLines = this.wrapNodeLabel(node.label, width);
-			let textBlockHeight = labelLines.length * this.nodeLineHeight;
-			let height = Math.max(minHeight, textBlockHeight + 16);
+			let metrics = this.getNodeRenderMetrics(node);
+			let width = metrics.width;
+			let height = metrics.height;
+			let labelLines = metrics.labelLines;
 			node.renderWidth = width;
 			node.renderHeight = height;
 			node.renderLabelLines = labelLines;
@@ -1450,10 +1474,10 @@ PaperRelations = {
 				}
 				state.dragNodeRawX += dx / state.scale;
 				state.dragNodeRawY += dy / state.scale;
-				let snapped = this.snapPointToGrid({
+				let snapped = this.snapNodePositionToGrid({
 					x: state.dragNodeRawX,
 					y: state.dragNodeRawY,
-				});
+				}, node);
 				node.x = snapped.x;
 				node.y = snapped.y;
 				this.renderGraph(window);
@@ -1484,10 +1508,10 @@ PaperRelations = {
 		) {
 			let node = state.nodes.find((n) => n.id === dragNodeID);
 			if (node) {
-				let snapped = this.snapPointToGrid({
+				let snapped = this.snapNodePositionToGrid({
 					x: node.x,
 					y: node.y,
-				});
+				}, node);
 				node.x = snapped.x;
 				node.y = snapped.y;
 				this.renderGraph(window);
