@@ -1,0 +1,124 @@
+# Paper Relations Storage and CRUD
+
+Date: 2026-02-27  
+Target: Zotero 7 (`src-2.0`)
+
+## 1. Storage backend
+
+- Backend: `Zotero.SyncedSettings`
+- Setting key: `paper-relations.graph.v1`
+- Scope: per `libraryID` (not global preference)
+- Sync behavior: uses Zotero synced settings channel (library-scoped)
+
+## 2. Store schema
+
+Top-level JSON shape:
+
+```json
+{
+  "schemaVersion": 1,
+  "topics": {
+    "<topicID>": {
+      "id": "<topicID>",
+      "libraryID": 1,
+      "name": "Topic name",
+      "createdAt": 1730000000000,
+      "updatedAt": 1730000000000,
+      "nodes": {
+        "<nodeID>": {
+          "id": "<nodeID>",
+          "libraryID": 1,
+          "itemKey": "ABCD1234",
+          "title": "Paper title",
+          "shortLabel": "",
+          "note": "",
+          "x": 120,
+          "y": 100,
+          "createdAt": 1730000000000,
+          "updatedAt": 1730000000000
+        }
+      },
+      "edges": {
+        "<edgeID>": {
+          "id": "<edgeID>",
+          "fromNodeID": "<nodeID>",
+          "toNodeID": "<nodeID>",
+          "type": "related",
+          "note": "",
+          "createdAt": 1730000000000,
+          "updatedAt": 1730000000000
+        }
+      }
+    }
+  },
+  "itemTopicIndex": {
+    "1/ABCD1234": ["<topicID>"]
+  }
+}
+```
+
+Notes:
+- `itemTopicIndex` key format is `${libraryID}/${itemKey}`.
+- One paper can belong to multiple topics via index array.
+
+## 3. Implemented CRUD API
+
+Implemented in `src-2.0/paper-relations.js`.
+
+### Topic CRUD
+
+- `listTopics(libraryID)`
+- `getTopic(libraryID, topicID)`
+- `getTopicsForItem(libraryID, itemKey)`
+- `createTopic(libraryID, { name, centerItem })`
+- `updateTopic(libraryID, topicID, patch)`
+- `deleteTopic(libraryID, topicID)`
+
+### Node CRUD
+
+- `addNode(libraryID, topicID, nodeInput, options = {})`
+- `updateNode(libraryID, topicID, nodeID, patch)`
+- `removeNode(libraryID, topicID, nodeID)`
+- `listNodes(libraryID, topicID)`
+
+### Edge CRUD
+
+- `addEdge(libraryID, topicID, edgeInput)`
+- `updateEdge(libraryID, topicID, edgeID, patch)`
+- `removeEdge(libraryID, topicID, edgeID)`
+- `listEdges(libraryID, topicID)`
+
+## 4. Internal helper contracts
+
+- `ensureSyncedSettingsLoaded(libraryID)`: must run `Zotero.SyncedSettings.loadAll(libraryID)` before `get/set`.
+- `loadStore(libraryID)` / `saveStore(libraryID, store)`: normalized IO boundary.
+- `normalizeStore(rawStore)`: schema guard for missing fields and invalid values.
+- `updateItemTopicIndexForTopic(store, topic)`: keeps reverse index consistent with topic nodes.
+
+## 5. Frontend integration (current behavior)
+
+- Selection-driven context loader:
+  - `handlePrimaryItemChanged(window, item, options)`
+  - If item has topics: load latest-updated topic.
+  - If item has no topics: create temporary in-memory topic graph.
+- Topic creation:
+  - `promptCreateTopicFromItem(window, item)` prompts name and persists topic.
+- Topic removal:
+  - `promptRemoveActiveTopic(window, item)` confirms and removes active topic.
+- Drag in items:
+  - `onGraphDrop(window, event)` reads `dataTransfer.getData("zotero/item")`.
+  - Adds dropped regular items as nodes into active saved topic.
+
+## 6. Data integrity rules
+
+- Use stable identity: `libraryID + itemKey`.
+- Skip duplicate nodes for same item in same topic.
+- Remove incident edges when node is removed.
+- Persist node coordinates after drag in saved topic context.
+- Reject cross-library dropped items.
+
+## 7. Known constraints
+
+- No visual topic chooser yet for papers that belong to multiple topics.
+- No edge-editing UI yet (API exists, UI pending).
+- Versioned migration path for future schema changes not yet implemented.
