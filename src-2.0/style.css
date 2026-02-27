@@ -133,7 +133,8 @@ item-pane-custom-section[data-pane="paper-relations-relations-selection"] [data-
 	flex-wrap: wrap;
 }
 
-.paper-relations-create-topic-btn {
+.paper-relations-create-topic-btn,
+.paper-relations-remove-topic-btn {
 	padding: 3px 8px;
 	border: 1px solid #a4b1bf;
 	border-radius: 6px;
@@ -142,27 +143,12 @@ item-pane-custom-section[data-pane="paper-relations-relations-selection"] [data-
 	font-size: 11px;
 }
 
-.paper-relations-create-topic-btn:hover:not(:disabled) {
+.paper-relations-create-topic-btn:hover:not(:disabled),
+.paper-relations-remove-topic-btn:hover:not(:disabled) {
 	background: #e7f0f8;
 }
 
-.paper-relations-create-topic-btn:disabled {
-	opacity: 0.6;
-}
-
-.paper-relations-remove-topic-btn {
-	padding: 3px 8px;
-	border: 1px solid #c9a1a1;
-	border-radius: 6px;
-	background: #faf0f0;
-	color: #7a2f2f;
-	font-size: 11px;
-}
-
-.paper-relations-remove-topic-btn:hover:not(:disabled) {
-	background: #f6e1e1;
-}
-
+.paper-relations-create-topic-btn:disabled,
 .paper-relations-remove-topic-btn:disabled {
 	opacity: 0.6;
 }
