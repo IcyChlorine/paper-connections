@@ -11,6 +11,7 @@ PaperRelations = {
 
 	graphStates: null,
 	selectionSectionListeners: null,
+	relationSectionListeners: null,
 	selectionItemsByWindow: null,
 	syncedSettingsLoadedLibraries: null,
 
@@ -22,6 +23,7 @@ PaperRelations = {
 	nodeGapY: 96,
 	nodeLineHeight: 16,
 	nodeLabelMaxLines: 3,
+	nodeTextPaddingX: 18,
 
 	init({ id, version, rootURI }) {
 		if (this.initialized) return;
@@ -30,6 +32,7 @@ PaperRelations = {
 		this.rootURI = rootURI;
 		this.graphStates = new WeakMap();
 		this.selectionSectionListeners = new WeakMap();
+		this.relationSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
 		this.initialized = true;
@@ -82,7 +85,8 @@ PaperRelations = {
 	wrapNodeLabel(label, width) {
 		let text = String(label || "").trim();
 		if (!text) return ["(untitled)"];
-		let maxUnitsPerLine = Math.max(8, Math.floor((width - 20) / 7));
+		let usableWidth = Math.max(48, width - this.nodeTextPaddingX * 2);
+		let maxUnitsPerLine = Math.max(6, Math.floor(usableWidth / 8));
 		let lines = [];
 		let current = "";
 		let currentUnits = 0;
@@ -113,9 +117,9 @@ PaperRelations = {
 		let consumed = lines.join("");
 		if (consumed.length < text.length && lines.length) {
 			let lastIndex = Math.min(lines.length, this.nodeLabelMaxLines) - 1;
-			let maxLastUnits = Math.max(2, maxUnitsPerLine - 2);
+			let maxLastUnits = Math.max(2, maxUnitsPerLine - 3);
 			let cropped = this.cropLineToUnits(lines[lastIndex], maxLastUnits);
-			lines[lastIndex] = `${cropped}…`;
+			lines[lastIndex] = `${cropped}...`;
 		}
 
 		if (!lines.length) return ["(untitled)"];
@@ -463,6 +467,18 @@ PaperRelations = {
 				l10nID: "paper-relations-relations-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/related.svg",
 			},
+			onInit: ({ doc, body, refresh }) => {
+				let win = doc.defaultView;
+				let listener = () => refresh();
+				win.addEventListener("paper-relations:graph-context-changed", listener);
+				this.relationSectionListeners.set(body, { win, listener });
+			},
+			onDestroy: ({ body }) => {
+				let data = this.relationSectionListeners.get(body);
+				if (!data) return;
+				data.win.removeEventListener("paper-relations:graph-context-changed", data.listener);
+				this.relationSectionListeners.delete(body);
+			},
 			onItemChange: ({ doc, item, setEnabled, setSectionSummary }) => {
 				setEnabled(!!item);
 				setSectionSummary(item ? `Item: ${item.key}` : "");
@@ -509,7 +525,15 @@ PaperRelations = {
 				createTopicBtn.addEventListener("click", () => {
 					this.promptCreateTopicFromItem(win, item).catch((error) => Zotero.logError(error));
 				});
-				buttonWrap.appendChild(createTopicBtn);
+				const removeTopicBtn = doc.createElementNS(XHTML_NS, "button");
+				removeTopicBtn.type = "button";
+				removeTopicBtn.className = "paper-relations-remove-topic-btn";
+				removeTopicBtn.textContent = "Remove topic";
+				removeTopicBtn.disabled = !this.canRemoveActiveTopic(win);
+				removeTopicBtn.addEventListener("click", () => {
+					this.promptRemoveActiveTopic(win, item).catch((error) => Zotero.logError(error));
+				});
+				buttonWrap.append(createTopicBtn, removeTopicBtn);
 
 				body.append(title, desc, list, buttonWrap);
 			},
@@ -853,6 +877,16 @@ PaperRelations = {
 		return { topicLabel: label, topicStatus: status };
 	},
 
+	notifyGraphContextChanged(window) {
+		window.dispatchEvent(new window.CustomEvent("paper-relations:graph-context-changed"));
+	},
+
+	canRemoveActiveTopic(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return false;
+		return !!(state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic);
+	},
+
 	refreshGraphChrome(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -874,6 +908,7 @@ PaperRelations = {
 		if (!state) return;
 		state.pinSelection = !!state.pinCheckbox.checked;
 		this.refreshGraphChrome(window);
+		this.notifyGraphContextChanged(window);
 	},
 
 	async handlePrimaryItemChanged(window, item, options = {}) {
@@ -896,6 +931,7 @@ PaperRelations = {
 			}
 			this.refreshGraphChrome(window);
 			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
 			return;
 		}
 
@@ -905,6 +941,7 @@ PaperRelations = {
 
 		if (state.pinSelection && !force) {
 			this.refreshGraphChrome(window);
+			this.notifyGraphContextChanged(window);
 			return;
 		}
 
@@ -917,6 +954,7 @@ PaperRelations = {
 		}
 		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
+		this.notifyGraphContextChanged(window);
 	},
 
 	applyTopicToGraphState(window, topic, selectedItem = null) {
@@ -1012,10 +1050,34 @@ PaperRelations = {
 			this.applyTopicToGraphState(window, savedTopic, item);
 			this.refreshGraphChrome(window);
 			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
 		}
 		catch (error) {
 			Zotero.logError(error);
 			Services.prompt.alert(window, "Create Topic Failed", String(error?.message || error));
+		}
+	},
+
+	async promptRemoveActiveTopic(window, explicitItem = null) {
+		let state = this.graphStates.get(window);
+		if (!state || !this.canRemoveActiveTopic(window)) return;
+
+		let topicName = state.activeTopicName || "this topic";
+		let confirmed = Services.prompt.confirm(
+			window,
+			"Remove Topic",
+			`Remove topic \"${topicName}\"? This operation cannot be undone.`,
+		);
+		if (!confirmed) return;
+
+		try {
+			await this.deleteTopic(state.activeLibraryID, state.activeTopicID);
+			let item = explicitItem || this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+			await this.handlePrimaryItemChanged(window, item, { force: true });
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Remove Topic Failed", String(error?.message || error));
 		}
 	},
 
@@ -1089,6 +1151,7 @@ PaperRelations = {
 		this.applyTopicToGraphState(window, updatedTopic, selectedItem);
 		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
+		this.notifyGraphContextChanged(window);
 	},
 
 	renderGraph(window) {
@@ -1137,8 +1200,8 @@ PaperRelations = {
 			let rect = doc.createElementNS(SVG_NS, "rect");
 			rect.setAttribute("width", String(width));
 			rect.setAttribute("height", String(height));
-			rect.setAttribute("rx", "12");
-			rect.setAttribute("ry", "12");
+			rect.setAttribute("rx", "10");
+			rect.setAttribute("ry", "10");
 
 			let titleElem = doc.createElementNS(SVG_NS, "title");
 			titleElem.textContent = node.label || "";
