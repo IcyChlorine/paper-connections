@@ -15,7 +15,7 @@
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-02-27a-summary.md`.
+- Session summary (latest): `doc/session-2026-02-27b-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.
@@ -45,11 +45,13 @@
 - Keep relation data topic-centered; use `itemTopicIndex` as reverse mapping.
 - Main item drag payload uses `dataTransfer` type `zotero/item` (comma-separated itemIDs).
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
+- If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in `make-zips` whitelist.
+- In PowerShell, run Git Bash with quoted path invocation: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips`.
 
 ## Build and Packaging
 - Build with `make-zips` from repo root.
 - `make-zips` uses whitelist packaging for `src`; temp files inside `src` are not packaged.
-- If shell permission issues occur on Windows sandbox, run `C:\\Program Files\\Git\\bin\\bash.exe ./make-zips`.
+- If shell permission issues occur on Windows sandbox, run `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips`.
 
 ## Token/Time Saving
 - Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
