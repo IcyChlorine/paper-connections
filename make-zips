@@ -4,8 +4,8 @@ set -euo pipefail
 rm -rf build
 mkdir build
 
-cd src-2.0
-zip -r ../build/paper-relations-2.0.xpi \
+cd src
+zip -r ../build/paper-relations.xpi \
 	bootstrap.js \
 	locale \
 	paper-relations.js \
@@ -14,5 +14,5 @@ zip -r ../build/paper-relations-2.0.xpi \
 	style.css
 cd ../build
 
-jq ".addons[\"paper-relations@example.com\"].updates[0].update_hash = \"sha256:`shasum -a 256 paper-relations-2.0.xpi | cut -d' ' -f1`\"" ../updates-2.0.json.tmpl > updates-2.0.json
+jq ".addons[\"paper-relations@example.com\"].updates[0].update_hash = \"sha256:`shasum -a 256 paper-relations.xpi | cut -d' ' -f1`\"" ../updates.json.tmpl > updates.json
 

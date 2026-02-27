@@ -5,11 +5,11 @@ function log(msg) {
 }
 
 function install() {
-	log("Installed 2.0");
+	log("Installed");
 }
 
 async function startup({ id, version, rootURI }) {
-	log("Starting 2.0");
+	log(`Starting ${version}`);
 	
 	Zotero.PreferencePanes.register({
 		pluginID: 'paper-relations@example.com',
@@ -32,12 +32,12 @@ function onMainWindowUnload({ window }) {
 }
 
 function shutdown() {
-	log("Shutting down 2.0");
+	log("Shutting down");
 	PaperRelations.removeFromAllWindows();
 	PaperRelations = undefined;
 }
 
 function uninstall() {
-	log("Uninstalled 2.0");
+	log("Uninstalled");
 }
 

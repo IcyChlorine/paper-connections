@@ -1,13 +1,13 @@
 {
 	"manifest_version": 2,
 	"name": "Paper Relations",
-	"version": "2.0",
+	"version": "1.0.0",
 	"description": "Paper relations plugin prototype for Zotero 7",
 	"homepage_url": "https://github.com/zotero/paper-relations",
 	"applications": {
 		"zotero": {
 			"id": "paper-relations@example.com",
-			"update_url": "https://zotero-download.s3.amazonaws.com/tmp/paper-relations/updates-2.0.json",
+			"update_url": "https://zotero-download.s3.amazonaws.com/tmp/paper-relations/updates.json",
 			"strict_min_version": "7.0",
 			"strict_max_version": "7.1.*"
 		}

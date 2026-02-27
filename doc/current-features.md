@@ -2,7 +2,7 @@
 
 ## Snapshot
 - Date: 2026-02-27
-- Target: Zotero 7 (`src-2.0`)
+- Target: Zotero 7 (`src`)
 - Plugin id: `paper-relations@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
 
@@ -41,13 +41,13 @@
   - Reduced corner radius and tighter spacing.
 
 ## Data Layer
-- Implemented topic/node/edge CRUD in `src-2.0/paper-relations.js`.
+- Implemented topic/node/edge CRUD in `src/paper-relations.js`.
 - Data schema and API details documented in `doc/storage-crud.md`.
 
 ## Build/Package
 - Build command: `./make-zips`
-- Output xpi: `build/paper-relations-2.0.xpi`
-- Update template: `updates-2.0.json.tmpl`
+- Output xpi: `build/paper-relations.xpi`
+- Update template: `updates.json.tmpl`
 
 ## Pending TODO (Next Stage)
 - Topic chooser UI when a paper belongs to multiple topics.

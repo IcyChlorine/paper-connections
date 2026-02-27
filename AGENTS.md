@@ -5,12 +5,12 @@
 # AGENTS Quick Notes (Read Every Session)
 
 ## Scope
-- Target: Zotero 7 plugin in `src-2.0`.
+- Target: Zotero 7 plugin in `src`.
 - Current direction: paper relations plugin (not color demo behavior).
 - Naming baseline: use `paper-relations` consistently (id, file names, build artifact names, update config keys).
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-02-27-summary.md`.
+- Session summary (latest): `doc/session-2026-02-27a-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.
@@ -43,7 +43,7 @@
 
 ## Build and Packaging
 - Build with `make-zips` from repo root.
-- `make-zips` uses whitelist packaging for `src-2.0`; temp files inside `src-2.0` are not packaged.
+- `make-zips` uses whitelist packaging for `src`; temp files inside `src` are not packaged.
 - If shell permission issues occur on Windows sandbox, run `C:\\Program Files\\Git\\bin\\bash.exe ./make-zips`.
 
 ## Token/Time Saving

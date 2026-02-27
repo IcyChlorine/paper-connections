@@ -1,7 +1,7 @@
 # Paper Relations Storage and CRUD
 
 Date: 2026-02-27  
-Target: Zotero 7 (`src-2.0`)
+Target: Zotero 7 (`src`)
 
 ## 1. Storage backend
 
@@ -63,7 +63,7 @@ Notes:
 
 ## 3. Implemented CRUD API
 
-Implemented in `src-2.0/paper-relations.js`.
+Implemented in `src/paper-relations.js`.
 
 ### Topic CRUD
 
