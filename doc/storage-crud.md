@@ -63,7 +63,7 @@ Notes:
 
 ## 3. Implemented CRUD API
 
-Implemented in `src/paper-relations.js`.
+Implemented in `src/paper-relations-storage.js` (storage/CRUD) and used by `src/paper-relations-graph-workspace.js`.
 
 ### Topic CRUD
 

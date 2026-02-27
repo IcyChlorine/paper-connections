@@ -41,7 +41,7 @@
   - Reduced corner radius and tighter spacing.
 
 ## Data Layer
-- Implemented topic/node/edge CRUD in `src/paper-relations.js`.
+- Implemented topic/node/edge CRUD in `src/paper-relations-storage.js`.
 - Data schema and API details documented in `doc/storage-crud.md`.
 
 ## Build/Package
