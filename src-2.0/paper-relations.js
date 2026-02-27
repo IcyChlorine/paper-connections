@@ -20,6 +20,8 @@ PaperRelations = {
 	nodeDefaultHeight: 50,
 	nodeGapX: 240,
 	nodeGapY: 96,
+	nodeLineHeight: 16,
+	nodeLabelMaxLines: 3,
 
 	init({ id, version, rootURI }) {
 		if (this.initialized) return;
@@ -58,6 +60,66 @@ PaperRelations = {
 		if (!item) return "";
 		let displayTitle = typeof item.getDisplayTitle === "function" ? item.getDisplayTitle() : "";
 		return item.getField("title") || displayTitle || item.key || "(untitled)";
+	},
+
+	getLabelCharUnits(char) {
+		if (!char) return 0;
+		return char.charCodeAt(0) > 255 ? 2 : 1;
+	},
+
+	cropLineToUnits(text, maxUnits) {
+		let units = 0;
+		let out = "";
+		for (let ch of text) {
+			let u = this.getLabelCharUnits(ch);
+			if (units + u > maxUnits) break;
+			out += ch;
+			units += u;
+		}
+		return out;
+	},
+
+	wrapNodeLabel(label, width) {
+		let text = String(label || "").trim();
+		if (!text) return ["(untitled)"];
+		let maxUnitsPerLine = Math.max(8, Math.floor((width - 20) / 7));
+		let lines = [];
+		let current = "";
+		let currentUnits = 0;
+
+		for (let ch of text) {
+			if (ch === "\n") {
+				if (current) lines.push(current);
+				current = "";
+				currentUnits = 0;
+				continue;
+			}
+			let u = this.getLabelCharUnits(ch);
+			if (currentUnits + u > maxUnitsPerLine) {
+				lines.push(current || ch);
+				current = current ? ch : "";
+				currentUnits = current ? u : 0;
+			}
+			else {
+				current += ch;
+				currentUnits += u;
+			}
+			if (lines.length >= this.nodeLabelMaxLines) break;
+		}
+		if (lines.length < this.nodeLabelMaxLines && current) {
+			lines.push(current);
+		}
+
+		let consumed = lines.join("");
+		if (consumed.length < text.length && lines.length) {
+			let lastIndex = Math.min(lines.length, this.nodeLabelMaxLines) - 1;
+			let maxLastUnits = Math.max(2, maxUnitsPerLine - 2);
+			let cropped = this.cropLineToUnits(lines[lastIndex], maxLastUnits);
+			lines[lastIndex] = `${cropped}…`;
+		}
+
+		if (!lines.length) return ["(untitled)"];
+		return lines.slice(0, this.nodeLabelMaxLines);
 	},
 
 	createEmptyStore() {
@@ -935,25 +997,26 @@ PaperRelations = {
 		let item = explicitItem || this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
 		if (!item) return;
 
-		let defaultName = this.getItemTitle(item);
-		let topicName = { value: defaultName };
-		let confirmed = Services.prompt.prompt(
-			window,
-			"Create Topic",
-			"Topic name:",
-			topicName,
-			null,
-			null,
-		);
-		if (!confirmed) return;
-
-		let topic = await this.createTopic(item.libraryID, {
-			name: topicName.value || defaultName,
-			centerItem: item,
-		});
-		this.applyTopicToGraphState(window, topic, item);
-		this.refreshGraphChrome(window);
-		this.notifyGraphSelectionChanged(window);
+		try {
+			let defaultName = this.getItemTitle(item);
+			let inputName = window.prompt("Topic name:", defaultName);
+			if (inputName === null) return;
+			let topic = await this.createTopic(item.libraryID, {
+				name: inputName || defaultName,
+				centerItem: item,
+			});
+			let savedTopic = await this.getTopic(item.libraryID, topic.id);
+			if (!savedTopic) {
+				throw new Error("Topic created but not found in storage");
+			}
+			this.applyTopicToGraphState(window, savedTopic, item);
+			this.refreshGraphChrome(window);
+			this.notifyGraphSelectionChanged(window);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Create Topic Failed", String(error?.message || error));
+		}
 	},
 
 	canDataTransferContainZoteroItems(dataTransfer) {
@@ -1039,6 +1102,17 @@ PaperRelations = {
 		edgesGroup.replaceChildren();
 		nodesGroup.replaceChildren();
 
+		for (let node of nodes) {
+			let width = Number.isFinite(node.width) ? node.width : this.nodeDefaultWidth;
+			let minHeight = Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight;
+			let labelLines = this.wrapNodeLabel(node.label, width);
+			let textBlockHeight = labelLines.length * this.nodeLineHeight;
+			let height = Math.max(minHeight, textBlockHeight + 16);
+			node.renderWidth = width;
+			node.renderHeight = height;
+			node.renderLabelLines = labelLines;
+		}
+
 		for (let edge of edges) {
 			let fromNode = nodes.find((n) => n.id === edge.from);
 			let toNode = nodes.find((n) => n.id === edge.to);
@@ -1055,8 +1129,10 @@ PaperRelations = {
 			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}`);
 			group.setAttribute("data-node-id", node.id);
 			group.setAttribute("transform", `translate(${node.x},${node.y})`);
-			let width = Number.isFinite(node.width) ? node.width : this.nodeDefaultWidth;
-			let height = Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight;
+			let width = node.renderWidth;
+			let height = node.renderHeight;
+			let labelLines = node.renderLabelLines || this.wrapNodeLabel(node.label, width);
+			let textBlockHeight = labelLines.length * this.nodeLineHeight;
 
 			let rect = doc.createElementNS(SVG_NS, "rect");
 			rect.setAttribute("width", String(width));
@@ -1064,14 +1140,25 @@ PaperRelations = {
 			rect.setAttribute("rx", "12");
 			rect.setAttribute("ry", "12");
 
+			let titleElem = doc.createElementNS(SVG_NS, "title");
+			titleElem.textContent = node.label || "";
+
 			let text = doc.createElementNS(SVG_NS, "text");
 			text.setAttribute("x", String(width / 2));
-			text.setAttribute("y", String(height / 2));
+			let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
+			text.setAttribute("y", String(firstLineY));
 			text.setAttribute("text-anchor", "middle");
-			text.setAttribute("dominant-baseline", "middle");
-			text.textContent = node.label;
+			for (let i = 0; i < labelLines.length; i++) {
+				let tspan = doc.createElementNS(SVG_NS, "tspan");
+				tspan.setAttribute("x", String(width / 2));
+				if (i > 0) {
+					tspan.setAttribute("dy", String(this.nodeLineHeight));
+				}
+				tspan.textContent = labelLines[i];
+				text.appendChild(tspan);
+			}
 
-			group.append(rect, text);
+			group.append(rect, titleElem, text);
 			nodesGroup.appendChild(group);
 		}
 
@@ -1079,9 +1166,12 @@ PaperRelations = {
 	},
 
 	buildBezierPath(fromNode, toNode) {
-		let fromWidth = Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth;
-		let fromHeight = Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight;
-		let toHeight = Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight;
+		let fromWidth = Number.isFinite(fromNode.renderWidth) ? fromNode.renderWidth :
+			(Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth);
+		let fromHeight = Number.isFinite(fromNode.renderHeight) ? fromNode.renderHeight :
+			(Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight);
+		let toHeight = Number.isFinite(toNode.renderHeight) ? toNode.renderHeight :
+			(Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight);
 		let startX = fromNode.x + fromWidth;
 		let startY = fromNode.y + fromHeight / 2;
 		let endX = toNode.x;
