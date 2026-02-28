@@ -75,6 +75,20 @@ PaperRelations = {
 		return item.getField("title") || displayTitle || item.key || "(untitled)";
 	},
 
+	getCurrentLocaleTag() {
+		let raw = String(
+			Zotero.locale
+			|| Services.locale?.appLocaleAsBCP47
+			|| Services.locale?.lastFallbackLocale
+			|| "en-US"
+		);
+		return raw.toLowerCase();
+	},
+
+	getRemarkDisplayLabel() {
+		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PR)" : "Remark(PR)";
+	},
+
 	normalizeRemarkValue(value) {
 		return String(value || "")
 			.replace(/\r?\n+/g, " ")
@@ -160,7 +174,7 @@ PaperRelations = {
 		if (Zotero.ItemTreeManager?.registerColumn) {
 			let registered = Zotero.ItemTreeManager.registerColumn({
 				dataKey: this.remarkColumnDataKey,
-				label: "Remark",
+				label: this.getRemarkDisplayLabel(),
 				pluginID: this.id,
 				enabledTreeIDs: ["main"],
 				dataProvider: (item) => this.getItemRemark(item),

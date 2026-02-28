@@ -1,15 +1,14 @@
 paper-relations-topic-context-header =
-    .label = Topic Context
+    .label = 主题上下文
 
 paper-relations-topic-context-sidenav =
-    .tooltiptext = Topic Context
+    .tooltiptext = 主题上下文
 
 paper-relations-selection-debug-header =
-    .label = Selection Debug
+    .label = 选择调试
 
 paper-relations-selection-debug-sidenav =
-    .tooltiptext = Selection Debug
+    .tooltiptext = 选择调试
 
 paper-relations-remark-label =
-    Remark(PR)
-
+    简记(PR)
