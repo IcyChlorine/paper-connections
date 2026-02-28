@@ -15,7 +15,7 @@
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-02-28a-summary.md`.
+- Session summary (latest): `doc/session-2026-02-28b-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.
@@ -52,6 +52,8 @@
 - Keep canvas cursor fully state-driven: show grab/grabbing only when background panning is available; use default pointer on nodes and during cut gestures.
 - For relation curves, keep drag-preview geometry and arrow semantics consistent with persisted edges, including backward-link routing with rightward tangents at both endpoints.
 - When introducing new runtime SVG assets, add them under `src/assets` and verify `make-zips` whitelist includes them; otherwise controls may render as fallback blobs in packaged builds.
+- For remark-driven node relayout, preserve node center and persist updated `x/y` for saved topics; otherwise topic reload on selection changes can cause subtle drift.
+- When persisting node positions, make snap calculations use the currently displayed label metrics (for example via `snapLabel`) to avoid title/remark width mismatch offsets.
 
 ## Build and Packaging
 - Build with `make-zips` from repo root.
