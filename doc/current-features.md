@@ -21,7 +21,8 @@
   - SVG canvas top-right includes two icon toggle buttons:
     - left magnet button toggles magnetic snap-to-grid.
     - right pin button toggles pinned graph context while selecting other items.
-  - Both toggles use dim gray inactive style and solid dark-gray active style.
+  - Controls are icon-only (no button border/background): dim gray at 30% opacity when inactive, solid dark gray when active.
+  - Snap-to-grid is enabled by default on workspace init.
 - Topic/context loading behavior
   - On item selection, if item belongs to one or more topics, loads latest-updated topic.
   - If item belongs to no topic, renders a temporary in-memory topic (not persisted).

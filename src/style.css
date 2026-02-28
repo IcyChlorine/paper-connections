@@ -83,51 +83,25 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 .paper-relations-canvas-btn {
 	pointer-events: all;
 	cursor: pointer;
-	opacity: 0.32;
-	transition: opacity 140ms ease, transform 140ms ease;
+	opacity: 0.3;
+	transition: opacity 140ms ease;
 }
 
 .paper-relations-canvas-btn:hover {
-	opacity: 0.7;
+	opacity: 0.48;
 }
 
 .paper-relations-canvas-btn.active {
 	opacity: 1;
 }
 
-.paper-relations-canvas-btn-bg {
-	fill: #dce5ed;
-	fill-opacity: 0.52;
-	stroke: #8092a2;
-	stroke-opacity: 0.56;
-	stroke-width: 1;
-}
-
-.paper-relations-canvas-btn.active .paper-relations-canvas-btn-bg {
-	fill: #434f5b;
-	fill-opacity: 0.94;
-	stroke: #2c3640;
-	stroke-opacity: 0.92;
+.paper-relations-canvas-btn-hitbox {
+	fill: rgba(0, 0, 0, 0.001);
+	stroke: none;
 }
 
 .paper-relations-canvas-btn-icon-fill {
-	fill: #45596b;
-}
-
-.paper-relations-canvas-btn-icon-stroke {
-	fill: none;
-	stroke: #45596b;
-	stroke-width: 1.8;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-}
-
-.paper-relations-canvas-btn.active .paper-relations-canvas-btn-icon-fill {
-	fill: #edf3f8;
-}
-
-.paper-relations-canvas-btn.active .paper-relations-canvas-btn-icon-stroke {
-	stroke: #f3f8fc;
+	transition: fill 140ms ease;
 }
 
 .paper-relations-edge {

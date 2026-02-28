@@ -121,6 +121,37 @@ var PaperRelationsGraphWorkspaceMixin = {
 		const controlButtonSize = 28;
 		const controlGap = 8;
 		const controlPanelWidth = controlButtonSize * 2 + controlGap;
+		const iconInset = 2;
+		const pinIconPathData = [
+			"M19.1835 7.80516L16.2188 4.83755C14.1921 2.8089 13.1788 1.79457 12.0904 2.03468C11.0021 2.2748 10.5086 3.62155 9.5217 6.31506L8.85373 8.1381C8.59063 8.85617 8.45908 9.2152 8.22239 9.49292C8.11619 9.61754 7.99536 9.72887 7.86251 9.82451C7.56644 10.0377 7.19811 10.1392 6.46145 10.3423C4.80107 10.8 3.97088 11.0289 3.65804 11.5721C3.5228 11.8069 3.45242 12.0735 3.45413 12.3446C3.45809 12.9715 4.06698 13.581 5.28476 14.8L6.69935 16.2163L2.22345 20.6964C1.92552 20.9946 1.92552 21.4782 2.22345 21.7764C2.52138 22.0746 3.00443 22.0746 3.30236 21.7764L7.77841 17.2961L9.24441 18.7635C10.4699 19.9902 11.0827 20.6036 11.7134 20.6045C11.9792 20.6049 12.2404 20.5358 12.4713 20.4041C13.0192 20.0914 13.2493 19.2551 13.7095 17.5825C13.9119 16.8472 14.013 16.4795 14.2254 16.1835C14.3184 16.054 14.4262 15.9358 14.5468 15.8314C14.8221 15.593 15.1788 15.459 15.8922 15.191L17.7362 14.4981C20.4 13.4973 21.7319 12.9969 21.9667 11.9115C22.2014 10.826 21.1954 9.81905 19.1835 7.80516Z",
+		];
+		const magnetIconPathData = [
+			"M13.6943 3H11C6.02943 3 2 7.02944 2 12C2 16.9706 6.02944 21 11 21H13.6943V16.5H10.9444C8.45916 16.5 6.44444 14.4853 6.44444 12C6.44444 9.51472 8.45916 7.5 10.9444 7.5H13.6943V3Z",
+			"M15.1943 7.5H16.5C17.3284 7.5 18 6.82843 18 6V4.5C18 3.67157 17.3284 3 16.5 3H15.1943V7.5Z",
+			"M15.1943 16.5V21H16.5C17.3284 21 18 20.3284 18 19.5V18C18 17.1716 17.3284 16.5 16.5 16.5H15.1943Z",
+			"M20.1556 8.63577C19.9545 8.27368 19.4979 8.14322 19.1358 8.34438C18.7768 8.54383 18.6455 8.99441 18.8393 9.35499L18.8443 9.36522C18.8512 9.37962 18.8643 9.40834 18.8818 9.45198C18.9167 9.53919 18.9691 9.6865 19.0235 9.89878C19.1322 10.3228 19.25 11.0101 19.25 12C19.25 12.9899 19.1322 13.6772 19.0235 14.1012C18.9691 14.3135 18.9167 14.4608 18.8818 14.548C18.8643 14.5917 18.8512 14.6204 18.8443 14.6348L18.8393 14.645C18.6455 15.0056 18.7768 15.4562 19.1358 15.6556C19.4979 15.8568 19.9545 15.7263 20.1556 15.3642L19.5 15C20.1556 15.3642 20.1556 15.3642 20.1556 15.3642L20.1563 15.3629L20.1571 15.3615L20.1588 15.3585L20.1626 15.3514L20.1723 15.333C20.1795 15.3189 20.1884 15.3012 20.1986 15.2797C20.2191 15.2367 20.2451 15.1787 20.2745 15.1051C20.3333 14.9579 20.4059 14.749 20.4765 14.4738C20.6178 13.9228 20.75 13.1101 20.75 12C20.75 10.8899 20.6178 10.0772 20.4765 9.52622C20.4059 9.251 20.3333 9.04206 20.2745 8.89489C20.2451 8.82135 20.2191 8.76335 20.1986 8.72032C20.1884 8.69881 20.1795 8.68106 20.1723 8.66699L20.1626 8.64864L20.1588 8.64152L20.1571 8.63847L20.1563 8.63708C20.1563 8.63708 20.1556 8.63577 19.5 9L20.1556 8.63577Z",
+			"M23.5031 14.846C23.3541 15.6504 23.1541 16.3136 22.95 16.8443C22.7463 17.3741 22.5394 17.7692 22.3775 18.0391C22.2966 18.1739 22.227 18.2773 22.1748 18.3504C22.1487 18.387 22.1269 18.416 22.1102 18.4376C22.1019 18.4484 22.0948 18.4573 22.0891 18.4644L22.0816 18.4737L22.0786 18.4773L22.0773 18.4788L22.0762 18.4802C21.811 18.7984 21.3381 18.8414 21.0199 18.5762C20.7032 18.3123 20.6591 17.8427 20.92 17.5245L20.9235 17.52C20.9288 17.5132 20.9393 17.4994 20.9542 17.4785C20.984 17.4368 21.0316 17.3668 21.0913 17.2673C21.2106 17.0683 21.3788 16.751 21.55 16.3058C21.7115 15.8859 21.8767 15.3499 22.006 14.6894C22.1332 14.0394 22.2258 13.2688 22.2459 12.3696C22.2486 12.2487 22.25 12.1255 22.25 12C22.25 11.4979 22.2276 11.0333 22.1887 10.6049C22.0719 9.31976 21.8063 8.36076 21.55 7.69429C21.3788 7.24907 21.2106 6.93174 21.0913 6.7328C21.0316 6.63328 20.984 6.56324 20.9542 6.52153C20.9393 6.50068 20.9288 6.4869 20.9235 6.48006L20.92 6.47558C20.6591 6.15743 20.7032 5.68775 21.0199 5.42385C21.3381 5.15868 21.811 5.20167 22.0762 5.51988L22.0773 5.52126L22.0786 5.5228L22.0816 5.52641L22.0891 5.53568C22.0948 5.54278 22.1019 5.55171 22.1102 5.5625C22.1269 5.58408 22.1487 5.61307 22.1748 5.64964C22.227 5.72277 22.2966 5.82617 22.3775 5.96102C22.5394 6.23084 22.7463 6.626 22.95 7.15578C23.2513 7.93896 23.5435 9.01067 23.676 10.3992C23.7231 10.8924 23.75 11.4256 23.75 12C23.75 12 23.75 12 23.75 12",
+		];
+		let appendIconPaths = (button, pathDataList) => {
+			let hitbox = doc.createElementNS(SVG_NS, "rect");
+			hitbox.setAttribute("class", "paper-relations-canvas-btn-hitbox");
+			hitbox.setAttribute("x", "0");
+			hitbox.setAttribute("y", "0");
+			hitbox.setAttribute("width", String(controlButtonSize));
+			hitbox.setAttribute("height", String(controlButtonSize));
+			hitbox.setAttribute("rx", "6");
+			hitbox.setAttribute("ry", "6");
+			let iconGroup = doc.createElementNS(SVG_NS, "g");
+			iconGroup.setAttribute("class", "paper-relations-canvas-btn-icon");
+			iconGroup.setAttribute("transform", `translate(${iconInset} ${iconInset})`);
+			for (let d of pathDataList) {
+				let path = doc.createElementNS(SVG_NS, "path");
+				path.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+				path.setAttribute("d", d);
+				iconGroup.appendChild(path);
+			}
+			button.append(hitbox, iconGroup);
+		};
 
 		let snapButton = doc.createElementNS(SVG_NS, "g");
 		snapButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-snap-btn");
@@ -128,34 +159,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		snapButton.setAttribute("role", "button");
 		snapButton.setAttribute("aria-label", "Toggle magnetic grid snapping");
 		snapButton.setAttribute("transform", "translate(0 0)");
-		let snapBg = doc.createElementNS(SVG_NS, "rect");
-		snapBg.setAttribute("class", "paper-relations-canvas-btn-bg");
-		snapBg.setAttribute("x", "0");
-		snapBg.setAttribute("y", "0");
-		snapBg.setAttribute("width", String(controlButtonSize));
-		snapBg.setAttribute("height", String(controlButtonSize));
-		snapBg.setAttribute("rx", "8");
-		snapBg.setAttribute("ry", "8");
-		let snapCapLeft = doc.createElementNS(SVG_NS, "rect");
-		snapCapLeft.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
-		snapCapLeft.setAttribute("x", "7.4");
-		snapCapLeft.setAttribute("y", "5.2");
-		snapCapLeft.setAttribute("width", "3.4");
-		snapCapLeft.setAttribute("height", "3.4");
-		snapCapLeft.setAttribute("rx", "0.8");
-		snapCapLeft.setAttribute("ry", "0.8");
-		let snapCapRight = doc.createElementNS(SVG_NS, "rect");
-		snapCapRight.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
-		snapCapRight.setAttribute("x", "17.2");
-		snapCapRight.setAttribute("y", "5.2");
-		snapCapRight.setAttribute("width", "3.4");
-		snapCapRight.setAttribute("height", "3.4");
-		snapCapRight.setAttribute("rx", "0.8");
-		snapCapRight.setAttribute("ry", "0.8");
-		let snapU = doc.createElementNS(SVG_NS, "path");
-		snapU.setAttribute("class", "paper-relations-canvas-btn-icon-stroke");
-		snapU.setAttribute("d", "M9 7.2 V15.2 A5 5 0 0 0 19 15.2 V7.2");
-		snapButton.append(snapBg, snapCapLeft, snapCapRight, snapU);
+		appendIconPaths(snapButton, magnetIconPathData);
 
 		let pinButton = doc.createElementNS(SVG_NS, "g");
 		pinButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-pin-btn");
@@ -163,37 +167,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		pinButton.setAttribute("role", "button");
 		pinButton.setAttribute("aria-label", "Toggle pinned graph context");
 		pinButton.setAttribute("transform", `translate(${controlButtonSize + controlGap} 0)`);
-		let pinBg = doc.createElementNS(SVG_NS, "rect");
-		pinBg.setAttribute("class", "paper-relations-canvas-btn-bg");
-		pinBg.setAttribute("x", "0");
-		pinBg.setAttribute("y", "0");
-		pinBg.setAttribute("width", String(controlButtonSize));
-		pinBg.setAttribute("height", String(controlButtonSize));
-		pinBg.setAttribute("rx", "8");
-		pinBg.setAttribute("ry", "8");
-		let pinHead = doc.createElementNS(SVG_NS, "circle");
-		pinHead.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
-		pinHead.setAttribute("cx", "14");
-		pinHead.setAttribute("cy", "9.2");
-		pinHead.setAttribute("r", "3.1");
-		let pinBody = doc.createElementNS(SVG_NS, "path");
-		pinBody.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
-		pinBody.setAttribute("d", "M10.7 12.1 H17.3 L14 16.9 Z");
-		let pinStem = doc.createElementNS(SVG_NS, "rect");
-		pinStem.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
-		pinStem.setAttribute("x", "12.9");
-		pinStem.setAttribute("y", "12.3");
-		pinStem.setAttribute("width", "2.2");
-		pinStem.setAttribute("height", "8.1");
-		pinStem.setAttribute("rx", "1");
-		pinStem.setAttribute("ry", "1");
-		let pinNeedle = doc.createElementNS(SVG_NS, "line");
-		pinNeedle.setAttribute("class", "paper-relations-canvas-btn-icon-stroke");
-		pinNeedle.setAttribute("x1", "14");
-		pinNeedle.setAttribute("y1", "20.2");
-		pinNeedle.setAttribute("x2", "14");
-		pinNeedle.setAttribute("y2", "24");
-		pinButton.append(pinBg, pinHead, pinBody, pinStem, pinNeedle);
+		appendIconPaths(pinButton, pinIconPathData);
 
 		canvasControls.append(snapButton, pinButton);
 		svg.appendChild(canvasControls);
@@ -345,29 +319,13 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!button) return;
 		let isActive = !!active;
 		button.classList.toggle("active", isActive);
-		let bg = button.querySelector(".paper-relations-canvas-btn-bg");
-		if (bg) {
-			if (isActive) {
-				bg.style.fill = "#434f5b";
-				bg.style.fillOpacity = "0.94";
-				bg.style.stroke = "#2c3640";
-				bg.style.strokeOpacity = "0.92";
-			}
-			else {
-				bg.style.fill = "#dce5ed";
-				bg.style.fillOpacity = "0.52";
-				bg.style.stroke = "#8092a2";
-				bg.style.strokeOpacity = "0.56";
-			}
-			bg.style.strokeWidth = "1";
-		}
-
-		let fillColor = isActive ? "#edf3f8" : "#45596b";
+		button.style.opacity = isActive ? "1" : "0.3";
+		let fillColor = isActive ? "#313a43" : "#9aa6b2";
 		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-fill")) {
 			elem.style.fill = fillColor;
 		}
 
-		let strokeColor = isActive ? "#f3f8fc" : "#45596b";
+		let strokeColor = isActive ? "#313a43" : "#9aa6b2";
 		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-stroke")) {
 			elem.style.fill = "none";
 			elem.style.stroke = strokeColor;
