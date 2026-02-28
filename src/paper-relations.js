@@ -471,6 +471,9 @@ PaperRelations = {
 			state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
 			window.removeEventListener("mousemove", state.handlers.mousemove);
 			window.removeEventListener("mouseup", state.handlers.mouseup);
+			window.removeEventListener("keydown", state.handlers.keydown);
+			window.removeEventListener("keyup", state.handlers.keyup);
+			window.removeEventListener("blur", state.handlers.blur);
 			state.canvas?.removeEventListener("dragover", state.handlers.dragover);
 			state.canvas?.removeEventListener("drop", state.handlers.drop);
 			state.canvas?.removeEventListener("dragleave", state.handlers.dragleave);

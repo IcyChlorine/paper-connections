@@ -10,6 +10,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.svg?.removeEventListener("contextmenu", existingState.handlers.contextmenu);
 				window.removeEventListener("mousemove", existingState.handlers.mousemove);
 				window.removeEventListener("mouseup", existingState.handlers.mouseup);
+				window.removeEventListener("keydown", existingState.handlers.keydown);
+				window.removeEventListener("keyup", existingState.handlers.keyup);
+				window.removeEventListener("blur", existingState.handlers.blur);
 				existingState.canvas?.removeEventListener("dragover", existingState.handlers.dragover);
 				existingState.canvas?.removeEventListener("drop", existingState.handlers.drop);
 				existingState.canvas?.removeEventListener("dragleave", existingState.handlers.dragleave);
@@ -223,6 +226,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			edgeDraft: null,
 			edgeCutDraft: null,
 			anchorHoverRadiusPx: 14,
+			altModifierPressed: false,
 			scale: 1,
 			panX: 40,
 			panY: 26,
@@ -241,6 +245,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			contextmenu: (event) => this.onGraphContextMenu(window, event),
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
+			keydown: (event) => this.onWindowKeyStateChange(window, event),
+			keyup: (event) => this.onWindowKeyStateChange(window, event),
+			blur: () => this.onWindowBlur(window),
 			dragover: (event) => this.onGraphDragOver(window, event),
 			drop: (event) => this.onGraphDrop(window, event),
 			dragleave: (event) => this.onGraphDragLeave(window, event),
@@ -255,6 +262,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		svg.addEventListener("contextmenu", state.handlers.contextmenu);
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
+		window.addEventListener("keydown", state.handlers.keydown);
+		window.addEventListener("keyup", state.handlers.keyup);
+		window.addEventListener("blur", state.handlers.blur);
 		canvas.addEventListener("dragover", state.handlers.dragover);
 		canvas.addEventListener("drop", state.handlers.drop);
 		canvas.addEventListener("dragleave", state.handlers.dragleave);
@@ -265,6 +275,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		window.addEventListener("resize", state.handlers.resize);
 
 		this.graphStates.set(window, state);
+		this.updateCanvasCursorState(window);
 		this.renderGraph(window);
 		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
@@ -711,6 +722,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 			cutLine.setAttribute("y1", String(state.edgeCutDraft.start.y));
 			cutLine.setAttribute("x2", String(state.edgeCutDraft.end.x));
 			cutLine.setAttribute("y2", String(state.edgeCutDraft.end.y));
+			cutLine.setAttribute("stroke", "#1a1a1a");
+			cutLine.setAttribute("stroke-width", "2");
+			cutLine.setAttribute("stroke-linecap", "round");
+			cutLine.setAttribute("stroke-dasharray", "6 5");
+			cutLine.setAttribute("opacity", "0.82");
+			cutLine.setAttribute("fill", "none");
 			overlayGroup.appendChild(cutLine);
 
 			let scissors = doc.createElementNS(SVG_NS, "image");
@@ -1116,6 +1133,36 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.updateGraphTransform(state);
 	},
 
+	updateCanvasCursorState(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.canvas) return;
+		state.canvas.classList.toggle("paper-relations-panning", state.dragMode === "pan");
+		state.canvas.classList.toggle("paper-relations-cut-ready", !!state.altModifierPressed || state.dragMode === "edge-cut");
+	},
+
+	syncAltModifierByEvent(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let next = !!event?.altKey;
+		if (state.altModifierPressed === next) return;
+		state.altModifierPressed = next;
+		this.updateCanvasCursorState(window);
+	},
+
+	onWindowKeyStateChange(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (event?.key && event.key !== "Alt") return;
+		this.syncAltModifierByEvent(window, event);
+	},
+
+	onWindowBlur(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.altModifierPressed = false;
+		this.updateCanvasCursorState(window);
+	},
+
 	onGraphContextMenu(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -1127,6 +1174,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 	onGraphMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.syncAltModifierByEvent(window, event);
 		if (event.button === 2 && event.altKey) {
 			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
 			state.dragMode = "edge-cut";
@@ -1142,6 +1190,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				end: start,
 			};
 			this.applyAnchorVisibilityToDOM(state);
+			this.updateCanvasCursorState(window);
 			this.renderGraph(window);
 			event.preventDefault();
 			event.stopPropagation();
@@ -1175,6 +1224,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.hoverAnchor = null;
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
+		this.updateCanvasCursorState(window);
 
 		if (state.dragNodeID) {
 			let node = state.nodes.find((n) => n.id === state.dragNodeID);
@@ -1193,6 +1243,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 	onGraphMouseMove(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.syncAltModifierByEvent(window, event);
 
 		if (!state.dragMode) {
 			this.updateHoverAnchorByClient(window, event.clientX, event.clientY);
@@ -1262,6 +1313,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 	async onGraphMouseUp(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.syncAltModifierByEvent(window, event);
 		let dragMode = state.dragMode;
 		let dragNodeID = state.dragNodeID;
 		let edgeDraft = state.edgeDraft;
@@ -1272,6 +1324,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.dragNodeRawY = null;
 		state.edgeDraft = null;
 		state.edgeCutDraft = null;
+		this.updateCanvasCursorState(window);
 		if (dragMode === "edge-cut") {
 			if (edgeCutDraft?.start && edgeCutDraft?.end) {
 				await this.cutEdgesByLine(window, edgeCutDraft.start, edgeCutDraft.end);
