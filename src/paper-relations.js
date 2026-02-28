@@ -200,7 +200,12 @@ PaperRelations = {
 				onGetData: ({ item }) => this.getItemRemark(item),
 				onSetData: ({ item, value }) => {
 					this.setItemRemark(item, value)
-						.then(() => this.refreshRemarkPresentation())
+						.then((changed) => {
+							this.refreshRemarkPresentation();
+							if (changed) {
+								this.refreshGraphNodeLabelsForItem(item);
+							}
+						})
 						.catch((error) => Zotero.logError(error));
 				},
 				onItemChange: ({ item, setEnabled }) => {
@@ -241,6 +246,44 @@ PaperRelations = {
 		}
 		if (Zotero.ItemTreeManager?.refreshColumns) {
 			Zotero.ItemTreeManager.refreshColumns();
+		}
+	},
+
+	refreshGraphNodeLabelsForItem(item) {
+		if (!item) return;
+		let itemLibraryID = item.libraryID || Zotero.Libraries.userLibraryID;
+		let itemKey = item.key;
+		if (!itemLibraryID || !itemKey) return;
+
+		for (let win of Zotero.getMainWindows()) {
+			if (!win?.ZoteroPane) continue;
+			let state = this.graphStates.get(win);
+			if (!state?.nodes?.length) continue;
+
+			let changed = false;
+			for (let node of state.nodes) {
+				if (node.libraryID !== itemLibraryID || node.itemKey !== itemKey) continue;
+				let nextLabel = this.getNodeLabelForDisplay(node);
+				let nextWidth = this.getNodeWidthForLabel(nextLabel);
+				let nextTitle = this.getItemTitle(item);
+				if (node.label !== nextLabel) {
+					node.label = nextLabel;
+					changed = true;
+				}
+				if (node.width !== nextWidth) {
+					node.width = nextWidth;
+					changed = true;
+				}
+				if (node.title !== nextTitle) {
+					node.title = nextTitle;
+					changed = true;
+				}
+			}
+
+			if (changed) {
+				this.renderGraph(win);
+				this.notifyGraphSelectionChanged(win);
+			}
 		}
 	},
 

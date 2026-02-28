@@ -18,6 +18,7 @@
   - Adds a custom main-list column `Remark` via `Zotero.ItemTreeManager`.
   - Adds a custom editable info-row `Remark` in right item info pane (`afterCreators`).
   - Stores remark in item `extra` as `remark: ...` (directly compatible with Ethereal Style remark data already in this format).
+  - Editing `Remark` in right info pane immediately refreshes graph node labels for that paper in open workspaces.
   - `Topic Context Section` includes a one-time `Migrate ES Remarks` action to import legacy ES note-tag based remark data into `extra`.
 - Middle-bottom `Relation Graph Workspace` under item list
   - Resizable with splitter (top edge drag).
