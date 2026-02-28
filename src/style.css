@@ -51,7 +51,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 }
 
 #paper-relations-graph-canvas.paper-relations-temporary-topic {
-	border-style: dashed;
+	border-style: solid;
 }
 
 #paper-relations-graph-canvas:active {
@@ -113,6 +113,23 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	stroke-linejoin: round;
 	marker-end: url(#paper-relations-arrow);
 	opacity: 0.9;
+}
+
+.paper-relations-edge-draft {
+	stroke: #2f3f4f;
+	opacity: 0.75;
+	marker-end: none;
+}
+
+.paper-relations-node-anchor {
+	fill: #151515;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 90ms ease;
+}
+
+.paper-relations-node-anchor.active {
+	opacity: 0.96;
 }
 
 .paper-relations-node rect {

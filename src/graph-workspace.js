@@ -215,6 +215,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			activeItemKey: null,
 			activeItemLibraryID: null,
 			selectedNodeID: null,
+			hoverAnchor: null,
+			edgeDraft: null,
+			anchorHoverRadiusPx: 14,
 			scale: 1,
 			panX: 40,
 			panY: 26,
@@ -658,6 +661,34 @@ var PaperRelationsGraphWorkspaceMixin = {
 			edgesGroup.appendChild(path);
 		}
 
+		if (state.edgeDraft?.startAnchor && state.edgeDraft?.pointer) {
+			let draftEnd = state.edgeDraft.targetAnchor || state.edgeDraft.pointer;
+			let draftPath = this.buildBezierPathByAnchors(
+				state.edgeDraft.startAnchor,
+				draftEnd,
+				state.edgeDraft.targetAnchor?.side || null,
+			);
+			if (draftPath) {
+				let path = doc.createElementNS(SVG_NS, "path");
+				path.setAttribute("class", "paper-relations-edge paper-relations-edge-draft");
+				path.setAttribute("d", draftPath);
+				edgesGroup.appendChild(path);
+			}
+		}
+
+		let isAnchorVisible = (nodeID, side) => {
+			if (state.hoverAnchor?.nodeID === nodeID && state.hoverAnchor?.side === side) {
+				return true;
+			}
+			if (state.edgeDraft?.startAnchor?.nodeID === nodeID && state.edgeDraft?.startAnchor?.side === side) {
+				return true;
+			}
+			if (state.edgeDraft?.targetAnchor?.nodeID === nodeID && state.edgeDraft?.targetAnchor?.side === side) {
+				return true;
+			}
+			return false;
+		};
+
 		for (let node of nodes) {
 			let group = doc.createElementNS(SVG_NS, "g");
 			let selectedClass = state.selectedNodeID === node.id ? " selected" : "";
@@ -693,7 +724,27 @@ var PaperRelationsGraphWorkspaceMixin = {
 				text.appendChild(tspan);
 			}
 
-			group.append(rect, titleElem, text);
+			let leftAnchor = doc.createElementNS(SVG_NS, "circle");
+			leftAnchor.setAttribute("class", "paper-relations-node-anchor");
+			leftAnchor.setAttribute("data-anchor-side", "left");
+			leftAnchor.setAttribute("cx", "0");
+			leftAnchor.setAttribute("cy", String(height / 2));
+			leftAnchor.setAttribute("r", "4");
+			if (isAnchorVisible(node.id, "left")) {
+				leftAnchor.classList.add("active");
+			}
+
+			let rightAnchor = doc.createElementNS(SVG_NS, "circle");
+			rightAnchor.setAttribute("class", "paper-relations-node-anchor");
+			rightAnchor.setAttribute("data-anchor-side", "right");
+			rightAnchor.setAttribute("cx", String(width));
+			rightAnchor.setAttribute("cy", String(height / 2));
+			rightAnchor.setAttribute("r", "4");
+			if (isAnchorVisible(node.id, "right")) {
+				rightAnchor.classList.add("active");
+			}
+
+			group.append(rect, titleElem, text, leftAnchor, rightAnchor);
 			nodesGroup.appendChild(group);
 		}
 
@@ -720,6 +771,127 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let c2x = endX - curve * direction;
 
 		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+	},
+
+	buildBezierPathByAnchors(startAnchor, endPoint, endSide = null) {
+		if (!startAnchor || !endPoint) return "";
+		let startX = startAnchor.x;
+		let startY = startAnchor.y;
+		let endX = endPoint.x;
+		let endY = endPoint.y;
+		let startDirection = startAnchor.side === "right" ? 1 : -1;
+		let endDirection = endSide === "left" ? -1 : (endSide === "right" ? 1 : -startDirection);
+		let curve = Math.max(72, Math.abs(endX - startX) * 0.45);
+		let c1x = startX + curve * startDirection;
+		let c2x = endX - curve * endDirection;
+		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+	},
+
+	getNodeAnchorPoint(node, side) {
+		if (!node || (side !== "left" && side !== "right")) return null;
+		let width = Number.isFinite(node.renderWidth) ? node.renderWidth :
+			this.getNodeRenderMetrics(node).width;
+		let height = Number.isFinite(node.renderHeight) ? node.renderHeight :
+			this.getNodeRenderMetrics(node).height;
+		return {
+			nodeID: node.id,
+			side,
+			x: side === "left" ? node.x : node.x + width,
+			y: node.y + height / 2,
+		};
+	},
+
+	sameAnchor(a, b) {
+		if (!a && !b) return true;
+		if (!a || !b) return false;
+		return a.nodeID === b.nodeID && a.side === b.side;
+	},
+
+	getAnchorPairEndpoints(startAnchor, targetAnchor) {
+		if (!startAnchor || !targetAnchor) return null;
+		if (startAnchor.nodeID === targetAnchor.nodeID) return null;
+		if (startAnchor.side === targetAnchor.side) return null;
+		if (startAnchor.side === "right" && targetAnchor.side === "left") {
+			return {
+				fromNodeID: startAnchor.nodeID,
+				toNodeID: targetAnchor.nodeID,
+			};
+		}
+		if (startAnchor.side === "left" && targetAnchor.side === "right") {
+			return {
+				fromNodeID: targetAnchor.nodeID,
+				toNodeID: startAnchor.nodeID,
+			};
+		}
+		return null;
+	},
+
+	clientToGraphPoint(state, clientX, clientY) {
+		let point = this.clientToSVGPoint(state, clientX, clientY);
+		return {
+			x: (point.x - state.panX) / state.scale,
+			y: (point.y - state.panY) / state.scale,
+		};
+	},
+
+	isClientInsideSVG(state, clientX, clientY) {
+		let rect = state.svg.getBoundingClientRect();
+		return (
+			clientX >= rect.left &&
+			clientX <= rect.right &&
+			clientY >= rect.top &&
+			clientY <= rect.bottom
+		);
+	},
+
+	getNearestAnchorAtClient(state, clientX, clientY) {
+		if (!state?.nodes?.length) return null;
+		let point = this.clientToGraphPoint(state, clientX, clientY);
+		let maxDistance = Math.max(6, state.anchorHoverRadiusPx / Math.max(0.3, state.scale));
+		let maxDistanceSq = maxDistance * maxDistance;
+		let nearest = null;
+
+		for (let node of state.nodes) {
+			let leftAnchor = this.getNodeAnchorPoint(node, "left");
+			let rightAnchor = this.getNodeAnchorPoint(node, "right");
+			for (let anchor of [leftAnchor, rightAnchor]) {
+				if (!anchor) continue;
+				let dx = point.x - anchor.x;
+				let dy = point.y - anchor.y;
+				let distSq = dx * dx + dy * dy;
+				if (distSq > maxDistanceSq) continue;
+				if (!nearest || distSq < nearest.distSq) {
+					nearest = {
+						nodeID: anchor.nodeID,
+						side: anchor.side,
+						x: anchor.x,
+						y: anchor.y,
+						distSq,
+					};
+				}
+			}
+		}
+
+		if (!nearest) return null;
+		return {
+			nodeID: nearest.nodeID,
+			side: nearest.side,
+			x: nearest.x,
+			y: nearest.y,
+		};
+	},
+
+	updateHoverAnchorByClient(window, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state) return null;
+		let nextHover = this.isClientInsideSVG(state, clientX, clientY)
+			? this.getNearestAnchorAtClient(state, clientX, clientY)
+			: null;
+		if (!this.sameAnchor(state.hoverAnchor, nextHover)) {
+			state.hoverAnchor = nextHover;
+			this.renderGraph(window);
+		}
+		return nextHover;
 	},
 
 	updateGraphTransform(state) {
@@ -765,12 +937,31 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (event.button !== 0) return;
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		let hoverAnchor = this.getNearestAnchorAtClient(state, event.clientX, event.clientY);
+		if (hoverAnchor) {
+			state.dragMode = "edge-draft";
+			state.dragNodeID = null;
+			state.dragNodeRawX = null;
+			state.dragNodeRawY = null;
+			state.lastClientX = event.clientX;
+			state.lastClientY = event.clientY;
+			state.hoverAnchor = hoverAnchor;
+			state.edgeDraft = {
+				startAnchor: hoverAnchor,
+				targetAnchor: null,
+				pointer: { x: hoverAnchor.x, y: hoverAnchor.y },
+			};
+			this.renderGraph(window);
+			event.preventDefault();
+			return;
+		}
 
 		let nodeElem = event.target.closest("[data-node-id]");
 		state.dragMode = nodeElem ? "node" : "pan";
 		state.dragNodeID = nodeElem ? nodeElem.getAttribute("data-node-id") : null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		state.hoverAnchor = null;
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
 
@@ -784,13 +975,35 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 		else {
 			this.selectGraphNode(window, null);
+			if (state.hoverAnchor) {
+				state.hoverAnchor = null;
+				this.renderGraph(window);
+			}
 		}
 		event.preventDefault();
 	},
 
 	onGraphMouseMove(window, event) {
 		let state = this.graphStates.get(window);
-		if (!state || !state.dragMode) return;
+		if (!state) return;
+
+		if (!state.dragMode) {
+			this.updateHoverAnchorByClient(window, event.clientX, event.clientY);
+			return;
+		}
+
+		if (state.dragMode === "edge-draft" && state.edgeDraft?.startAnchor) {
+			let pointer = this.clientToGraphPoint(state, event.clientX, event.clientY);
+			state.edgeDraft.pointer = pointer;
+			let hoverAnchor = this.updateHoverAnchorByClient(window, event.clientX, event.clientY);
+			let candidate = this.getAnchorPairEndpoints(state.edgeDraft.startAnchor, hoverAnchor) ? hoverAnchor : null;
+			if (!this.sameAnchor(state.edgeDraft.targetAnchor, candidate)) {
+				state.edgeDraft.targetAnchor = candidate;
+			}
+			this.renderGraph(window);
+			event.preventDefault();
+			return;
+		}
 
 		let dx = event.clientX - state.lastClientX;
 		let dy = event.clientY - state.lastClientY;
@@ -832,15 +1045,51 @@ var PaperRelationsGraphWorkspaceMixin = {
 		event.preventDefault();
 	},
 
-	onGraphMouseUp(window) {
+	async onGraphMouseUp(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let dragMode = state.dragMode;
 		let dragNodeID = state.dragNodeID;
+		let edgeDraft = state.edgeDraft;
 		state.dragMode = null;
 		state.dragNodeID = null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		state.edgeDraft = null;
+		if (dragMode === "edge-draft") {
+			if (edgeDraft?.startAnchor && edgeDraft?.targetAnchor) {
+				let endpoints = this.getAnchorPairEndpoints(edgeDraft.startAnchor, edgeDraft.targetAnchor);
+				if (
+					endpoints &&
+					state.activeTopicID &&
+					state.activeLibraryID &&
+					!state.isTemporaryTopic
+				) {
+					try {
+						let edge = await this.addEdge(state.activeLibraryID, state.activeTopicID, {
+							fromNodeID: endpoints.fromNodeID,
+							toNodeID: endpoints.toNodeID,
+							type: "related",
+						});
+						if (edge && !state.edges.some((e) => e.id === edge.id)) {
+							state.edges.push({
+								id: edge.id,
+								from: edge.fromNodeID,
+								to: edge.toNodeID,
+								type: edge.type || "related",
+							});
+						}
+					}
+					catch (error) {
+						Zotero.logError(error);
+					}
+				}
+			}
+			this.renderGraph(window);
+			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
+			return;
+		}
 		if (
 			dragMode === "node" &&
 			dragNodeID &&

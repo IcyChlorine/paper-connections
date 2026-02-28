@@ -36,6 +36,9 @@
   - Mouse wheel zoom (zoom around cursor position).
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
+  - Node left/right anchors appear as black dots only when cursor nears an anchor.
+  - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
+  - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).
   - Background grid remains visible regardless of snap toggle state.
   - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
 - Node rendering improvements
@@ -56,6 +59,6 @@
 
 ## Pending TODO (Next Stage)
 - Topic chooser UI when a paper belongs to multiple topics.
-- Edge creation/editing UI (relation type and note).
+- Edge editing UI (relation type and note).
 - Integration with real relation semantics in right pane (beyond debug scaffolding).
 - Schema migration helpers for future storage versions.
