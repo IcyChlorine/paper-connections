@@ -41,6 +41,7 @@
   - Mouse wheel zoom (zoom around cursor position).
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
+  - Selecting a graph node reverse-syncs selection to the top Zotero item list.
   - Node left/right anchors appear as black dots only when cursor nears an anchor.
   - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
   - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).

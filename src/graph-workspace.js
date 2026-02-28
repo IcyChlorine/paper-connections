@@ -78,7 +78,14 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		let header = doc.createElementNS(XHTML_NS, "div");
 		header.id = "paper-relations-graph-header";
-		header.textContent = "Relation Graph Workspace";
+		let headerMain = doc.createElementNS(XHTML_NS, "span");
+		headerMain.className = "paper-relations-graph-header-main";
+		headerMain.textContent = "Relation Graph Workspace";
+		let headerTemporaryHint = doc.createElementNS(XHTML_NS, "span");
+		headerTemporaryHint.className = "paper-relations-graph-header-temporary-hint";
+		headerTemporaryHint.textContent = "temporary topic";
+		headerTemporaryHint.hidden = true;
+		header.append(headerMain, headerTemporaryHint);
 
 		let subheader = doc.createElementNS(XHTML_NS, "div");
 		subheader.id = "paper-relations-graph-subheader";
@@ -223,6 +230,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 			window,
 			canvas,
 			header,
+			headerMain,
+			headerTemporaryHint,
 			subheader,
 			boardGrid,
 			svg,
@@ -365,7 +374,17 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state) return;
 
 		let summary = this.getGraphContextSummary(window);
-		state.header.textContent = summary.topicLabel.replace(/^Topic:\s*/, "");
+		let headerTitle = state.activeTopicName || "-";
+		if (state.headerMain) {
+			state.headerMain.textContent = headerTitle;
+		}
+		else {
+			let fallbackTitle = summary.topicLabel.replace(/^Topic:\s*/, "").replace(/\s+\(temporary\)\s*$/, "");
+			state.header.textContent = fallbackTitle;
+		}
+		if (state.headerTemporaryHint) {
+			state.headerTemporaryHint.hidden = !state.isTemporaryTopic;
+		}
 		state.subheader.textContent = summary.topicStatus;
 		this.setCanvasButtonVisual(state.pinButton, !!state.pinSelection);
 		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
@@ -1469,8 +1488,42 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state) return;
 		if (state.selectedNodeID === nodeID) return;
 		state.selectedNodeID = nodeID;
+		this.syncSelectedGraphNodeToItemList(window, nodeID);
 		this.renderGraph(window);
 		this.notifyGraphSelectionChanged(window);
+	},
+
+	syncSelectedGraphNodeToItemList(window, nodeID) {
+		if (!nodeID) return;
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let node = state.nodes.find((n) => n.id === nodeID);
+		if (!node?.libraryID || !node?.itemKey) return;
+
+		let item = null;
+		if (typeof Zotero.Items?.getByLibraryAndKey === "function") {
+			try {
+				item = Zotero.Items.getByLibraryAndKey(node.libraryID, node.itemKey);
+			}
+			catch (error) {
+				Zotero.logError(error);
+			}
+		}
+		if (!item?.id) return;
+
+		let currentSelected = window.ZoteroPane?.getSelectedItems?.() || [];
+		if (currentSelected.some((it) => it?.id === item.id)) return;
+
+		if (typeof window.ZoteroPane?.selectItems !== "function") return;
+		try {
+			let maybePromise = window.ZoteroPane.selectItems([item.id]);
+			if (maybePromise && typeof maybePromise.then === "function") {
+				maybePromise.catch((error) => Zotero.logError(error));
+			}
+		}
+		catch (error) {
+			Zotero.logError(error);
+		}
 	},
 
 	notifyGraphSelectionChanged(window) {
