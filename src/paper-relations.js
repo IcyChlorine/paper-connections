@@ -468,6 +468,7 @@ PaperRelations = {
 		if (state?.handlers) {
 			state.svg?.removeEventListener("wheel", state.handlers.wheel);
 			state.svg?.removeEventListener("mousedown", state.handlers.mousedown);
+			state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
 			window.removeEventListener("mousemove", state.handlers.mousemove);
 			window.removeEventListener("mouseup", state.handlers.mouseup);
 			state.canvas?.removeEventListener("dragover", state.handlers.dragover);

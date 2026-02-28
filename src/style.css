@@ -120,6 +120,19 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	opacity: 0.75;
 }
 
+.paper-relations-edge-cut-preview {
+	stroke: #1a1a1a;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-dasharray: 6 5;
+	opacity: 0.82;
+}
+
+.paper-relations-edge-cut-scissors {
+	pointer-events: none;
+	opacity: 0.96;
+}
+
 .paper-relations-node-anchor {
 	fill: #151515;
 	opacity: 0;

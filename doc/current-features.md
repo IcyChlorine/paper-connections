@@ -39,6 +39,8 @@
   - Node left/right anchors appear as black dots only when cursor nears an anchor.
   - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
   - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).
+  - Hold `Alt` and drag with right mouse button to draw a dotted cut line and remove intersected relation edges on release.
+  - Cut preview shows a scissors icon near cut-path start.
   - Background grid remains visible regardless of snap toggle state.
   - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
 - Node rendering improvements

@@ -7,6 +7,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			if (existingState?.handlers) {
 				existingState.svg?.removeEventListener("wheel", existingState.handlers.wheel);
 				existingState.svg?.removeEventListener("mousedown", existingState.handlers.mousedown);
+				existingState.svg?.removeEventListener("contextmenu", existingState.handlers.contextmenu);
 				window.removeEventListener("mousemove", existingState.handlers.mousemove);
 				window.removeEventListener("mouseup", existingState.handlers.mouseup);
 				existingState.canvas?.removeEventListener("dragover", existingState.handlers.dragover);
@@ -132,7 +133,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		edgesGroup.setAttribute("class", "paper-relations-edges");
 		let nodesGroup = doc.createElementNS(SVG_NS, "g");
 		nodesGroup.setAttribute("class", "paper-relations-nodes");
-		viewport.append(boardGroup, edgesGroup, nodesGroup);
+		let overlayGroup = doc.createElementNS(SVG_NS, "g");
+		overlayGroup.setAttribute("class", "paper-relations-overlay");
+		viewport.append(boardGroup, edgesGroup, nodesGroup, overlayGroup);
 		svg.appendChild(viewport);
 
 		let canvasControls = doc.createElementNS(SVG_NS, "g");
@@ -200,6 +203,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			viewport,
 			edgesGroup,
 			nodesGroup,
+			overlayGroup,
 			canvasControls,
 			pinButton,
 			snapButton,
@@ -217,6 +221,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			selectedNodeID: null,
 			hoverAnchor: null,
 			edgeDraft: null,
+			edgeCutDraft: null,
 			anchorHoverRadiusPx: 14,
 			scale: 1,
 			panX: 40,
@@ -233,6 +238,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.handlers = {
 			wheel: (event) => this.onGraphWheel(window, event),
 			mousedown: (event) => this.onGraphMouseDown(window, event),
+			contextmenu: (event) => this.onGraphContextMenu(window, event),
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
 			dragover: (event) => this.onGraphDragOver(window, event),
@@ -246,6 +252,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
 		svg.addEventListener("mousedown", state.handlers.mousedown);
+		svg.addEventListener("contextmenu", state.handlers.contextmenu);
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
 		canvas.addEventListener("dragover", state.handlers.dragover);
@@ -409,6 +416,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 				state.nodes = [];
 				state.edges = [];
 				state.selectedNodeID = null;
+				state.hoverAnchor = null;
+				state.edgeDraft = null;
+				state.edgeCutDraft = null;
 				this.renderGraph(window);
 			}
 			this.refreshGraphChrome(window);
@@ -476,6 +486,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.activeTopicName = topic.name || "Untitled Topic";
 		state.isTemporaryTopic = false;
 		state.selectedNodeID = null;
+		state.hoverAnchor = null;
+		state.edgeDraft = null;
+		state.edgeCutDraft = null;
 		if (selectedItemRef) {
 			let selectedNode = nodes.find((node) => this.getItemRef(node.libraryID, node.itemKey) === selectedItemRef);
 			if (selectedNode) {
@@ -508,6 +521,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.activeTopicName = title;
 		state.isTemporaryTopic = true;
 		state.selectedNodeID = nodeID;
+		state.hoverAnchor = null;
+		state.edgeDraft = null;
+		state.edgeCutDraft = null;
 		this.renderGraph(window);
 	},
 
@@ -640,12 +656,13 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 
-		let { nodes, edges, edgesGroup, nodesGroup } = state;
+		let { nodes, edges, edgesGroup, nodesGroup, overlayGroup } = state;
 		let doc = window.document;
 		const SVG_NS = "http://www.w3.org/2000/svg";
 
 		edgesGroup.replaceChildren();
 		nodesGroup.replaceChildren();
+		overlayGroup.replaceChildren();
 
 		for (let node of nodes) {
 			let metrics = this.getNodeRenderMetrics(node);
@@ -683,8 +700,33 @@ var PaperRelationsGraphWorkspaceMixin = {
 				else if (state.edgeDraft.startAnchor.side === "left") {
 					path.setAttribute("marker-start", "url(#paper-relations-arrow)");
 				}
-				edgesGroup.appendChild(path);
+				overlayGroup.appendChild(path);
 			}
+		}
+
+		if (state.edgeCutDraft?.start && state.edgeCutDraft?.end) {
+			let cutLine = doc.createElementNS(SVG_NS, "line");
+			cutLine.setAttribute("class", "paper-relations-edge-cut-preview");
+			cutLine.setAttribute("x1", String(state.edgeCutDraft.start.x));
+			cutLine.setAttribute("y1", String(state.edgeCutDraft.start.y));
+			cutLine.setAttribute("x2", String(state.edgeCutDraft.end.x));
+			cutLine.setAttribute("y2", String(state.edgeCutDraft.end.y));
+			overlayGroup.appendChild(cutLine);
+
+			let scissors = doc.createElementNS(SVG_NS, "image");
+			let scissorsSize = 18;
+			let scissorsOffsetX = 8;
+			let scissorsOffsetY = -18;
+			let scissorsHref = `${this.rootURI}assets/scissors.svg`;
+			scissors.setAttribute("class", "paper-relations-edge-cut-scissors");
+			scissors.setAttribute("x", String(state.edgeCutDraft.start.x + scissorsOffsetX));
+			scissors.setAttribute("y", String(state.edgeCutDraft.start.y + scissorsOffsetY));
+			scissors.setAttribute("width", String(scissorsSize));
+			scissors.setAttribute("height", String(scissorsSize));
+			scissors.setAttribute("preserveAspectRatio", "xMidYMid meet");
+			scissors.setAttribute("href", scissorsHref);
+			scissors.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", scissorsHref);
+			overlayGroup.appendChild(scissors);
 		}
 
 		for (let node of nodes) {
@@ -762,14 +804,27 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let startY = fromNode.y + fromHeight / 2;
 		let endX = toNode.x;
 		let endY = toNode.y + toHeight / 2;
+		let curve = this.getBezierCurveByEndpoints(startX, startY, endX, endY);
+		return this.buildBezierPathFromCurve(curve);
+	},
 
+	buildBezierPathFromCurve(curve) {
+		if (!curve) return "";
+		return `M ${curve.start.x} ${curve.start.y} C ${curve.c1.x} ${curve.c1.y}, ${curve.c2.x} ${curve.c2.y}, ${curve.end.x} ${curve.end.y}`;
+	},
+
+	getBezierCurveByEndpoints(startX, startY, endX, endY) {
 		let dx = endX - startX;
 		let direction = dx === 0 ? 1 : Math.sign(dx);
 		let curve = Math.max(72, Math.abs(dx) * 0.45);
 		let c1x = startX + curve * direction;
 		let c2x = endX - curve * direction;
-
-		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+		return {
+			start: { x: startX, y: startY },
+			c1: { x: c1x, y: startY },
+			c2: { x: c2x, y: endY },
+			end: { x: endX, y: endY },
+		};
 	},
 
 	buildBezierPathByAnchors(startAnchor, endPoint) {
@@ -778,12 +833,109 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let startY = startAnchor.y;
 		let endX = endPoint.x;
 		let endY = endPoint.y;
-		let dx = endX - startX;
-		let direction = dx === 0 ? 1 : Math.sign(dx);
-		let curve = Math.max(72, Math.abs(endX - startX) * 0.45);
-		let c1x = startX + curve * direction;
-		let c2x = endX - curve * direction;
-		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+		return this.buildBezierPathFromCurve(this.getBezierCurveByEndpoints(startX, startY, endX, endY));
+	},
+
+	getBezierCurveForEdgeNodes(fromNode, toNode) {
+		if (!fromNode || !toNode) return null;
+		let fromWidth = Number.isFinite(fromNode.renderWidth) ? fromNode.renderWidth :
+			(Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth);
+		let fromHeight = Number.isFinite(fromNode.renderHeight) ? fromNode.renderHeight :
+			(Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight);
+		let toHeight = Number.isFinite(toNode.renderHeight) ? toNode.renderHeight :
+			(Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight);
+		return this.getBezierCurveByEndpoints(
+			fromNode.x + fromWidth,
+			fromNode.y + fromHeight / 2,
+			toNode.x,
+			toNode.y + toHeight / 2,
+		);
+	},
+
+	getPointOnCubicBezier(curve, t) {
+		let inv = 1 - t;
+		let x = inv * inv * inv * curve.start.x
+			+ 3 * inv * inv * t * curve.c1.x
+			+ 3 * inv * t * t * curve.c2.x
+			+ t * t * t * curve.end.x;
+		let y = inv * inv * inv * curve.start.y
+			+ 3 * inv * inv * t * curve.c1.y
+			+ 3 * inv * t * t * curve.c2.y
+			+ t * t * t * curve.end.y;
+		return { x, y };
+	},
+
+	isPointOnSegment(point, a, b, epsilon = 1e-6) {
+		return (
+			point.x <= Math.max(a.x, b.x) + epsilon &&
+			point.x + epsilon >= Math.min(a.x, b.x) &&
+			point.y <= Math.max(a.y, b.y) + epsilon &&
+			point.y + epsilon >= Math.min(a.y, b.y)
+		);
+	},
+
+	getOrientation(a, b, c, epsilon = 1e-6) {
+		let value = (b.y - a.y) * (c.x - a.x) - (b.x - a.x) * (c.y - a.y);
+		if (Math.abs(value) <= epsilon) return 0;
+		return value > 0 ? 1 : -1;
+	},
+
+	doSegmentsIntersect(a1, a2, b1, b2, epsilon = 1e-6) {
+		let o1 = this.getOrientation(a1, a2, b1, epsilon);
+		let o2 = this.getOrientation(a1, a2, b2, epsilon);
+		let o3 = this.getOrientation(b1, b2, a1, epsilon);
+		let o4 = this.getOrientation(b1, b2, a2, epsilon);
+
+		if (o1 !== o2 && o3 !== o4) return true;
+		if (o1 === 0 && this.isPointOnSegment(b1, a1, a2, epsilon)) return true;
+		if (o2 === 0 && this.isPointOnSegment(b2, a1, a2, epsilon)) return true;
+		if (o3 === 0 && this.isPointOnSegment(a1, b1, b2, epsilon)) return true;
+		if (o4 === 0 && this.isPointOnSegment(a2, b1, b2, epsilon)) return true;
+		return false;
+	},
+
+	doCutSegmentIntersectCurve(cutStart, cutEnd, curve, steps = 28) {
+		if (!cutStart || !cutEnd || !curve) return false;
+		let prev = curve.start;
+		for (let i = 1; i <= steps; i++) {
+			let t = i / steps;
+			let curr = this.getPointOnCubicBezier(curve, t);
+			if (this.doSegmentsIntersect(cutStart, cutEnd, prev, curr)) {
+				return true;
+			}
+			prev = curr;
+		}
+		return false;
+	},
+
+	async cutEdgesByLine(window, cutStart, cutEnd) {
+		let state = this.graphStates.get(window);
+		if (!state || !cutStart || !cutEnd) return 0;
+		let toRemoveIDs = [];
+		for (let edge of state.edges) {
+			let fromNode = state.nodes.find((n) => n.id === edge.from);
+			let toNode = state.nodes.find((n) => n.id === edge.to);
+			if (!fromNode || !toNode) continue;
+			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+			if (this.doCutSegmentIntersectCurve(cutStart, cutEnd, curve)) {
+				toRemoveIDs.push(edge.id);
+			}
+		}
+		if (!toRemoveIDs.length) return 0;
+
+		let removeSet = new Set(toRemoveIDs);
+		state.edges = state.edges.filter((edge) => !removeSet.has(edge.id));
+
+		if (state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic) {
+			await Promise.all(toRemoveIDs.map((edgeID) =>
+				this.removeEdge(state.activeLibraryID, state.activeTopicID, edgeID)
+					.catch((error) => {
+						Zotero.logError(error);
+						return false;
+					}),
+			));
+		}
+		return toRemoveIDs.length;
 	},
 
 	isAnchorVisibleInState(state, nodeID, side) {
@@ -964,10 +1116,38 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.updateGraphTransform(state);
 	},
 
-	onGraphMouseDown(window, event) {
-		if (event.button !== 0) return;
+	onGraphContextMenu(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		if (state.dragMode === "edge-cut" || (event.altKey && event.button === 2)) {
+			event.preventDefault();
+		}
+	},
+
+	onGraphMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (event.button === 2 && event.altKey) {
+			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
+			state.dragMode = "edge-cut";
+			state.dragNodeID = null;
+			state.dragNodeRawX = null;
+			state.dragNodeRawY = null;
+			state.lastClientX = event.clientX;
+			state.lastClientY = event.clientY;
+			state.hoverAnchor = null;
+			state.edgeDraft = null;
+			state.edgeCutDraft = {
+				start,
+				end: start,
+			};
+			this.applyAnchorVisibilityToDOM(state);
+			this.renderGraph(window);
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (event.button !== 0) return;
 		let hoverAnchor = this.getNearestAnchorAtClient(state, event.clientX, event.clientY);
 		if (hoverAnchor) {
 			state.dragMode = "edge-draft";
@@ -1032,6 +1212,13 @@ var PaperRelationsGraphWorkspaceMixin = {
 			return;
 		}
 
+		if (state.dragMode === "edge-cut" && state.edgeCutDraft?.start) {
+			state.edgeCutDraft.end = this.clientToGraphPoint(state, event.clientX, event.clientY);
+			this.renderGraph(window);
+			event.preventDefault();
+			return;
+		}
+
 		let dx = event.clientX - state.lastClientX;
 		let dy = event.clientY - state.lastClientY;
 		if (!dx && !dy) return;
@@ -1072,17 +1259,31 @@ var PaperRelationsGraphWorkspaceMixin = {
 		event.preventDefault();
 	},
 
-	async onGraphMouseUp(window) {
+	async onGraphMouseUp(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let dragMode = state.dragMode;
 		let dragNodeID = state.dragNodeID;
 		let edgeDraft = state.edgeDraft;
+		let edgeCutDraft = state.edgeCutDraft;
 		state.dragMode = null;
 		state.dragNodeID = null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
 		state.edgeDraft = null;
+		state.edgeCutDraft = null;
+		if (dragMode === "edge-cut") {
+			if (edgeCutDraft?.start && edgeCutDraft?.end) {
+				await this.cutEdgesByLine(window, edgeCutDraft.start, edgeCutDraft.end);
+			}
+			this.renderGraph(window);
+			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
+			if (event) {
+				event.preventDefault();
+			}
+			return;
+		}
 		if (dragMode === "edge-draft") {
 			if (edgeDraft?.startAnchor && edgeDraft?.targetAnchor) {
 				let endpoints = this.getAnchorPairEndpoints(edgeDraft.startAnchor, edgeDraft.targetAnchor);
