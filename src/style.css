@@ -118,7 +118,6 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 .paper-relations-edge-draft {
 	stroke: #2f3f4f;
 	opacity: 0.75;
-	marker-end: none;
 }
 
 .paper-relations-node-anchor {

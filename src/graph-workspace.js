@@ -677,6 +677,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 				let path = doc.createElementNS(SVG_NS, "path");
 				path.setAttribute("class", "paper-relations-edge paper-relations-edge-draft");
 				path.setAttribute("d", draftPath);
+				if (state.edgeDraft.startAnchor.side === "right") {
+					path.setAttribute("marker-end", "url(#paper-relations-arrow)");
+				}
+				else if (state.edgeDraft.startAnchor.side === "left") {
+					path.setAttribute("marker-start", "url(#paper-relations-arrow)");
+				}
 				edgesGroup.appendChild(path);
 			}
 		}
