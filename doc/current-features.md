@@ -14,6 +14,11 @@
 - Right item-pane custom section: `Selection Debug Section`
   - Shows selected graph node label/id.
   - Shows incoming and outgoing linked nodes for debug.
+- Remark system
+  - Adds a custom main-list column `Remark` via `Zotero.ItemTreeManager`.
+  - Adds a custom editable info-row `Remark` in right item info pane (`afterCreators`).
+  - Stores remark in item `extra` as `remark: ...` (directly compatible with Ethereal Style remark data already in this format).
+  - `Topic Context Section` includes a one-time `Migrate ES Remarks` action to import legacy ES note-tag based remark data into `extra`.
 - Middle-bottom `Relation Graph Workspace` under item list
   - Resizable with splitter (top edge drag).
   - Grid board and nodes pan together.
@@ -70,3 +75,4 @@
 - Edge editing UI (relation type and note).
 - Integration with real relation semantics in right pane (beyond debug scaffolding).
 - Schema migration helpers for future storage versions.
+

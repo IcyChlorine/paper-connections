@@ -10,3 +10,6 @@ paper-relations-selection-debug-header =
 paper-relations-selection-debug-sidenav =
     .tooltiptext = Selection Debug
 
+paper-relations-remark-label =
+    .label = Remark
+

@@ -126,3 +126,15 @@ Implemented in `src/paper-relations-storage.js` (storage/CRUD) and used by `src/
 - No visual topic chooser yet for papers that belong to multiple topics.
 - No edge-editing UI yet (API exists, UI pending).
 - Versioned migration path for future schema changes not yet implemented.
+
+## 8. Remark storage (new)
+
+- Scope: per Zotero item (not in `paper-relations.graph.v1`).
+- Backend: Zotero built-in item field `extra`.
+- Format: a single line in `extra`, case-insensitive prefix:
+  - `remark: <text>`
+- Compatibility:
+  - Ethereal Style data already written as `remark:` in `extra` is directly readable/writable by Paper Relations.
+- One-time migration utility:
+  - `Migrate ES Remarks` scans regular items in a library.
+  - If an item has no `extra remark`, it tries legacy ES note-tag remark fallback (child note tagged `remark`) and writes into `extra`.
