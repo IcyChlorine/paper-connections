@@ -15,7 +15,7 @@
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-02-27b-summary.md`.
+- Session summary (latest): `doc/session-2026-02-28a-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.
@@ -47,6 +47,11 @@
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
 - If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in `make-zips` whitelist.
 - In PowerShell, run Git Bash with quoted path invocation: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips`.
+- For SVG canvas overlay controls, call a post-render position sync (for example via `requestAnimationFrame` + delayed retries) so top-right placement is correct on first mount before topic/context switches.
+- For right-click gestures (for example Alt + RMB cut), explicitly handle `contextmenu` suppression and window-level key/mouse cleanup to prevent browser menu interference and stale interaction state.
+- Keep canvas cursor fully state-driven: show grab/grabbing only when background panning is available; use default pointer on nodes and during cut gestures.
+- For relation curves, keep drag-preview geometry and arrow semantics consistent with persisted edges, including backward-link routing with rightward tangents at both endpoints.
+- When introducing new runtime SVG assets, add them under `src/assets` and verify `make-zips` whitelist includes them; otherwise controls may render as fallback blobs in packaged builds.
 
 ## Build and Packaging
 - Build with `make-zips` from repo root.
