@@ -836,10 +836,16 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 	getBezierCurveByEndpoints(startX, startY, endX, endY) {
 		let dx = endX - startX;
-		let direction = dx === 0 ? 1 : Math.sign(dx);
-		let curve = Math.max(72, Math.abs(dx) * 0.45);
-		let c1x = startX + curve * direction;
-		let c2x = endX - curve * direction;
+		let absDx = Math.abs(dx);
+		let outCurve = Math.max(72, absDx * 0.45);
+		let inCurve = Math.max(72, absDx * 0.45);
+		if (dx < 0) {
+			// For backward links, keep both endpoint tangents rightward and route with a wrap-around arc.
+			outCurve = Math.max(outCurve, 92 + absDx * 0.36);
+			inCurve = Math.max(inCurve, 82 + absDx * 0.24);
+		}
+		let c1x = startX + outCurve;
+		let c2x = endX - inCurve;
 		return {
 			start: { x: startX, y: startY },
 			c1: { x: c1x, y: startY },

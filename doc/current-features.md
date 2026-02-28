@@ -39,6 +39,7 @@
   - Node left/right anchors appear as black dots only when cursor nears an anchor.
   - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
   - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).
+  - Backward links (target anchor left of source anchor) use wrap-around bezier routing while keeping rightward tangents at both endpoints.
   - Hold `Alt` and drag with right mouse button to draw a dotted cut line and remove intersected relation edges on release.
   - Cut preview shows a scissors icon near cut-path start.
   - Background grid remains visible regardless of snap toggle state.
