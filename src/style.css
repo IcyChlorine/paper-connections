@@ -125,7 +125,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	fill: #151515;
 	opacity: 0;
 	pointer-events: none;
-	transition: opacity 90ms ease;
+	transition: opacity 120ms ease-out;
 }
 
 .paper-relations-node-anchor.active {

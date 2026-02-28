@@ -261,6 +261,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.renderGraph(window);
 		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
+		window.requestAnimationFrame(() => {
+			this.updateCanvasControlsLayout(window);
+			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
+		});
+		window.setTimeout(() => this.updateCanvasControlsLayout(window), 80);
+		window.setTimeout(() => this.updateCanvasControlsLayout(window), 220);
 
 		let selectedItem = this.getCurrentSelectedItem(window);
 		if (selectedItem) {
@@ -666,7 +672,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 			let draftPath = this.buildBezierPathByAnchors(
 				state.edgeDraft.startAnchor,
 				draftEnd,
-				state.edgeDraft.targetAnchor?.side || null,
 			);
 			if (draftPath) {
 				let path = doc.createElementNS(SVG_NS, "path");
@@ -675,19 +680,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 				edgesGroup.appendChild(path);
 			}
 		}
-
-		let isAnchorVisible = (nodeID, side) => {
-			if (state.hoverAnchor?.nodeID === nodeID && state.hoverAnchor?.side === side) {
-				return true;
-			}
-			if (state.edgeDraft?.startAnchor?.nodeID === nodeID && state.edgeDraft?.startAnchor?.side === side) {
-				return true;
-			}
-			if (state.edgeDraft?.targetAnchor?.nodeID === nodeID && state.edgeDraft?.targetAnchor?.side === side) {
-				return true;
-			}
-			return false;
-		};
 
 		for (let node of nodes) {
 			let group = doc.createElementNS(SVG_NS, "g");
@@ -730,7 +722,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			leftAnchor.setAttribute("cx", "0");
 			leftAnchor.setAttribute("cy", String(height / 2));
 			leftAnchor.setAttribute("r", "4");
-			if (isAnchorVisible(node.id, "left")) {
+			if (this.isAnchorVisibleInState(state, node.id, "left")) {
 				leftAnchor.classList.add("active");
 			}
 
@@ -740,7 +732,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			rightAnchor.setAttribute("cx", String(width));
 			rightAnchor.setAttribute("cy", String(height / 2));
 			rightAnchor.setAttribute("r", "4");
-			if (isAnchorVisible(node.id, "right")) {
+			if (this.isAnchorVisibleInState(state, node.id, "right")) {
 				rightAnchor.classList.add("active");
 			}
 
@@ -748,6 +740,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			nodesGroup.appendChild(group);
 		}
 
+		this.applyAnchorVisibilityToDOM(state);
 		this.updateGraphTransform(state);
 		this.updateCanvasControlsLayout(window);
 	},
@@ -773,18 +766,45 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
 	},
 
-	buildBezierPathByAnchors(startAnchor, endPoint, endSide = null) {
+	buildBezierPathByAnchors(startAnchor, endPoint) {
 		if (!startAnchor || !endPoint) return "";
 		let startX = startAnchor.x;
 		let startY = startAnchor.y;
 		let endX = endPoint.x;
 		let endY = endPoint.y;
-		let startDirection = startAnchor.side === "right" ? 1 : -1;
-		let endDirection = endSide === "left" ? -1 : (endSide === "right" ? 1 : -startDirection);
+		let dx = endX - startX;
+		let direction = dx === 0 ? 1 : Math.sign(dx);
 		let curve = Math.max(72, Math.abs(endX - startX) * 0.45);
-		let c1x = startX + curve * startDirection;
-		let c2x = endX - curve * endDirection;
+		let c1x = startX + curve * direction;
+		let c2x = endX - curve * direction;
 		return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+	},
+
+	isAnchorVisibleInState(state, nodeID, side) {
+		if (!state) return false;
+		if (state.hoverAnchor?.nodeID === nodeID && state.hoverAnchor?.side === side) {
+			return true;
+		}
+		if (state.edgeDraft?.startAnchor?.nodeID === nodeID && state.edgeDraft?.startAnchor?.side === side) {
+			return true;
+		}
+		if (state.edgeDraft?.targetAnchor?.nodeID === nodeID && state.edgeDraft?.targetAnchor?.side === side) {
+			return true;
+		}
+		return false;
+	},
+
+	applyAnchorVisibilityToDOM(state) {
+		if (!state?.nodesGroup) return;
+		let nodeElems = state.nodesGroup.querySelectorAll(".paper-relations-node[data-node-id]");
+		for (let elem of nodeElems) {
+			let nodeID = elem.getAttribute("data-node-id");
+			for (let side of ["left", "right"]) {
+				let anchor = elem.querySelector(`.paper-relations-node-anchor[data-anchor-side="${side}"]`);
+				if (!anchor) continue;
+				anchor.classList.toggle("active", this.isAnchorVisibleInState(state, nodeID, side));
+			}
+		}
 	},
 
 	getNodeAnchorPoint(node, side) {
@@ -881,7 +901,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		};
 	},
 
-	updateHoverAnchorByClient(window, clientX, clientY) {
+	updateHoverAnchorByClient(window, clientX, clientY, options = {}) {
 		let state = this.graphStates.get(window);
 		if (!state) return null;
 		let nextHover = this.isClientInsideSVG(state, clientX, clientY)
@@ -889,7 +909,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 			: null;
 		if (!this.sameAnchor(state.hoverAnchor, nextHover)) {
 			state.hoverAnchor = nextHover;
-			this.renderGraph(window);
+			if (options.render) {
+				this.renderGraph(window);
+			}
+			else {
+				this.applyAnchorVisibilityToDOM(state);
+			}
 		}
 		return nextHover;
 	},
@@ -975,10 +1000,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 		else {
 			this.selectGraphNode(window, null);
-			if (state.hoverAnchor) {
-				state.hoverAnchor = null;
-				this.renderGraph(window);
-			}
 		}
 		event.preventDefault();
 	},
@@ -995,7 +1016,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (state.dragMode === "edge-draft" && state.edgeDraft?.startAnchor) {
 			let pointer = this.clientToGraphPoint(state, event.clientX, event.clientY);
 			state.edgeDraft.pointer = pointer;
-			let hoverAnchor = this.updateHoverAnchorByClient(window, event.clientX, event.clientY);
+			let hoverAnchor = this.updateHoverAnchorByClient(window, event.clientX, event.clientY, { render: false });
 			let candidate = this.getAnchorPairEndpoints(state.edgeDraft.startAnchor, hoverAnchor) ? hoverAnchor : null;
 			if (!this.sameAnchor(state.edgeDraft.targetAnchor, candidate)) {
 				state.edgeDraft.targetAnchor = candidate;
