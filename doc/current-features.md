@@ -60,6 +60,11 @@
 - Output xpi: `build/paper-relations.xpi`
 - Update template: `updates.json.tmpl`
 
+## Developer Tooling
+- `tools/screenshot.py` now prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
+- `tools/screenshot.py --list-windows` lists matched top-level windows for debugging query strings.
+- `tools/screenshot_server.py` mirrors the same behavior in MCP tools (`take_screenshot`, `take_screenshot_base64`) and adds `list_windows`.
+
 ## Pending TODO (Next Stage)
 - Topic chooser UI when a paper belongs to multiple topics.
 - Edge editing UI (relation type and note).
