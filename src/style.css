@@ -43,7 +43,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	border-radius: 10px;
 	background: #f7fafd;
 	overflow: hidden;
-	cursor: grab;
+	cursor: default;
 }
 
 #paper-relations-graph-canvas.paper-relations-drop-active {
@@ -52,6 +52,10 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 
 #paper-relations-graph-canvas.paper-relations-temporary-topic {
 	border-style: solid;
+}
+
+#paper-relations-graph-canvas.paper-relations-pan-ready {
+	cursor: grab;
 }
 
 #paper-relations-graph-canvas.paper-relations-panning {
