@@ -316,7 +316,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.subheader.textContent = summary.topicStatus;
 		this.setCanvasButtonVisual(state.pinButton, !!state.pinSelection);
 		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
-		state.boardGrid.classList.toggle("paper-relations-board-grid-disabled", !state.snapToGrid);
+		state.boardGrid.classList.remove("paper-relations-board-grid-disabled");
 		this.updateCanvasControlsLayout(window);
 		if (state.isTemporaryTopic) {
 			state.canvas.classList.add("paper-relations-temporary-topic");

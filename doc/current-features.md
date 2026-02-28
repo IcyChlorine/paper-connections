@@ -36,6 +36,7 @@
   - Mouse wheel zoom (zoom around cursor position).
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
+  - Background grid remains visible regardless of snap toggle state.
   - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
 - Node rendering improvements
   - Node width adapts by title length within a wider range to reduce excessive wrapping.

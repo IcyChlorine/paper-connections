@@ -72,10 +72,6 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	fill: url(#paper-relations-grid-pattern);
 }
 
-.paper-relations-board-grid-disabled {
-	opacity: 0.06;
-}
-
 .paper-relations-canvas-controls {
 	pointer-events: none;
 }
