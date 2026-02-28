@@ -466,14 +466,19 @@ PaperRelations = {
 	removeFromWindow(window) {
 		let state = this.graphStates.get(window);
 		if (state?.handlers) {
-			state.svg.removeEventListener("wheel", state.handlers.wheel);
-			state.svg.removeEventListener("mousedown", state.handlers.mousedown);
+			state.svg?.removeEventListener("wheel", state.handlers.wheel);
+			state.svg?.removeEventListener("mousedown", state.handlers.mousedown);
 			window.removeEventListener("mousemove", state.handlers.mousemove);
 			window.removeEventListener("mouseup", state.handlers.mouseup);
-			state.canvas.removeEventListener("dragover", state.handlers.dragover);
-			state.canvas.removeEventListener("drop", state.handlers.drop);
-			state.canvas.removeEventListener("dragleave", state.handlers.dragleave);
-			state.pinCheckbox.removeEventListener("change", state.handlers.pinchange);
+			state.canvas?.removeEventListener("dragover", state.handlers.dragover);
+			state.canvas?.removeEventListener("drop", state.handlers.drop);
+			state.canvas?.removeEventListener("dragleave", state.handlers.dragleave);
+			state.pinButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
+			state.snapButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
+			state.pinButton?.removeEventListener("click", state.handlers.pinbtnclick);
+			state.snapButton?.removeEventListener("click", state.handlers.snapbtnclick);
+			window.removeEventListener("resize", state.handlers.resize);
+			state.pinCheckbox?.removeEventListener("change", state.handlers.pinchange);
 		}
 		this.graphStates.delete(window);
 		this.selectionItemsByWindow.delete(window);

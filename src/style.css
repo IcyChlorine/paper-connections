@@ -35,24 +35,6 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	color: #617282;
 }
 
-#paper-relations-graph-controls {
-	display: flex;
-	align-items: center;
-}
-
-#paper-relations-pin-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	font-size: 11px;
-	color: #42586d;
-	user-select: none;
-}
-
-#paper-relations-pin-checkbox {
-	margin: 0;
-}
-
 #paper-relations-graph-canvas {
 	margin-top: 8px;
 	flex: 1;
@@ -88,6 +70,60 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 
 .paper-relations-board-grid {
 	fill: url(#paper-relations-grid-pattern);
+}
+
+.paper-relations-board-grid-disabled {
+	opacity: 0.06;
+}
+
+.paper-relations-canvas-controls {
+	pointer-events: none;
+}
+
+.paper-relations-canvas-btn {
+	pointer-events: all;
+	cursor: pointer;
+	opacity: 0.3;
+	transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.paper-relations-canvas-btn:hover {
+	opacity: 0.62;
+}
+
+.paper-relations-canvas-btn.active {
+	opacity: 1;
+}
+
+.paper-relations-canvas-btn-bg {
+	fill: rgba(61, 76, 89, 0.08);
+	stroke: rgba(64, 78, 91, 0.24);
+	stroke-width: 1;
+}
+
+.paper-relations-canvas-btn.active .paper-relations-canvas-btn-bg {
+	fill: rgba(47, 58, 69, 0.22);
+	stroke: rgba(43, 52, 62, 0.62);
+}
+
+.paper-relations-canvas-btn-icon-fill {
+	fill: #5f6d7a;
+}
+
+.paper-relations-canvas-btn-icon-stroke {
+	fill: none;
+	stroke: #5f6d7a;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.paper-relations-canvas-btn.active .paper-relations-canvas-btn-icon-fill {
+	fill: #2f3a45;
+}
+
+.paper-relations-canvas-btn.active .paper-relations-canvas-btn-icon-stroke {
+	stroke: #2f3a45;
 }
 
 .paper-relations-edge {

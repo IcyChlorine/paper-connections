@@ -1,7 +1,7 @@
 # Paper Relations - Current Features
 
 ## Snapshot
-- Date: 2026-02-27
+- Date: 2026-02-28
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-relations@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
@@ -18,7 +18,10 @@
   - Resizable with splitter (top edge drag).
   - Grid board and nodes pan together.
   - Pane resize does not auto-scale graph objects.
-  - Toolbar includes `Pinned` switch to freeze graph context while selecting other items.
+  - SVG canvas top-right includes two icon toggle buttons:
+    - left magnet button toggles magnetic snap-to-grid.
+    - right pin button toggles pinned graph context while selecting other items.
+  - Both toggles use dim gray inactive style and solid dark-gray active style.
 - Topic/context loading behavior
   - On item selection, if item belongs to one or more topics, loads latest-updated topic.
   - If item belongs to no topic, renders a temporary in-memory topic (not persisted).

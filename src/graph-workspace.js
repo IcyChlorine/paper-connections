@@ -38,20 +38,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		subheader.textContent = "Select an item to load topic graph";
 
 		titleWrap.append(header, subheader);
-
-		let controls = doc.createElementNS(XHTML_NS, "div");
-		controls.id = "paper-relations-graph-controls";
-		let pinLabel = doc.createElementNS(XHTML_NS, "label");
-		pinLabel.id = "paper-relations-pin-label";
-		let pinCheckbox = doc.createElementNS(XHTML_NS, "input");
-		pinCheckbox.type = "checkbox";
-		pinCheckbox.id = "paper-relations-pin-checkbox";
-		let pinText = doc.createElementNS(XHTML_NS, "span");
-		pinText.textContent = "Pinned";
-		pinLabel.append(pinCheckbox, pinText);
-		controls.appendChild(pinLabel);
-
-		toolbar.append(titleWrap, controls);
+		toolbar.append(titleWrap);
 
 		let canvas = doc.createElementNS(XHTML_NS, "div");
 		canvas.id = "paper-relations-graph-canvas";
@@ -127,6 +114,89 @@ var PaperRelationsGraphWorkspaceMixin = {
 		nodesGroup.setAttribute("class", "paper-relations-nodes");
 		viewport.append(boardGroup, edgesGroup, nodesGroup);
 		svg.appendChild(viewport);
+
+		let canvasControls = doc.createElementNS(SVG_NS, "g");
+		canvasControls.setAttribute("class", "paper-relations-canvas-controls");
+		canvasControls.setAttribute("aria-label", "graph workspace controls");
+		const controlButtonSize = 28;
+		const controlGap = 8;
+		const controlPanelWidth = controlButtonSize * 2 + controlGap;
+
+		let snapButton = doc.createElementNS(SVG_NS, "g");
+		snapButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-snap-btn");
+		snapButton.setAttribute("data-control", "snap");
+		snapButton.setAttribute("role", "button");
+		snapButton.setAttribute("aria-label", "Toggle magnetic grid snapping");
+		snapButton.setAttribute("transform", "translate(0 0)");
+		let snapBg = doc.createElementNS(SVG_NS, "rect");
+		snapBg.setAttribute("class", "paper-relations-canvas-btn-bg");
+		snapBg.setAttribute("x", "0");
+		snapBg.setAttribute("y", "0");
+		snapBg.setAttribute("width", String(controlButtonSize));
+		snapBg.setAttribute("height", String(controlButtonSize));
+		snapBg.setAttribute("rx", "8");
+		snapBg.setAttribute("ry", "8");
+		let snapCapLeft = doc.createElementNS(SVG_NS, "rect");
+		snapCapLeft.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+		snapCapLeft.setAttribute("x", "7.4");
+		snapCapLeft.setAttribute("y", "5.2");
+		snapCapLeft.setAttribute("width", "3.4");
+		snapCapLeft.setAttribute("height", "3.4");
+		snapCapLeft.setAttribute("rx", "0.8");
+		snapCapLeft.setAttribute("ry", "0.8");
+		let snapCapRight = doc.createElementNS(SVG_NS, "rect");
+		snapCapRight.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+		snapCapRight.setAttribute("x", "17.2");
+		snapCapRight.setAttribute("y", "5.2");
+		snapCapRight.setAttribute("width", "3.4");
+		snapCapRight.setAttribute("height", "3.4");
+		snapCapRight.setAttribute("rx", "0.8");
+		snapCapRight.setAttribute("ry", "0.8");
+		let snapU = doc.createElementNS(SVG_NS, "path");
+		snapU.setAttribute("class", "paper-relations-canvas-btn-icon-stroke");
+		snapU.setAttribute("d", "M9 7.2 V15.2 A5 5 0 0 0 19 15.2 V7.2");
+		snapButton.append(snapBg, snapCapLeft, snapCapRight, snapU);
+
+		let pinButton = doc.createElementNS(SVG_NS, "g");
+		pinButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-pin-btn");
+		pinButton.setAttribute("data-control", "pin");
+		pinButton.setAttribute("role", "button");
+		pinButton.setAttribute("aria-label", "Toggle pinned graph context");
+		pinButton.setAttribute("transform", `translate(${controlButtonSize + controlGap} 0)`);
+		let pinBg = doc.createElementNS(SVG_NS, "rect");
+		pinBg.setAttribute("class", "paper-relations-canvas-btn-bg");
+		pinBg.setAttribute("x", "0");
+		pinBg.setAttribute("y", "0");
+		pinBg.setAttribute("width", String(controlButtonSize));
+		pinBg.setAttribute("height", String(controlButtonSize));
+		pinBg.setAttribute("rx", "8");
+		pinBg.setAttribute("ry", "8");
+		let pinHead = doc.createElementNS(SVG_NS, "circle");
+		pinHead.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+		pinHead.setAttribute("cx", "14");
+		pinHead.setAttribute("cy", "9.2");
+		pinHead.setAttribute("r", "3.1");
+		let pinBody = doc.createElementNS(SVG_NS, "path");
+		pinBody.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+		pinBody.setAttribute("d", "M10.7 12.1 H17.3 L14 16.9 Z");
+		let pinStem = doc.createElementNS(SVG_NS, "rect");
+		pinStem.setAttribute("class", "paper-relations-canvas-btn-icon-fill");
+		pinStem.setAttribute("x", "12.9");
+		pinStem.setAttribute("y", "12.3");
+		pinStem.setAttribute("width", "2.2");
+		pinStem.setAttribute("height", "8.1");
+		pinStem.setAttribute("rx", "1");
+		pinStem.setAttribute("ry", "1");
+		let pinNeedle = doc.createElementNS(SVG_NS, "line");
+		pinNeedle.setAttribute("class", "paper-relations-canvas-btn-icon-stroke");
+		pinNeedle.setAttribute("x1", "14");
+		pinNeedle.setAttribute("y1", "20.2");
+		pinNeedle.setAttribute("x2", "14");
+		pinNeedle.setAttribute("y2", "24");
+		pinButton.append(pinBg, pinHead, pinBody, pinStem, pinNeedle);
+
+		canvasControls.append(snapButton, pinButton);
+		svg.appendChild(canvasControls);
 		canvas.appendChild(svg);
 
 		pane.append(toolbar, canvas);
@@ -140,11 +210,15 @@ var PaperRelationsGraphWorkspaceMixin = {
 			canvas,
 			header,
 			subheader,
-			pinCheckbox,
+			boardGrid,
 			svg,
 			viewport,
 			edgesGroup,
 			nodesGroup,
+			canvasControls,
+			pinButton,
+			snapButton,
+			controlPanelWidth,
 			nodes: [],
 			edges: [],
 			activeTopicID: null,
@@ -152,6 +226,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			activeTopicName: "",
 			isTemporaryTopic: false,
 			pinSelection: false,
+			snapToGrid: true,
 			activeItemKey: null,
 			activeItemLibraryID: null,
 			selectedNodeID: null,
@@ -175,7 +250,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 			dragover: (event) => this.onGraphDragOver(window, event),
 			drop: (event) => this.onGraphDrop(window, event),
 			dragleave: (event) => this.onGraphDragLeave(window, event),
-			pinchange: () => this.onPinCheckboxChange(window),
+			controlmousedown: (event) => this.onCanvasControlMouseDown(window, event),
+			pinbtnclick: () => this.onPinButtonToggle(window),
+			snapbtnclick: () => this.onSnapButtonToggle(window),
+			resize: () => this.updateCanvasControlsLayout(window),
 		};
 
 		svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
@@ -185,7 +263,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 		canvas.addEventListener("dragover", state.handlers.dragover);
 		canvas.addEventListener("drop", state.handlers.drop);
 		canvas.addEventListener("dragleave", state.handlers.dragleave);
-		pinCheckbox.addEventListener("change", state.handlers.pinchange);
+		pinButton.addEventListener("mousedown", state.handlers.controlmousedown);
+		snapButton.addEventListener("mousedown", state.handlers.controlmousedown);
+		pinButton.addEventListener("click", state.handlers.pinbtnclick);
+		snapButton.addEventListener("click", state.handlers.snapbtnclick);
+		window.addEventListener("resize", state.handlers.resize);
 
 		this.graphStates.set(window, state);
 		this.renderGraph(window);
@@ -210,7 +292,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state) {
 			return {
 				topicLabel: "Topic: (graph pane not ready)",
-				topicStatus: "Pin: off",
+				topicStatus: "Pin: off | Snap: on",
 			};
 		}
 
@@ -226,6 +308,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			? "Temporary topic is not saved. Use the button to create a real topic."
 			: (state.activeTopicID ? `Topic ID: ${state.activeTopicID}` : "No topic loaded");
 		status += state.pinSelection ? " | Pin: on" : " | Pin: off";
+		status += state.snapToGrid ? " | Snap: on" : " | Snap: off";
 		return { topicLabel: label, topicStatus: status };
 	},
 
@@ -246,7 +329,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let summary = this.getGraphContextSummary(window);
 		state.header.textContent = summary.topicLabel.replace(/^Topic:\s*/, "");
 		state.subheader.textContent = summary.topicStatus;
-		state.pinCheckbox.checked = !!state.pinSelection;
+		state.pinButton.classList.toggle("active", !!state.pinSelection);
+		state.snapButton.classList.toggle("active", !!state.snapToGrid);
+		state.boardGrid.classList.toggle("paper-relations-board-grid-disabled", !state.snapToGrid);
+		this.updateCanvasControlsLayout(window);
 		if (state.isTemporaryTopic) {
 			state.canvas.classList.add("paper-relations-temporary-topic");
 		}
@@ -255,10 +341,34 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 	},
 
-	onPinCheckboxChange(window) {
+	updateCanvasControlsLayout(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		state.pinSelection = !!state.pinCheckbox.checked;
+		let rect = state.svg.getBoundingClientRect();
+		let width = Number.isFinite(rect.width) ? rect.width : 0;
+		let x = Math.max(10, width - 10 - state.controlPanelWidth);
+		state.canvasControls.setAttribute("transform", `translate(${x} 10)`);
+	},
+
+	onCanvasControlMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+	},
+
+	onPinButtonToggle(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.pinSelection = !state.pinSelection;
+		this.refreshGraphChrome(window);
+		this.notifyGraphContextChanged(window);
+	},
+
+	onSnapButtonToggle(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.snapToGrid = !state.snapToGrid;
 		this.refreshGraphChrome(window);
 		this.notifyGraphContextChanged(window);
 	},
@@ -577,6 +687,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 
 		this.updateGraphTransform(state);
+		this.updateCanvasControlsLayout(window);
 	},
 
 	buildBezierPath(fromNode, toNode) {
@@ -688,12 +799,18 @@ var PaperRelationsGraphWorkspaceMixin = {
 				}
 				state.dragNodeRawX += dx / state.scale;
 				state.dragNodeRawY += dy / state.scale;
-				let snapped = this.snapNodePositionToGrid({
-					x: state.dragNodeRawX,
-					y: state.dragNodeRawY,
-				}, node);
-				node.x = snapped.x;
-				node.y = snapped.y;
+				if (state.snapToGrid) {
+					let snapped = this.snapNodePositionToGrid({
+						x: state.dragNodeRawX,
+						y: state.dragNodeRawY,
+					}, node);
+					node.x = snapped.x;
+					node.y = snapped.y;
+				}
+				else {
+					node.x = state.dragNodeRawX;
+					node.y = state.dragNodeRawY;
+				}
 				this.renderGraph(window);
 				this.notifyGraphSelectionChanged(window);
 			}
@@ -722,12 +839,14 @@ var PaperRelationsGraphWorkspaceMixin = {
 		) {
 			let node = state.nodes.find((n) => n.id === dragNodeID);
 			if (node) {
-				let snapped = this.snapNodePositionToGrid({
-					x: node.x,
-					y: node.y,
-				}, node);
-				node.x = snapped.x;
-				node.y = snapped.y;
+				if (state.snapToGrid) {
+					let snapped = this.snapNodePositionToGrid({
+						x: node.x,
+						y: node.y,
+					}, node);
+					node.x = snapped.x;
+					node.y = snapped.y;
+				}
 				this.renderGraph(window);
 				this.updateNode(state.activeLibraryID, state.activeTopicID, dragNodeID, {
 					x: node.x,
