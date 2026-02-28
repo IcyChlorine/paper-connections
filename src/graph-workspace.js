@@ -1,4 +1,27 @@
 var PaperRelationsGraphWorkspaceMixin = {
+	getNodeLabelForDisplay(nodeInput = {}) {
+		let item = null;
+		let libraryID = nodeInput.libraryID;
+		let itemKey = nodeInput.itemKey;
+		if (libraryID && itemKey && typeof Zotero.Items?.getByLibraryAndKey === "function") {
+			try {
+				item = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
+			}
+			catch (error) {
+				Zotero.logError(error);
+			}
+		}
+
+		let remark = this.getItemRemark(item);
+		if (remark) return remark;
+
+		let liveTitle = item ? this.getItemTitle(item) : "";
+		if (liveTitle) return liveTitle;
+
+		if (nodeInput.shortLabel) return nodeInput.shortLabel;
+		return nodeInput.title || nodeInput.itemKey || "(untitled)";
+	},
+
 	addGraphPane(window) {
 		let doc = window.document;
 		let existingPane = doc.getElementById("paper-relations-graph-pane");
@@ -470,15 +493,16 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let selectedItemRef = selectedItem ? this.getItemRef(selectedItem.libraryID, selectedItem.key) : null;
 		let nodes = Object.values(topic.nodes).map((node) => {
 			let itemRef = this.getItemRef(node.libraryID, node.itemKey);
+			let displayLabel = this.getNodeLabelForDisplay(node);
 			return {
 				id: node.id,
 				itemKey: node.itemKey,
 				libraryID: node.libraryID,
 				title: node.title || node.itemKey,
-				label: node.shortLabel || node.title || node.itemKey,
+				label: displayLabel,
 				x: Number.isFinite(node.x) ? node.x : 80,
 				y: Number.isFinite(node.y) ? node.y : 120,
-				width: this.getNodeWidthForLabel(node.shortLabel || node.title || node.itemKey),
+				width: this.getNodeWidthForLabel(displayLabel),
 				height: this.nodeDefaultHeight,
 				kind: selectedItemRef && selectedItemRef === itemRef ? "root" : "leaf",
 			};
@@ -516,16 +540,21 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state || !item) return;
 		let title = this.getItemTitle(item);
+		let label = this.getNodeLabelForDisplay({
+			libraryID: item.libraryID,
+			itemKey: item.key,
+			title,
+		});
 		let nodeID = `temp_${item.libraryID}_${item.key}`;
 		state.nodes = [{
 			id: nodeID,
 			itemKey: item.key,
 			libraryID: item.libraryID,
 			title,
-			label: title,
+			label,
 			x: 120,
 			y: 100,
-			width: this.getNodeWidthForLabel(title),
+			width: this.getNodeWidthForLabel(label),
 			height: this.nodeDefaultHeight,
 			kind: "root",
 		}];
