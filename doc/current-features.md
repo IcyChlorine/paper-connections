@@ -53,6 +53,7 @@
   - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
 - Node rendering improvements
   - Graph node text prefers item `Remark` (if present); falls back to full paper title when remark is empty.
+  - When label changes (for example after editing `Remark`), node center is preserved while width/height recompute, keeping snap-grid alignment stable.
   - Node width adapts by title length within a wider range to reduce excessive wrapping.
   - Multi-line title wrapping prefers word boundaries; if forced to split a long word, adds hyphen.
   - Dynamic node height based on wrapped lines.

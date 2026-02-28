@@ -263,15 +263,35 @@ PaperRelations = {
 			let changed = false;
 			for (let node of state.nodes) {
 				if (node.libraryID !== itemLibraryID || node.itemKey !== itemKey) continue;
+				let oldMetrics = this.getNodeRenderMetrics(node);
+				let oldCenterX = node.x + oldMetrics.width / 2;
+				let oldCenterY = node.y + oldMetrics.height / 2;
+
 				let nextLabel = this.getNodeLabelForDisplay(node);
 				let nextWidth = this.getNodeWidthForLabel(nextLabel);
 				let nextTitle = this.getItemTitle(item);
+				let nextMetrics = this.getNodeRenderMetrics({
+					...node,
+					label: nextLabel,
+					width: nextWidth,
+				});
+				let nextX = oldCenterX - nextMetrics.width / 2;
+				let nextY = oldCenterY - nextMetrics.height / 2;
+
 				if (node.label !== nextLabel) {
 					node.label = nextLabel;
 					changed = true;
 				}
 				if (node.width !== nextWidth) {
 					node.width = nextWidth;
+					changed = true;
+				}
+				if (node.x !== nextX) {
+					node.x = nextX;
+					changed = true;
+				}
+				if (node.y !== nextY) {
+					node.y = nextY;
 					changed = true;
 				}
 				if (node.title !== nextTitle) {
