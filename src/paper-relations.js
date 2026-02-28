@@ -254,6 +254,7 @@ PaperRelations = {
 		let itemLibraryID = item.libraryID || Zotero.Libraries.userLibraryID;
 		let itemKey = item.key;
 		if (!itemLibraryID || !itemKey) return;
+		let pendingPersistByNode = new Map();
 
 		for (let win of Zotero.getMainWindows()) {
 			if (!win?.ZoteroPane) continue;
@@ -277,6 +278,7 @@ PaperRelations = {
 				});
 				let nextX = oldCenterX - nextMetrics.width / 2;
 				let nextY = oldCenterY - nextMetrics.height / 2;
+				let nodePositionChanged = false;
 
 				if (node.label !== nextLabel) {
 					node.label = nextLabel;
@@ -289,14 +291,33 @@ PaperRelations = {
 				if (node.x !== nextX) {
 					node.x = nextX;
 					changed = true;
+					nodePositionChanged = true;
 				}
 				if (node.y !== nextY) {
 					node.y = nextY;
 					changed = true;
+					nodePositionChanged = true;
 				}
 				if (node.title !== nextTitle) {
 					node.title = nextTitle;
 					changed = true;
+				}
+				if (
+					nodePositionChanged &&
+					state.activeTopicID &&
+					state.activeLibraryID &&
+					!state.isTemporaryTopic &&
+					node.id
+				) {
+					let persistKey = `${state.activeLibraryID}/${state.activeTopicID}/${node.id}`;
+					pendingPersistByNode.set(persistKey, {
+						libraryID: state.activeLibraryID,
+						topicID: state.activeTopicID,
+						nodeID: node.id,
+						x: node.x,
+						y: node.y,
+						snapLabel: nextLabel,
+					});
 				}
 			}
 
@@ -304,6 +325,19 @@ PaperRelations = {
 				this.renderGraph(win);
 				this.notifyGraphSelectionChanged(win);
 			}
+		}
+
+		for (let persist of pendingPersistByNode.values()) {
+			this.updateNode(
+				persist.libraryID,
+				persist.topicID,
+				persist.nodeID,
+				{
+					x: persist.x,
+					y: persist.y,
+					snapLabel: persist.snapLabel,
+				},
+			).catch((error) => Zotero.logError(error));
 		}
 	},
 

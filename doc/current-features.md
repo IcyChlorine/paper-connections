@@ -54,6 +54,7 @@
 - Node rendering improvements
   - Graph node text prefers item `Remark` (if present); falls back to full paper title when remark is empty.
   - When label changes (for example after editing `Remark`), node center is preserved while width/height recompute, keeping snap-grid alignment stable.
+  - Node position persistence during drag and remark-driven relayout uses displayed label metrics, preventing topic reload selection changes from introducing tiny grid misalignment drift.
   - Node width adapts by title length within a wider range to reduce excessive wrapping.
   - Multi-line title wrapping prefers word boundaries; if forced to split a long word, adds hyphen.
   - Dynamic node height based on wrapped lines.

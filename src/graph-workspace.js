@@ -1478,6 +1478,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				this.updateNode(state.activeLibraryID, state.activeTopicID, dragNodeID, {
 					x: node.x,
 					y: node.y,
+					snapLabel: node.label,
 				}).catch((error) => Zotero.logError(error));
 			}
 		}

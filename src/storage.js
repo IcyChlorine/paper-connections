@@ -235,7 +235,10 @@ var PaperRelationsStorageMixin = {
 			}
 		}
 		if (patch?.x !== undefined || patch?.y !== undefined) {
-			let nodeLabel = node.shortLabel || node.title || node.itemKey;
+			let snapLabel = typeof patch?.snapLabel === "string"
+				? patch.snapLabel.trim()
+				: "";
+			let nodeLabel = snapLabel || node.shortLabel || node.title || node.itemKey;
 			let snapped = this.snapNodePositionToGrid({
 				x: patch?.x !== undefined ? patch.x : node.x,
 				y: patch?.y !== undefined ? patch.y : node.y,

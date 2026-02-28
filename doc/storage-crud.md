@@ -78,6 +78,7 @@ Implemented in `src/paper-relations-storage.js` (storage/CRUD) and used by `src/
 
 - `addNode(libraryID, topicID, nodeInput, options = {})`
 - `updateNode(libraryID, topicID, nodeID, patch)`
+  - When patching `x/y`, optional `patch.snapLabel` can be passed so grid snapping uses current displayed label width instead of fallback title width.
 - `removeNode(libraryID, topicID, nodeID)`
 - `listNodes(libraryID, topicID)`
 
