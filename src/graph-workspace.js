@@ -329,8 +329,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let summary = this.getGraphContextSummary(window);
 		state.header.textContent = summary.topicLabel.replace(/^Topic:\s*/, "");
 		state.subheader.textContent = summary.topicStatus;
-		state.pinButton.classList.toggle("active", !!state.pinSelection);
-		state.snapButton.classList.toggle("active", !!state.snapToGrid);
+		this.setCanvasButtonVisual(state.pinButton, !!state.pinSelection);
+		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
 		state.boardGrid.classList.toggle("paper-relations-board-grid-disabled", !state.snapToGrid);
 		this.updateCanvasControlsLayout(window);
 		if (state.isTemporaryTopic) {
@@ -338,6 +338,42 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 		else {
 			state.canvas.classList.remove("paper-relations-temporary-topic");
+		}
+	},
+
+	setCanvasButtonVisual(button, active) {
+		if (!button) return;
+		let isActive = !!active;
+		button.classList.toggle("active", isActive);
+		let bg = button.querySelector(".paper-relations-canvas-btn-bg");
+		if (bg) {
+			if (isActive) {
+				bg.style.fill = "#434f5b";
+				bg.style.fillOpacity = "0.94";
+				bg.style.stroke = "#2c3640";
+				bg.style.strokeOpacity = "0.92";
+			}
+			else {
+				bg.style.fill = "#dce5ed";
+				bg.style.fillOpacity = "0.52";
+				bg.style.stroke = "#8092a2";
+				bg.style.strokeOpacity = "0.56";
+			}
+			bg.style.strokeWidth = "1";
+		}
+
+		let fillColor = isActive ? "#edf3f8" : "#45596b";
+		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-fill")) {
+			elem.style.fill = fillColor;
+		}
+
+		let strokeColor = isActive ? "#f3f8fc" : "#45596b";
+		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-stroke")) {
+			elem.style.fill = "none";
+			elem.style.stroke = strokeColor;
+			elem.style.strokeWidth = "1.8";
+			elem.style.strokeLinecap = "round";
+			elem.style.strokeLinejoin = "round";
 		}
 	},
 
