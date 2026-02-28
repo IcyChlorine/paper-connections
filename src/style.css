@@ -100,6 +100,11 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	stroke: none;
 }
 
+.paper-relations-canvas-btn-icon-image {
+	pointer-events: none;
+	transition: filter 140ms ease;
+}
+
 .paper-relations-canvas-btn-icon-fill {
 	transition: fill 140ms ease;
 }
