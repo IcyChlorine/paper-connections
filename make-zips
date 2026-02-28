@@ -8,8 +8,8 @@ cd src
 zip -r ../build/paper-relations.xpi \
 	bootstrap.js \
 	locale \
-	paper-relations-storage.js \
-	paper-relations-graph-workspace.js \
+	storage.js \
+	graph-workspace.js \
 	paper-relations.js \
 	manifest.json \
 	prefs.js \
