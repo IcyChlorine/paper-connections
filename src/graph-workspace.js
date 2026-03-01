@@ -103,6 +103,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		let canvas = doc.createElementNS(XHTML_NS, "div");
 		canvas.id = "paper-relations-graph-canvas";
+		canvas.style.position = "relative";
 
 		let svg = doc.createElementNS(SVG_NS, "svg");
 
@@ -230,6 +231,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let nodeContextMenu = doc.createElementNS(XHTML_NS, "div");
 		nodeContextMenu.className = "paper-relations-node-context-menu";
 		nodeContextMenu.hidden = true;
+		nodeContextMenu.style.position = "absolute";
+		nodeContextMenu.style.zIndex = "8";
 		let removeNodeBtn = doc.createElementNS(XHTML_NS, "button");
 		removeNodeBtn.type = "button";
 		removeNodeBtn.className = "paper-relations-node-context-item";
@@ -248,6 +251,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		renameInput.className = "paper-relations-node-rename-input";
 		renameInput.hidden = true;
 		renameInput.setAttribute("spellcheck", "false");
+		renameInput.style.position = "absolute";
+		renameInput.style.zIndex = "7";
 		canvas.appendChild(renameInput);
 
 		pane.append(toolbar, canvas);
@@ -520,6 +525,40 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return state.nodes.find((node) => node.id === nodeID) || null;
 	},
 
+	getNodeIDFromEventTarget(target) {
+		let current = target;
+		while (current) {
+			if (typeof current.getAttribute === "function") {
+				let nodeID = current.getAttribute("data-node-id");
+				if (nodeID) {
+					return nodeID;
+				}
+			}
+			current = current.parentNode;
+		}
+		return null;
+	},
+
+	getNodeAtClient(window, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodes?.length) return null;
+		let point = this.clientToGraphPoint(state, clientX, clientY);
+		for (let i = state.nodes.length - 1; i >= 0; i--) {
+			let node = state.nodes[i];
+			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
+			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
+			if (
+				point.x >= node.x &&
+				point.x <= node.x + width &&
+				point.y >= node.y &&
+				point.y <= node.y + height
+			) {
+				return node;
+			}
+		}
+		return null;
+	},
+
 	getItemForNode(node) {
 		if (!node?.libraryID || !node?.itemKey) return null;
 		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
@@ -700,8 +739,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		};
 		state.renameBusy = false;
 		state.renameInput.value = initialValue;
-		this.setRenameInputHidden(window, false);
 		this.renderGraph(window);
+		this.syncNodeRenameInputLayout(window);
+		this.setRenameInputHidden(window, false);
 		this.syncNodeRenameInputLayout(window);
 		if (!state.renameInput.hidden) {
 			state.renameInput.focus();
@@ -814,19 +854,36 @@ var PaperRelationsGraphWorkspaceMixin = {
 			this.finishNodeRename(window, { restoreNode: false, render: false });
 			return;
 		}
-		let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
-		let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
-		let left = state.panX + node.x * state.scale;
-		let top = state.panY + node.y * state.scale;
-		let pxWidth = Math.max(40, Math.round(width * state.scale));
-		let pxHeight = Math.max(22, Math.round(height * state.scale));
-		let fontSize = Math.max(11, Math.round(15 * state.scale));
+		let canvasRect = state.canvas.getBoundingClientRect();
+		let pxWidth = 0;
+		let pxHeight = 0;
+		let left = 0;
+		let top = 0;
+		let nodeElem = state.nodesGroup?.querySelector?.(`[data-node-id="${state.renamingNodeID}"]`);
+		if (nodeElem) {
+			let nodeRect = nodeElem.getBoundingClientRect();
+			left = nodeRect.left - canvasRect.left;
+			top = nodeRect.top - canvasRect.top;
+			pxWidth = nodeRect.width;
+			pxHeight = nodeRect.height;
+		}
+		else {
+			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
+			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
+			left = state.panX + node.x * state.scale;
+			top = state.panY + node.y * state.scale;
+			pxWidth = width * state.scale;
+			pxHeight = height * state.scale;
+		}
+		pxWidth = Math.max(40, Math.round(pxWidth));
+		pxHeight = Math.max(22, Math.round(pxHeight));
+		let fontSize = Math.max(11, Math.round(15 * Math.max(0.7, state.scale)));
 		input.style.left = `${Math.round(left)}px`;
 		input.style.top = `${Math.round(top)}px`;
 		input.style.width = `${pxWidth}px`;
 		input.style.height = `${pxHeight}px`;
 		input.style.fontSize = `${fontSize}px`;
-		input.style.lineHeight = `${Math.max(14, Math.round(this.nodeLineHeight * state.scale))}px`;
+		input.style.lineHeight = `${Math.max(14, Math.round(this.nodeLineHeight * Math.max(0.7, state.scale)))}px`;
 	},
 
 	async removeNodeFromActiveTopic(window, nodeID) {
@@ -1697,13 +1754,15 @@ var PaperRelationsGraphWorkspaceMixin = {
 			event.preventDefault();
 			return;
 		}
-		let nodeElem = event.target?.closest?.("[data-node-id]");
-		if (!nodeElem) {
+		let nodeID = this.getNodeIDFromEventTarget(event.target);
+		if (!nodeID) {
+			let hitNode = this.getNodeAtClient(window, event.clientX, event.clientY);
+			nodeID = hitNode?.id || null;
+		}
+		if (!nodeID) {
 			this.hideNodeContextMenu(window);
 			return;
 		}
-		let nodeID = nodeElem.getAttribute("data-node-id");
-		if (!nodeID) return;
 		this.selectGraphNode(window, nodeID);
 		event.preventDefault();
 		event.stopPropagation();
