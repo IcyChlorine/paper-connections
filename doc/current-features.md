@@ -71,7 +71,8 @@
 - Data schema and API details documented in `doc/storage-crud.md`.
 
 ## Build/Package
-- Build command: `./make-zips`
+- Build command (Git Bash): `./make-zips.sh`
+- Build command (PowerShell): `.\make-zips.ps1`
 - Output xpi: `build/paper-relations.xpi`
 - Update template: `updates.json.tmpl`
 

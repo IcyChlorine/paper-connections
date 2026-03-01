@@ -4,5 +4,5 @@ A sample plugin for Zotero 7
 
   * [src](src): Bootstrapped plugin for Zotero 7
 
-To test, run `./make-zips` and install the XPIs in the Zotero Add-ons window, or see [Setting Up a Plugin Development Environment](https://www.zotero.org/support/dev/client_coding/plugin_development#setting_up_a_plugin_development_environment) to run from source.
+To test, run `./make-zips.sh` (Git Bash) or `.\make-zips.ps1` (PowerShell) and install the XPIs in the Zotero Add-ons window, or see [Setting Up a Plugin Development Environment](https://www.zotero.org/support/dev/client_coding/plugin_development#setting_up_a_plugin_development_environment) to run from source.
 

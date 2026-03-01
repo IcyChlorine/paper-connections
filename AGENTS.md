@@ -45,20 +45,20 @@
 - Keep relation data topic-centered; use `itemTopicIndex` as reverse mapping.
 - Main item drag payload uses `dataTransfer` type `zotero/item` (comma-separated itemIDs).
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
-- If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in `make-zips` whitelist.
-- In PowerShell, run Git Bash with quoted path invocation: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips`.
+- If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in the packaging whitelist used by `make-zips.sh` / `make-zips.ps1`.
+- In PowerShell, prefer native build script: `.\make-zips.ps1`; Git Bash fallback: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips.sh`.
 - For SVG canvas overlay controls, call a post-render position sync (for example via `requestAnimationFrame` + delayed retries) so top-right placement is correct on first mount before topic/context switches.
 - For right-click gestures (for example Alt + RMB cut), explicitly handle `contextmenu` suppression and window-level key/mouse cleanup to prevent browser menu interference and stale interaction state.
 - Keep canvas cursor fully state-driven: show grab/grabbing only when background panning is available; use default pointer on nodes and during cut gestures.
 - For relation curves, keep drag-preview geometry and arrow semantics consistent with persisted edges, including backward-link routing with rightward tangents at both endpoints.
-- When introducing new runtime SVG assets, add them under `src/assets` and verify `make-zips` whitelist includes them; otherwise controls may render as fallback blobs in packaged builds.
+- When introducing new runtime SVG assets, add them under `src/assets` and verify `make-zips.sh` / `make-zips.ps1` whitelist includes them; otherwise controls may render as fallback blobs in packaged builds.
 - For remark-driven node relayout, preserve node center and persist updated `x/y` for saved topics; otherwise topic reload on selection changes can cause subtle drift.
 - When persisting node positions, make snap calculations use the currently displayed label metrics (for example via `snapLabel`) to avoid title/remark width mismatch offsets.
 
 ## Build and Packaging
-- Build with `make-zips` from repo root.
-- `make-zips` uses whitelist packaging for `src`; temp files inside `src` are not packaged.
-- If shell permission issues occur on Windows sandbox, run `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips`.
+- Build with `make-zips.sh` (Git Bash) or `make-zips.ps1` (PowerShell) from repo root.
+- Both scripts use whitelist packaging for `src`; temp files inside `src` are not packaged.
+- If shell permission issues occur in one shell, switch to the other script (`.\make-zips.ps1` or `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips.sh`).
 
 ## Token/Time Saving
 - Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
