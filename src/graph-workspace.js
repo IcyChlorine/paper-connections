@@ -65,7 +65,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.snapButton?.removeEventListener("click", existingState.handlers.snapbtnclick);
 				window.removeEventListener("resize", existingState.handlers.resize);
 				existingState.nodeContextMenu?.removeEventListener("mousedown", existingState.handlers.nodemenumousedown);
-				existingState.nodeContextMenu?.removeEventListener("click", existingState.handlers.nodemenuclick);
+				existingState.removeNodeBtn?.removeEventListener("click", existingState.handlers.menuremoveclick);
+				existingState.renameNodeBtn?.removeEventListener("click", existingState.handlers.menurenameclick);
 				existingState.renameInput?.removeEventListener("mousedown", existingState.handlers.renameinputmousedown);
 				existingState.renameInput?.removeEventListener("input", existingState.handlers.renameinput);
 				existingState.renameInput?.removeEventListener("keydown", existingState.handlers.renameinputkeydown);
@@ -358,7 +359,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 			pinbtnclick: () => this.onPinButtonToggle(window),
 			snapbtnclick: () => this.onSnapButtonToggle(window),
 			nodemenumousedown: (event) => this.onNodeContextMenuMouseDown(window, event),
-			nodemenuclick: (event) => this.onNodeContextMenuClick(window, event),
+			menuremoveclick: (event) => this.onNodeMenuRemoveClick(window, event),
+			menurenameclick: (event) => this.onNodeMenuRenameClick(window, event),
 			renameinputmousedown: (event) => this.onNodeRenameInputMouseDown(window, event),
 			renameinput: (event) => this.onNodeRenameInput(window, event),
 			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
@@ -384,7 +386,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		pinButton.addEventListener("click", state.handlers.pinbtnclick);
 		snapButton.addEventListener("click", state.handlers.snapbtnclick);
 		nodeContextMenu.addEventListener("mousedown", state.handlers.nodemenumousedown);
-		nodeContextMenu.addEventListener("click", state.handlers.nodemenuclick);
+		removeNodeBtn.addEventListener("click", state.handlers.menuremoveclick);
+		renameNodeBtn.addEventListener("click", state.handlers.menurenameclick);
 		renameInput.addEventListener("mousedown", state.handlers.renameinputmousedown);
 		renameInput.addEventListener("input", state.handlers.renameinput);
 		renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
@@ -581,6 +584,16 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return null;
 	},
 
+	isTargetInsideElement(target, rootElem) {
+		if (!target || !rootElem) return false;
+		let current = target;
+		while (current) {
+			if (current === rootElem) return true;
+			current = current.parentNode;
+		}
+		return false;
+	},
+
 	getItemForNode(node) {
 		if (!node?.libraryID || !node?.itemKey) return null;
 		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
@@ -632,19 +645,23 @@ var PaperRelationsGraphWorkspaceMixin = {
 	onNodeContextMenuMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		event.preventDefault();
 		event.stopPropagation();
 	},
 
-	onNodeContextMenuClick(window, event) {
+	onNodeMenuRemoveClick(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		let actionElem = event.target?.closest?.("[data-action]");
-		let action = actionElem?.getAttribute?.("data-action");
-		if (!action) return;
 		event.preventDefault();
 		event.stopPropagation();
-		this.handleNodeContextMenuAction(window, action, state.contextMenuNodeID).catch((error) => Zotero.logError(error));
+		this.handleNodeContextMenuAction(window, "remove", state.contextMenuNodeID).catch((error) => Zotero.logError(error));
+	},
+
+	onNodeMenuRenameClick(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+		this.handleNodeContextMenuAction(window, "rename", state.contextMenuNodeID).catch((error) => Zotero.logError(error));
 	},
 
 	async handleNodeContextMenuAction(window, action, nodeID) {
@@ -663,12 +680,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let target = event?.target;
-		let clickInMenu = !!target?.closest?.(".paper-relations-node-context-menu");
+		let clickInMenu = this.isTargetInsideElement(target, state.nodeContextMenu);
 		if (!clickInMenu) {
 			this.hideNodeContextMenu(window);
 		}
 		if (state.renamingNodeID && !state.renameBusy) {
-			let clickInRenameInput = !!target?.closest?.(".paper-relations-node-rename-input");
+			let clickInRenameInput = this.isTargetInsideElement(target, state.renameInput);
 			if (!clickInRenameInput) {
 				this.cancelNodeRename(window);
 			}
