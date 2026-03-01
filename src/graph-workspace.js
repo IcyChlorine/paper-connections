@@ -22,6 +22,24 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return nodeInput.title || nodeInput.itemKey || "(untitled)";
 	},
 
+	getGraphWorkspaceText(key) {
+		let isZh = this.getCurrentLocaleTag().startsWith("zh");
+		let table = isZh
+			? {
+				nodeMenuRemove: "移除",
+				nodeMenuRename: "重命名",
+				renameFailedTitle: "重命名失败",
+				removeNodeFailedTitle: "移除节点失败",
+			}
+			: {
+				nodeMenuRemove: "Remove",
+				nodeMenuRename: "Rename",
+				renameFailedTitle: "Rename Failed",
+				removeNodeFailedTitle: "Remove Node Failed",
+			};
+		return table[key] || "";
+	},
+
 	addGraphPane(window) {
 		let doc = window.document;
 		let existingPane = doc.getElementById("paper-relations-graph-pane");
@@ -237,12 +255,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		removeNodeBtn.type = "button";
 		removeNodeBtn.className = "paper-relations-node-context-item";
 		removeNodeBtn.setAttribute("data-action", "remove");
-		removeNodeBtn.textContent = "Remove";
+		removeNodeBtn.textContent = this.getGraphWorkspaceText("nodeMenuRemove");
 		let renameNodeBtn = doc.createElementNS(XHTML_NS, "button");
 		renameNodeBtn.type = "button";
 		renameNodeBtn.className = "paper-relations-node-context-item";
 		renameNodeBtn.setAttribute("data-action", "rename");
-		renameNodeBtn.textContent = "Rename";
+		renameNodeBtn.textContent = this.getGraphWorkspaceText("nodeMenuRename");
 		nodeContextMenu.append(removeNodeBtn, renameNodeBtn);
 		canvas.appendChild(nodeContextMenu);
 
@@ -835,7 +853,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 		catch (error) {
 			Zotero.logError(error);
 			this.finishNodeRename(window, { restoreNode: true, render: true });
-			Services.prompt.alert(window, "Rename Failed", String(error?.message || error));
+			Services.prompt.alert(
+				window,
+				this.getGraphWorkspaceText("renameFailedTitle"),
+				String(error?.message || error),
+			);
 		}
 	},
 
@@ -913,7 +935,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 		catch (error) {
 			Zotero.logError(error);
-			Services.prompt.alert(window, "Remove Node Failed", String(error?.message || error));
+			Services.prompt.alert(
+				window,
+				this.getGraphWorkspaceText("removeNodeFailedTitle"),
+				String(error?.message || error),
+			);
 		}
 	},
 
