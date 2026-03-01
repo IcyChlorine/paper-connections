@@ -336,7 +336,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 			lastClientY: 0,
 			contextMenuNodeID: null,
 			renamingNodeID: null,
-			renameOriginalRemark: "",
 			renameFallbackTitle: "",
 			renameSnapshot: null,
 			renameBusy: false,
@@ -791,7 +790,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let currentRemark = this.getItemRemark(item) || "";
 		let initialValue = currentRemark || node.label || fallbackTitle;
 		state.renamingNodeID = nodeID;
-		state.renameOriginalRemark = currentRemark;
 		state.renameFallbackTitle = fallbackTitle;
 		state.renameSnapshot = {
 			label: node.label,
@@ -856,7 +854,6 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 
 		state.renamingNodeID = null;
-		state.renameOriginalRemark = "";
 		state.renameFallbackTitle = "";
 		state.renameSnapshot = null;
 		state.renameBusy = false;

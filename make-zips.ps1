@@ -36,6 +36,14 @@ finally {
 Move-Item -Path $zipPath -Destination $xpiPath -Force
 
 $hash = (Get-FileHash -Path $xpiPath -Algorithm SHA256).Hash.ToLowerInvariant()
-$updates = Get-Content -Raw -Path $templatePath | ConvertFrom-Json
-$updates.addons.'paper-relations@example.com'.updates[0].update_hash = "sha256:$hash"
-$updates | ConvertTo-Json -Depth 20 | Set-Content -Path $updatesPath -Encoding utf8
+$templateContent = Get-Content -Raw -Path $templatePath
+$updatedContent = [System.Text.RegularExpressions.Regex]::Replace(
+	$templateContent,
+	'("update_hash"\s*:\s*")sha256:[^"]*(")',
+	"`$1sha256:$hash`$2",
+	[System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+)
+if ($updatedContent -eq $templateContent) {
+	throw "Failed to update update_hash in updates.json.tmpl"
+}
+Set-Content -Path $updatesPath -Value $updatedContent -Encoding ascii
