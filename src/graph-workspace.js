@@ -33,6 +33,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.svg?.removeEventListener("contextmenu", existingState.handlers.contextmenu);
 				window.removeEventListener("mousemove", existingState.handlers.mousemove);
 				window.removeEventListener("mouseup", existingState.handlers.mouseup);
+				window.removeEventListener("mousedown", existingState.handlers.windowmousedown, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown);
 				window.removeEventListener("keyup", existingState.handlers.keyup);
 				window.removeEventListener("blur", existingState.handlers.blur);
@@ -44,6 +45,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.pinButton?.removeEventListener("click", existingState.handlers.pinbtnclick);
 				existingState.snapButton?.removeEventListener("click", existingState.handlers.snapbtnclick);
 				window.removeEventListener("resize", existingState.handlers.resize);
+				existingState.nodeContextMenu?.removeEventListener("mousedown", existingState.handlers.nodemenumousedown);
+				existingState.nodeContextMenu?.removeEventListener("click", existingState.handlers.nodemenuclick);
+				existingState.renameInput?.removeEventListener("mousedown", existingState.handlers.renameinputmousedown);
+				existingState.renameInput?.removeEventListener("input", existingState.handlers.renameinput);
+				existingState.renameInput?.removeEventListener("keydown", existingState.handlers.renameinputkeydown);
+				existingState.renameInput?.removeEventListener("blur", existingState.handlers.renameinputblur);
 			}
 			this.graphStates?.delete(window);
 			doc.getElementById("paper-relations-graph-splitter")?.remove();
@@ -220,6 +227,29 @@ var PaperRelationsGraphWorkspaceMixin = {
 		svg.appendChild(canvasControls);
 		canvas.appendChild(svg);
 
+		let nodeContextMenu = doc.createElementNS(XHTML_NS, "div");
+		nodeContextMenu.className = "paper-relations-node-context-menu";
+		nodeContextMenu.hidden = true;
+		let removeNodeBtn = doc.createElementNS(XHTML_NS, "button");
+		removeNodeBtn.type = "button";
+		removeNodeBtn.className = "paper-relations-node-context-item";
+		removeNodeBtn.setAttribute("data-action", "remove");
+		removeNodeBtn.textContent = "Remove";
+		let renameNodeBtn = doc.createElementNS(XHTML_NS, "button");
+		renameNodeBtn.type = "button";
+		renameNodeBtn.className = "paper-relations-node-context-item";
+		renameNodeBtn.setAttribute("data-action", "rename");
+		renameNodeBtn.textContent = "Rename";
+		nodeContextMenu.append(removeNodeBtn, renameNodeBtn);
+		canvas.appendChild(nodeContextMenu);
+
+		let renameInput = doc.createElementNS(XHTML_NS, "input");
+		renameInput.type = "text";
+		renameInput.className = "paper-relations-node-rename-input";
+		renameInput.hidden = true;
+		renameInput.setAttribute("spellcheck", "false");
+		canvas.appendChild(renameInput);
+
 		pane.append(toolbar, canvas);
 		itemsContainer.append(splitter, pane);
 
@@ -242,6 +272,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 			canvasControls,
 			pinButton,
 			snapButton,
+			nodeContextMenu,
+			removeNodeBtn,
+			renameNodeBtn,
+			renameInput,
 			controlPanelWidth,
 			nodes: [],
 			edges: [],
@@ -271,6 +305,13 @@ var PaperRelationsGraphWorkspaceMixin = {
 			dragNodeRawY: null,
 			lastClientX: 0,
 			lastClientY: 0,
+			contextMenuNodeID: null,
+			renamingNodeID: null,
+			renameOriginalRemark: "",
+			renameFallbackTitle: "",
+			renameSnapshot: null,
+			renameBusy: false,
+			suppressRenameInputBlur: false,
 			handlers: null,
 		};
 
@@ -280,8 +321,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			contextmenu: (event) => this.onGraphContextMenu(window, event),
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
-			keydown: (event) => this.onWindowKeyStateChange(window, event),
-			keyup: (event) => this.onWindowKeyStateChange(window, event),
+			windowmousedown: (event) => this.onWindowMouseDown(window, event),
+			keydown: (event) => this.onWindowKeyDown(window, event),
+			keyup: (event) => this.onWindowKeyUp(window, event),
 			blur: () => this.onWindowBlur(window),
 			dragover: (event) => this.onGraphDragOver(window, event),
 			drop: (event) => this.onGraphDrop(window, event),
@@ -289,6 +331,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 			controlmousedown: (event) => this.onCanvasControlMouseDown(window, event),
 			pinbtnclick: () => this.onPinButtonToggle(window),
 			snapbtnclick: () => this.onSnapButtonToggle(window),
+			nodemenumousedown: (event) => this.onNodeContextMenuMouseDown(window, event),
+			nodemenuclick: (event) => this.onNodeContextMenuClick(window, event),
+			renameinputmousedown: (event) => this.onNodeRenameInputMouseDown(window, event),
+			renameinput: (event) => this.onNodeRenameInput(window, event),
+			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
+			renameinputblur: (event) => this.onNodeRenameInputBlur(window, event),
 			resize: () => this.updateCanvasControlsLayout(window),
 		};
 
@@ -297,6 +345,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		svg.addEventListener("contextmenu", state.handlers.contextmenu);
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
+		window.addEventListener("mousedown", state.handlers.windowmousedown, true);
 		window.addEventListener("keydown", state.handlers.keydown);
 		window.addEventListener("keyup", state.handlers.keyup);
 		window.addEventListener("blur", state.handlers.blur);
@@ -307,6 +356,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		snapButton.addEventListener("mousedown", state.handlers.controlmousedown);
 		pinButton.addEventListener("click", state.handlers.pinbtnclick);
 		snapButton.addEventListener("click", state.handlers.snapbtnclick);
+		nodeContextMenu.addEventListener("mousedown", state.handlers.nodemenumousedown);
+		nodeContextMenu.addEventListener("click", state.handlers.nodemenuclick);
+		renameInput.addEventListener("mousedown", state.handlers.renameinputmousedown);
+		renameInput.addEventListener("input", state.handlers.renameinput);
+		renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
+		renameInput.addEventListener("blur", state.handlers.renameinputblur);
 		window.addEventListener("resize", state.handlers.resize);
 
 		this.graphStates.set(window, state);
@@ -456,12 +511,363 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.notifyGraphContextChanged(window);
 	},
 
+	isSavedTopicMutableState(state) {
+		return !!(state?.activeTopicID && state?.activeLibraryID && !state?.isTemporaryTopic);
+	},
+
+	getNodeByID(state, nodeID) {
+		if (!state?.nodes?.length || !nodeID) return null;
+		return state.nodes.find((node) => node.id === nodeID) || null;
+	},
+
+	getItemForNode(node) {
+		if (!node?.libraryID || !node?.itemKey) return null;
+		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
+		try {
+			return Zotero.Items.getByLibraryAndKey(node.libraryID, node.itemKey);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			return null;
+		}
+	},
+
+	hideNodeContextMenu(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodeContextMenu) return;
+		state.nodeContextMenu.hidden = true;
+		state.contextMenuNodeID = null;
+	},
+
+	showNodeContextMenu(window, nodeID, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodeContextMenu || !nodeID) return;
+		let node = this.getNodeByID(state, nodeID);
+		if (!node) {
+			this.hideNodeContextMenu(window);
+			return;
+		}
+
+		state.contextMenuNodeID = nodeID;
+		state.removeNodeBtn.disabled = !this.isSavedTopicMutableState(state);
+		state.renameNodeBtn.disabled = !this.getItemForNode(node);
+		state.nodeContextMenu.hidden = false;
+
+		let canvasRect = state.canvas.getBoundingClientRect();
+		let left = clientX - canvasRect.left;
+		let top = clientY - canvasRect.top;
+		state.nodeContextMenu.style.left = `${Math.max(6, Math.round(left))}px`;
+		state.nodeContextMenu.style.top = `${Math.max(6, Math.round(top))}px`;
+
+		let menuRect = state.nodeContextMenu.getBoundingClientRect();
+		let maxLeft = Math.max(6, Math.floor(canvasRect.width - menuRect.width - 6));
+		let maxTop = Math.max(6, Math.floor(canvasRect.height - menuRect.height - 6));
+		let clampedLeft = Math.min(maxLeft, Math.max(6, Math.round(left)));
+		let clampedTop = Math.min(maxTop, Math.max(6, Math.round(top)));
+		state.nodeContextMenu.style.left = `${clampedLeft}px`;
+		state.nodeContextMenu.style.top = `${clampedTop}px`;
+	},
+
+	onNodeContextMenuMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+	},
+
+	onNodeContextMenuClick(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let actionElem = event.target?.closest?.("[data-action]");
+		let action = actionElem?.getAttribute?.("data-action");
+		if (!action) return;
+		event.preventDefault();
+		event.stopPropagation();
+		this.handleNodeContextMenuAction(window, action, state.contextMenuNodeID).catch((error) => Zotero.logError(error));
+	},
+
+	async handleNodeContextMenuAction(window, action, nodeID) {
+		if (!nodeID || !action) return;
+		this.hideNodeContextMenu(window);
+		if (action === "remove") {
+			await this.removeNodeFromActiveTopic(window, nodeID);
+			return;
+		}
+		if (action === "rename") {
+			this.startNodeRename(window, nodeID);
+		}
+	},
+
+	onWindowMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let target = event?.target;
+		let clickInMenu = !!target?.closest?.(".paper-relations-node-context-menu");
+		if (!clickInMenu) {
+			this.hideNodeContextMenu(window);
+		}
+		if (state.renamingNodeID && !state.renameBusy) {
+			let clickInRenameInput = !!target?.closest?.(".paper-relations-node-rename-input");
+			if (!clickInRenameInput) {
+				this.cancelNodeRename(window);
+			}
+		}
+	},
+
+	onNodeRenameInputMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.stopPropagation();
+	},
+
+	onNodeRenameInput(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID || state.renameBusy) return;
+		this.updateNodeRenamePreview(window, event?.target?.value || "");
+	},
+
+	onNodeRenameInputKeyDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID || state.renameBusy) return;
+		if (event.key === "Enter") {
+			event.preventDefault();
+			event.stopPropagation();
+			this.confirmNodeRename(window).catch((error) => Zotero.logError(error));
+			return;
+		}
+		if (event.key === "Escape") {
+			event.preventDefault();
+			event.stopPropagation();
+			this.cancelNodeRename(window);
+		}
+	},
+
+	onNodeRenameInputBlur(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID || state.renameBusy || state.suppressRenameInputBlur) return;
+		this.cancelNodeRename(window);
+	},
+
+	setRenameInputHidden(window, hidden) {
+		let state = this.graphStates.get(window);
+		if (!state?.renameInput) return;
+		state.suppressRenameInputBlur = true;
+		if (hidden && state.renameInput === window.document.activeElement) {
+			state.renameInput.blur();
+		}
+		state.renameInput.hidden = !!hidden;
+		state.renameInput.disabled = !!state.renameBusy;
+		if (hidden) {
+			state.renameInput.value = "";
+		}
+		window.setTimeout(() => {
+			let nextState = this.graphStates.get(window);
+			if (!nextState) return;
+			nextState.suppressRenameInputBlur = false;
+		}, 0);
+	},
+
+	startNodeRename(window, nodeID) {
+		let state = this.graphStates.get(window);
+		if (!state || !nodeID || state.renameBusy) return;
+		let node = this.getNodeByID(state, nodeID);
+		if (!node) return;
+		let item = this.getItemForNode(node);
+		if (!item) return;
+
+		this.hideNodeContextMenu(window);
+		if (state.renamingNodeID && state.renamingNodeID !== nodeID) {
+			this.finishNodeRename(window, { restoreNode: true, render: true });
+			state = this.graphStates.get(window);
+			if (!state) return;
+			node = this.getNodeByID(state, nodeID);
+			if (!node) return;
+		}
+
+		this.selectGraphNode(window, nodeID);
+		let fallbackTitle = this.getItemTitle(item) || node.title || node.itemKey || "(untitled)";
+		let currentRemark = this.getItemRemark(item) || "";
+		let initialValue = currentRemark || node.label || fallbackTitle;
+		state.renamingNodeID = nodeID;
+		state.renameOriginalRemark = currentRemark;
+		state.renameFallbackTitle = fallbackTitle;
+		state.renameSnapshot = {
+			label: node.label,
+			width: node.width,
+			title: node.title,
+			x: node.x,
+			y: node.y,
+		};
+		state.renameBusy = false;
+		state.renameInput.value = initialValue;
+		this.setRenameInputHidden(window, false);
+		this.renderGraph(window);
+		this.syncNodeRenameInputLayout(window);
+		if (!state.renameInput.hidden) {
+			state.renameInput.focus();
+			state.renameInput.select();
+		}
+	},
+
+	updateNodeRenamePreview(window, inputValue) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID) return;
+		let node = this.getNodeByID(state, state.renamingNodeID);
+		if (!node) return;
+		let oldMetrics = this.getNodeRenderMetrics(node);
+		let centerX = node.x + oldMetrics.width / 2;
+		let centerY = node.y + oldMetrics.height / 2;
+
+		let text = String(inputValue || "");
+		let fallbackTitle = state.renameFallbackTitle || node.title || node.itemKey || "(untitled)";
+		let nextLabel = text.trim() ? text : fallbackTitle;
+		let nextWidth = this.getNodeWidthForLabel(nextLabel);
+		let nextMetrics = this.getNodeRenderMetrics({
+			...node,
+			label: nextLabel,
+			width: nextWidth,
+		});
+		node.label = nextLabel;
+		node.width = nextWidth;
+		node.x = centerX - nextMetrics.width / 2;
+		node.y = centerY - nextMetrics.height / 2;
+		this.renderGraph(window);
+		this.notifyGraphSelectionChanged(window);
+	},
+
+	finishNodeRename(window, options = {}) {
+		let { restoreNode = false, render = true } = options;
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let snapshot = state.renameSnapshot;
+		let nodeID = state.renamingNodeID;
+		if (restoreNode && snapshot && nodeID) {
+			let node = this.getNodeByID(state, nodeID);
+			if (node) {
+				node.label = snapshot.label;
+				node.width = snapshot.width;
+				node.title = snapshot.title;
+				node.x = snapshot.x;
+				node.y = snapshot.y;
+			}
+		}
+
+		state.renamingNodeID = null;
+		state.renameOriginalRemark = "";
+		state.renameFallbackTitle = "";
+		state.renameSnapshot = null;
+		state.renameBusy = false;
+		this.setRenameInputHidden(window, true);
+		if (render) {
+			this.renderGraph(window);
+			this.notifyGraphSelectionChanged(window);
+		}
+	},
+
+	cancelNodeRename(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID) return;
+		this.finishNodeRename(window, { restoreNode: true, render: true });
+	},
+
+	async confirmNodeRename(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.renamingNodeID || state.renameBusy) return;
+		let node = this.getNodeByID(state, state.renamingNodeID);
+		if (!node) return;
+		let item = this.getItemForNode(node);
+		if (!item) {
+			this.finishNodeRename(window, { restoreNode: true, render: true });
+			return;
+		}
+
+		state.renameBusy = true;
+		if (state.renameInput) {
+			state.renameInput.disabled = true;
+		}
+		let nextRemark = state.renameInput?.value || "";
+		try {
+			await this.setItemRemark(item, nextRemark);
+			this.finishNodeRename(window, { restoreNode: false, render: true });
+			this.refreshRemarkPresentation();
+			this.refreshGraphNodeLabelsForItem(item);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			this.finishNodeRename(window, { restoreNode: true, render: true });
+			Services.prompt.alert(window, "Rename Failed", String(error?.message || error));
+		}
+	},
+
+	syncNodeRenameInputLayout(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.renameInput) return;
+		let input = state.renameInput;
+		if (!state.renamingNodeID) {
+			if (!input.hidden) {
+				this.setRenameInputHidden(window, true);
+			}
+			return;
+		}
+		let node = this.getNodeByID(state, state.renamingNodeID);
+		if (!node) {
+			this.finishNodeRename(window, { restoreNode: false, render: false });
+			return;
+		}
+		let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
+		let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
+		let left = state.panX + node.x * state.scale;
+		let top = state.panY + node.y * state.scale;
+		let pxWidth = Math.max(40, Math.round(width * state.scale));
+		let pxHeight = Math.max(22, Math.round(height * state.scale));
+		let fontSize = Math.max(11, Math.round(15 * state.scale));
+		input.style.left = `${Math.round(left)}px`;
+		input.style.top = `${Math.round(top)}px`;
+		input.style.width = `${pxWidth}px`;
+		input.style.height = `${pxHeight}px`;
+		input.style.fontSize = `${fontSize}px`;
+		input.style.lineHeight = `${Math.max(14, Math.round(this.nodeLineHeight * state.scale))}px`;
+	},
+
+	async removeNodeFromActiveTopic(window, nodeID) {
+		let state = this.graphStates.get(window);
+		if (!state || !nodeID || !this.isSavedTopicMutableState(state)) return;
+		let topicID = state.activeTopicID;
+		let libraryID = state.activeLibraryID;
+		if (!topicID || !libraryID) return;
+		if (state.renamingNodeID === nodeID) {
+			this.cancelNodeRename(window);
+		}
+
+		try {
+			let removed = await this.removeNode(libraryID, topicID, nodeID);
+			if (!removed) return;
+			let updatedTopic = await this.getTopic(libraryID, topicID);
+			let selectedItem = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+			if (updatedTopic) {
+				this.applyTopicToGraphState(window, updatedTopic, selectedItem);
+				this.refreshGraphChrome(window);
+				this.notifyGraphSelectionChanged(window);
+				this.notifyGraphContextChanged(window);
+			}
+			else {
+				await this.handlePrimaryItemChanged(window, selectedItem, { force: true });
+			}
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Remove Node Failed", String(error?.message || error));
+		}
+	},
+
 	async handlePrimaryItemChanged(window, item, options = {}) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 
 		let force = !!options.force;
 		if (!item) {
+			this.hideNodeContextMenu(window);
+			this.finishNodeRename(window, { restoreNode: false, render: false });
 			if (!state.pinSelection || force) {
 				state.activeTopicID = null;
 				state.activeLibraryID = null;
@@ -508,6 +914,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 	applyTopicToGraphState(window, topic, selectedItem = null) {
 		let state = this.graphStates.get(window);
 		if (!state || !topic) return;
+		this.hideNodeContextMenu(window);
+		this.finishNodeRename(window, { restoreNode: false, render: false });
 
 		let selectedItemRef = selectedItem ? this.getItemRef(selectedItem.libraryID, selectedItem.key) : null;
 		let nodes = Object.values(topic.nodes).map((node) => {
@@ -558,6 +966,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 	applyTemporaryTopicForItem(window, item) {
 		let state = this.graphStates.get(window);
 		if (!state || !item) return;
+		this.hideNodeContextMenu(window);
+		this.finishNodeRename(window, { restoreNode: false, render: false });
 		let title = this.getItemTitle(item);
 		let label = this.getNodeLabelForDisplay({
 			libraryID: item.libraryID,
@@ -801,7 +1211,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		for (let node of nodes) {
 			let group = doc.createElementNS(SVG_NS, "g");
 			let selectedClass = state.selectedNodeID === node.id ? " selected" : "";
-			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}`);
+			let renamingClass = state.renamingNodeID === node.id ? " renaming" : "";
+			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}${renamingClass}`);
 			group.setAttribute("data-node-id", node.id);
 			group.setAttribute("transform", `translate(${node.x},${node.y})`);
 			let width = node.renderWidth;
@@ -860,6 +1271,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.applyAnchorVisibilityToDOM(state);
 		this.updateGraphTransform(state);
 		this.updateCanvasControlsLayout(window);
+		this.syncNodeRenameInputLayout(window);
 	},
 
 	buildBezierPath(fromNode, toNode) {
@@ -1154,6 +1566,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 	updateGraphTransform(state) {
 		state.viewport.setAttribute("transform", `translate(${state.panX} ${state.panY}) scale(${state.scale})`);
+		if (state?.window) {
+			this.syncNodeRenameInputLayout(state.window);
+		}
 	},
 
 	clampScale(scale) {
@@ -1174,6 +1589,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 	onGraphWheel(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.hideNodeContextMenu(window);
 		event.preventDefault();
 
 		let oldScale = state.scale;
@@ -1229,16 +1645,44 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.updateCanvasCursorState(window);
 	},
 
-	onWindowKeyStateChange(window, event) {
+	onWindowKeyDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		if (event?.key && event.key !== "Alt") return;
+		this.syncAltModifierByEvent(window, event);
+		if (!event?.key) return;
+		if (event.key === "F2") {
+			if (state.selectedNodeID && !state.dragMode && !state.renameBusy) {
+				this.startNodeRename(window, state.selectedNodeID);
+				event.preventDefault();
+				event.stopPropagation();
+			}
+			return;
+		}
+		if (!state.renamingNodeID || state.renameBusy) return;
+		if (event.key === "Enter") {
+			event.preventDefault();
+			event.stopPropagation();
+			this.confirmNodeRename(window).catch((error) => Zotero.logError(error));
+			return;
+		}
+		if (event.key === "Escape") {
+			event.preventDefault();
+			event.stopPropagation();
+			this.cancelNodeRename(window);
+		}
+	},
+
+	onWindowKeyUp(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
 		this.syncAltModifierByEvent(window, event);
 	},
 
 	onWindowBlur(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.hideNodeContextMenu(window);
+		this.cancelNodeRename(window);
 		state.altModifierPressed = false;
 		state.pointerInCanvas = false;
 		state.pointerOverNode = false;
@@ -1251,12 +1695,25 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state) return;
 		if (state.dragMode === "edge-cut" || (event.altKey && event.button === 2)) {
 			event.preventDefault();
+			return;
 		}
+		let nodeElem = event.target?.closest?.("[data-node-id]");
+		if (!nodeElem) {
+			this.hideNodeContextMenu(window);
+			return;
+		}
+		let nodeID = nodeElem.getAttribute("data-node-id");
+		if (!nodeID) return;
+		this.selectGraphNode(window, nodeID);
+		event.preventDefault();
+		event.stopPropagation();
+		this.showNodeContextMenu(window, nodeID, event.clientX, event.clientY);
 	},
 
 	onGraphMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
+		this.hideNodeContextMenu(window);
 		this.syncAltModifierByEvent(window, event);
 		this.updatePointerContextFromEvent(window, event);
 		if (event.button === 2 && event.altKey) {

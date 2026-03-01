@@ -43,6 +43,9 @@
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
   - Selecting a graph node reverse-syncs selection to the top Zotero item list.
+  - Right-click a node to open a context menu with `Remove` and `Rename`.
+  - `Remove` deletes the node from the active saved topic and removes all incident edges.
+  - `Rename` (or `F2` on selected node) enters inline edit mode; `Enter` confirms and `Esc` cancels.
   - Node left/right anchors appear as black dots only when cursor nears an anchor.
   - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
   - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).
@@ -53,6 +56,8 @@
   - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
 - Node rendering improvements
   - Graph node text prefers item `Remark` (if present); falls back to full paper title when remark is empty.
+  - Confirming inline node rename writes back to item `Remark` (`extra` field `remark: ...`) and refreshes all open graph labels.
+  - During inline rename typing, node width/height reflow immediately and node center stays stable.
   - When label changes (for example after editing `Remark`), node center is preserved while width/height recompute, keeping snap-grid alignment stable.
   - Node position persistence during drag and remark-driven relayout uses displayed label metrics, preventing topic reload selection changes from introducing tiny grid misalignment drift.
   - Node width adapts by title length within a wider range to reduce excessive wrapping.

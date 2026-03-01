@@ -47,6 +47,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 }
 
 #paper-relations-graph-canvas {
+	position: relative;
 	margin-top: 8px;
 	flex: 1;
 	min-height: 120px;
@@ -191,6 +192,56 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 .paper-relations-node.selected rect {
 	stroke: #1c4f88;
 	stroke-width: 3;
+}
+
+.paper-relations-node.renaming rect {
+	stroke: #1c4f88;
+	stroke-width: 2.2;
+}
+
+.paper-relations-node-context-menu {
+	position: absolute;
+	z-index: 8;
+	display: flex;
+	flex-direction: column;
+	min-width: 104px;
+	padding: 4px;
+	border: 1px solid #b8c6d3;
+	border-radius: 8px;
+	background: #ffffff;
+	box-shadow: 0 6px 18px rgba(34, 48, 64, 0.2);
+}
+
+.paper-relations-node-context-item {
+	padding: 6px 9px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: #223548;
+	font-size: 12px;
+	text-align: left;
+}
+
+.paper-relations-node-context-item:hover:not(:disabled) {
+	background: #eef4fa;
+}
+
+.paper-relations-node-context-item:disabled {
+	opacity: 0.45;
+}
+
+.paper-relations-node-rename-input {
+	position: absolute;
+	z-index: 7;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 6px 10px;
+	border: 2px solid #1c4f88;
+	border-radius: 10px;
+	background: #ffffff;
+	color: #233446;
+	font-weight: 500;
+	outline: none;
 }
 
 .paper-relations-pane-actions {
