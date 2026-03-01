@@ -52,6 +52,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				window.removeEventListener("mousemove", existingState.handlers.mousemove);
 				window.removeEventListener("mouseup", existingState.handlers.mouseup);
 				window.removeEventListener("mousedown", existingState.handlers.windowmousedown, true);
+				doc.removeEventListener("mousedown", existingState.handlers.documentmousedown, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown);
 				window.removeEventListener("keyup", existingState.handlers.keyup);
 				window.removeEventListener("blur", existingState.handlers.blur);
@@ -268,9 +269,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 		renameInput.type = "text";
 		renameInput.className = "paper-relations-node-rename-input";
 		renameInput.hidden = true;
-		renameInput.setAttribute("spellcheck", "false");
-		renameInput.style.position = "absolute";
-		renameInput.style.zIndex = "7";
+			renameInput.setAttribute("spellcheck", "false");
+			renameInput.style.position = "absolute";
+			renameInput.style.zIndex = "7";
+			renameInput.style.textAlign = "center";
 		canvas.appendChild(renameInput);
 
 		pane.append(toolbar, canvas);
@@ -345,6 +347,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
 			windowmousedown: (event) => this.onWindowMouseDown(window, event),
+			documentmousedown: (event) => this.onWindowMouseDown(window, event),
 			keydown: (event) => this.onWindowKeyDown(window, event),
 			keyup: (event) => this.onWindowKeyUp(window, event),
 			blur: () => this.onWindowBlur(window),
@@ -369,6 +372,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
 		window.addEventListener("mousedown", state.handlers.windowmousedown, true);
+		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
 		window.addEventListener("keydown", state.handlers.keydown);
 		window.addEventListener("keyup", state.handlers.keyup);
 		window.addEventListener("blur", state.handlers.blur);
@@ -884,12 +888,14 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let nodeElem = state.nodesGroup?.querySelector?.(`[data-node-id="${state.renamingNodeID}"]`);
 		if (nodeElem) {
 			let nodeRect = nodeElem.getBoundingClientRect();
-			left = nodeRect.left - canvasRect.left;
-			top = nodeRect.top - canvasRect.top;
-			pxWidth = nodeRect.width;
-			pxHeight = nodeRect.height;
+			if (nodeRect.width > 1 && nodeRect.height > 1) {
+				left = nodeRect.left - canvasRect.left;
+				top = nodeRect.top - canvasRect.top;
+				pxWidth = nodeRect.width;
+				pxHeight = nodeRect.height;
+			}
 		}
-		else {
+		if (!(pxWidth > 1 && pxHeight > 1)) {
 			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
 			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
 			left = state.panX + node.x * state.scale;
