@@ -52,7 +52,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 				window.removeEventListener("mousemove", existingState.handlers.mousemove);
 				window.removeEventListener("mouseup", existingState.handlers.mouseup);
 				window.removeEventListener("mousedown", existingState.handlers.windowmousedown, true);
+				window.removeEventListener("click", existingState.handlers.windowclick, true);
 				doc.removeEventListener("mousedown", existingState.handlers.documentmousedown, true);
+				doc.removeEventListener("click", existingState.handlers.documentclick, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown);
 				window.removeEventListener("keyup", existingState.handlers.keyup);
 				window.removeEventListener("blur", existingState.handlers.blur);
@@ -253,6 +255,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		nodeContextMenu.hidden = true;
 		nodeContextMenu.style.position = "absolute";
 		nodeContextMenu.style.zIndex = "8";
+		nodeContextMenu.style.display = "none";
 		let removeNodeBtn = doc.createElementNS(XHTML_NS, "button");
 		removeNodeBtn.type = "button";
 		removeNodeBtn.className = "paper-relations-node-context-item";
@@ -348,7 +351,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
 			windowmousedown: (event) => this.onWindowMouseDown(window, event),
+			windowclick: (event) => this.onWindowMouseDown(window, event),
 			documentmousedown: (event) => this.onWindowMouseDown(window, event),
+			documentclick: (event) => this.onWindowMouseDown(window, event),
 			keydown: (event) => this.onWindowKeyDown(window, event),
 			keyup: (event) => this.onWindowKeyUp(window, event),
 			blur: () => this.onWindowBlur(window),
@@ -374,7 +379,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
 		window.addEventListener("mousedown", state.handlers.windowmousedown, true);
+		window.addEventListener("click", state.handlers.windowclick, true);
 		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
+		doc.addEventListener("click", state.handlers.documentclick, true);
 		window.addEventListener("keydown", state.handlers.keydown);
 		window.addEventListener("keyup", state.handlers.keyup);
 		window.addEventListener("blur", state.handlers.blur);
@@ -594,6 +601,19 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return false;
 	},
 
+	isClientPointInsideElementRect(elem, clientX, clientY) {
+		if (!elem || elem.hidden || elem.style?.display === "none") return false;
+		if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+		let rect = elem.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return false;
+		return (
+			clientX >= rect.left &&
+			clientX <= rect.right &&
+			clientY >= rect.top &&
+			clientY <= rect.bottom
+		);
+	},
+
 	getItemForNode(node) {
 		if (!node?.libraryID || !node?.itemKey) return null;
 		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
@@ -610,6 +630,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state?.nodeContextMenu) return;
 		state.nodeContextMenu.hidden = true;
+		state.nodeContextMenu.style.display = "none";
 		state.contextMenuNodeID = null;
 	},
 
@@ -626,6 +647,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.removeNodeBtn.disabled = !this.isSavedTopicMutableState(state);
 		state.renameNodeBtn.disabled = !this.getItemForNode(node);
 		state.nodeContextMenu.hidden = false;
+		state.nodeContextMenu.style.display = "flex";
 
 		let canvasRect = state.canvas.getBoundingClientRect();
 		let left = clientX - canvasRect.left;
@@ -680,12 +702,14 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let target = event?.target;
-		let clickInMenu = this.isTargetInsideElement(target, state.nodeContextMenu);
+		let clickInMenu = this.isTargetInsideElement(target, state.nodeContextMenu)
+			|| this.isClientPointInsideElementRect(state.nodeContextMenu, event?.clientX, event?.clientY);
 		if (!clickInMenu) {
 			this.hideNodeContextMenu(window);
 		}
 		if (state.renamingNodeID && !state.renameBusy) {
-			let clickInRenameInput = this.isTargetInsideElement(target, state.renameInput);
+			let clickInRenameInput = this.isTargetInsideElement(target, state.renameInput)
+				|| this.isClientPointInsideElementRect(state.renameInput, event?.clientX, event?.clientY);
 			if (!clickInRenameInput) {
 				this.cancelNodeRename(window);
 			}
@@ -1317,7 +1341,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		for (let node of nodes) {
 			let group = doc.createElementNS(SVG_NS, "g");
 			let selectedClass = state.selectedNodeID === node.id ? " selected" : "";
-			let renamingClass = state.renamingNodeID === node.id ? " renaming" : "";
+			let isRenamingNode = state.renamingNodeID === node.id;
+			let renamingClass = isRenamingNode ? " renaming" : "";
 			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}${renamingClass}`);
 			group.setAttribute("data-node-id", node.id);
 			group.setAttribute("transform", `translate(${node.x},${node.y})`);
@@ -1332,22 +1357,26 @@ var PaperRelationsGraphWorkspaceMixin = {
 			rect.setAttribute("rx", "10");
 			rect.setAttribute("ry", "10");
 
-			let titleElem = doc.createElementNS(SVG_NS, "title");
-			titleElem.textContent = node.label || "";
+			let titleElem = null;
+			let text = null;
+			if (!isRenamingNode) {
+				titleElem = doc.createElementNS(SVG_NS, "title");
+				titleElem.textContent = node.label || "";
 
-			let text = doc.createElementNS(SVG_NS, "text");
-			text.setAttribute("x", String(width / 2));
-			let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
-			text.setAttribute("y", String(firstLineY));
-			text.setAttribute("text-anchor", "middle");
-			for (let i = 0; i < labelLines.length; i++) {
-				let tspan = doc.createElementNS(SVG_NS, "tspan");
-				tspan.setAttribute("x", String(width / 2));
-				if (i > 0) {
-					tspan.setAttribute("dy", String(this.nodeLineHeight));
+				text = doc.createElementNS(SVG_NS, "text");
+				text.setAttribute("x", String(width / 2));
+				let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
+				text.setAttribute("y", String(firstLineY));
+				text.setAttribute("text-anchor", "middle");
+				for (let i = 0; i < labelLines.length; i++) {
+					let tspan = doc.createElementNS(SVG_NS, "tspan");
+					tspan.setAttribute("x", String(width / 2));
+					if (i > 0) {
+						tspan.setAttribute("dy", String(this.nodeLineHeight));
+					}
+					tspan.textContent = labelLines[i];
+					text.appendChild(tspan);
 				}
-				tspan.textContent = labelLines[i];
-				text.appendChild(tspan);
 			}
 
 			let leftAnchor = doc.createElementNS(SVG_NS, "circle");
@@ -1370,7 +1399,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 				rightAnchor.classList.add("active");
 			}
 
-			group.append(rect, titleElem, text, leftAnchor, rightAnchor);
+			group.append(rect);
+			if (titleElem) group.append(titleElem);
+			if (text) group.append(text);
+			group.append(leftAnchor, rightAnchor);
 			nodesGroup.appendChild(group);
 		}
 
