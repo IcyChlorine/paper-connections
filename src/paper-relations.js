@@ -847,7 +847,9 @@ PaperRelations = {
 			window.removeEventListener("click", state.handlers.windowclick, true);
 			window.document.removeEventListener("mousedown", state.handlers.documentmousedown, true);
 			window.document.removeEventListener("click", state.handlers.documentclick, true);
+			window.removeEventListener("keydown", state.handlers.keydown, true);
 			window.removeEventListener("keydown", state.handlers.keydown);
+			window.removeEventListener("keyup", state.handlers.keyup, true);
 			window.removeEventListener("keyup", state.handlers.keyup);
 			window.removeEventListener("blur", state.handlers.blur);
 			state.canvas?.removeEventListener("dragover", state.handlers.dragover);
@@ -864,6 +866,7 @@ PaperRelations = {
 			state.renameInput?.removeEventListener("input", state.handlers.renameinput);
 			state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
 			state.renameInput?.removeEventListener("blur", state.handlers.renameinputblur);
+			state.toolbarToggleButton?.removeEventListener("click", state.handlers.togglebtnclick);
 			state.toolbarToggleButton?.removeEventListener("command", state.handlers.togglebtncommand);
 			window.removeEventListener("resize", state.handlers.resize);
 			this.clearGraphWorkspaceTogglePlacementTimers(state);

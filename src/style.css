@@ -7,6 +7,11 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	list-style-image: url("assets/node-red-svgrepo-com.svg");
 }
 
+#paper-relations-graph-toggle-btn .toolbarbutton-icon {
+	width: 16px;
+	height: 16px;
+}
+
 #paper-relations-graph-toggle-btn[data-graph-visible="false"] {
 	opacity: 0.6;
 }

@@ -199,7 +199,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 				window.removeEventListener("click", existingState.handlers.windowclick, true);
 				doc.removeEventListener("mousedown", existingState.handlers.documentmousedown, true);
 				doc.removeEventListener("click", existingState.handlers.documentclick, true);
+				window.removeEventListener("keydown", existingState.handlers.keydown, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown);
+				window.removeEventListener("keyup", existingState.handlers.keyup, true);
 				window.removeEventListener("keyup", existingState.handlers.keyup);
 				window.removeEventListener("blur", existingState.handlers.blur);
 				existingState.canvas?.removeEventListener("dragover", existingState.handlers.dragover);
@@ -217,6 +219,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.renameInput?.removeEventListener("input", existingState.handlers.renameinput);
 				existingState.renameInput?.removeEventListener("keydown", existingState.handlers.renameinputkeydown);
 				existingState.renameInput?.removeEventListener("blur", existingState.handlers.renameinputblur);
+				existingState.toolbarToggleButton?.removeEventListener("click", existingState.handlers.togglebtnclick);
 				existingState.toolbarToggleButton?.removeEventListener("command", existingState.handlers.togglebtncommand);
 			}
 			this.clearGraphWorkspaceTogglePlacementTimers(existingState);
@@ -521,6 +524,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			renameinput: (event) => this.onNodeRenameInput(window, event),
 			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
 			renameinputblur: (event) => this.onNodeRenameInputBlur(window, event),
+			togglebtnclick: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
 			togglebtncommand: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
 			resize: () => this.updateCanvasControlsLayout(window),
 		};
@@ -534,8 +538,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		window.addEventListener("click", state.handlers.windowclick, true);
 		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
 		doc.addEventListener("click", state.handlers.documentclick, true);
-		window.addEventListener("keydown", state.handlers.keydown);
-		window.addEventListener("keyup", state.handlers.keyup);
+		window.addEventListener("keydown", state.handlers.keydown, true);
+		window.addEventListener("keyup", state.handlers.keyup, true);
 		window.addEventListener("blur", state.handlers.blur);
 		canvas.addEventListener("dragover", state.handlers.dragover);
 		canvas.addEventListener("drop", state.handlers.drop);
@@ -551,6 +555,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		renameInput.addEventListener("input", state.handlers.renameinput);
 		renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
 		renameInput.addEventListener("blur", state.handlers.renameinputblur);
+		toolbarToggleButton?.addEventListener("click", state.handlers.togglebtnclick);
 		toolbarToggleButton?.addEventListener("command", state.handlers.togglebtncommand);
 		window.addEventListener("resize", state.handlers.resize);
 
@@ -1942,11 +1947,18 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		this.syncAltModifierByEvent(window, event);
+		let isBackquoteLike = !!(
+			event?.code === "Backquote" ||
+			event?.key === "`" ||
+			event?.key === "~" ||
+			event?.keyCode === 192 ||
+			event?.which === 192
+		);
 		let isToggleShortcut = !!(
-			event?.ctrlKey &&
+			(event?.ctrlKey || event?.getModifierState?.("Control")) &&
 			!event?.altKey &&
 			!event?.metaKey &&
-			(event?.code === "Backquote" || event?.key === "`")
+			isBackquoteLike
 		);
 		if (isToggleShortcut) {
 			event.preventDefault();
