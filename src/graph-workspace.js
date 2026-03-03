@@ -41,7 +41,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
-		table.svgExportSettingsIntro = isZh ? "SVG \u5bfc\u51fa\u8bbe\u7f6e" : "SVG export settings";
+		table.svgExportSettingsIntro = isZh ? "SVG\u5bfc\u51fa\u8bbe\u7f6e" : "SVG export settings";
 		table.svgExportIncludeGrid = isZh ? "\u5305\u542b\u80cc\u666f\u7f51\u683c" : "Include background grid";
 		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09" : "Margin (pixels)";
 		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
@@ -2215,9 +2215,14 @@ var PaperRelationsGraphWorkspaceMixin = {
 		dialog.setAttribute("role", "dialog");
 		dialog.setAttribute("aria-modal", "true");
 
-		let intro = doc.createElementNS(XHTML_NS, "div");
-		intro.className = "paper-relations-export-settings-intro";
-		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
+		let introRow = doc.createElementNS(XHTML_NS, "div");
+		introRow.className = "paper-relations-export-settings-row paper-relations-export-settings-intro-row";
+		let introLabel = doc.createElementNS(XHTML_NS, "div");
+		introLabel.className = "paper-relations-export-settings-label paper-relations-export-settings-intro";
+		introLabel.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
+		let introControl = doc.createElementNS(XHTML_NS, "span");
+		introControl.className = "paper-relations-export-settings-control";
+		introRow.append(introLabel, introControl);
 
 		let includeGridRow = doc.createElementNS(XHTML_NS, "div");
 		includeGridRow.className = "paper-relations-export-settings-row";
@@ -2263,9 +2268,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		confirmBtn.type = "button";
 		confirmBtn.className = "paper-relations-export-settings-btn paper-relations-export-settings-btn-primary";
 		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
-		actions.append(cancelBtn, confirmBtn);
+		actions.append(confirmBtn, cancelBtn);
 
-		dialog.append(intro, includeGridRow, marginRow, actions);
+		dialog.append(introRow, includeGridRow, marginRow, actions);
 		backdrop.appendChild(dialog);
 		canvas.appendChild(backdrop);
 		window.setTimeout(() => {

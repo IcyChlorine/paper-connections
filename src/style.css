@@ -298,11 +298,6 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 12px;
 }
 
-.paper-relations-export-settings-intro {
-	margin: 0 0 8px;
-	font-weight: 600;
-}
-
 .paper-relations-export-settings-row {
 	display: grid;
 	grid-template-columns: 118px 92px;
@@ -315,9 +310,17 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	margin-top: 8px;
 }
 
+.paper-relations-export-settings-intro-row {
+	margin-bottom: 2px;
+}
+
 .paper-relations-export-settings-label {
 	white-space: nowrap;
 	text-align: right;
+}
+
+.paper-relations-export-settings-intro {
+	font-weight: 600;
 }
 
 .paper-relations-export-settings-control {
@@ -333,7 +336,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	border: 1px solid #b5c2ce;
 	border-radius: 6px;
 	font-size: 12px;
-	text-align: right;
+	text-align: left;
 }
 
 .paper-relations-export-settings-checkbox {
