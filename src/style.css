@@ -321,8 +321,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 }
 
 .paper-relations-export-settings-input {
-	flex: 1;
-	min-width: 0;
+	width: 92px;
 	padding: 3px 6px;
 	border: 1px solid #b5c2ce;
 	border-radius: 6px;

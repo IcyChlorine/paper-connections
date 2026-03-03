@@ -43,7 +43,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
 		table.svgExportSettingsIntro = isZh ? "SVG \u5bfc\u51fa\u8bbe\u7f6e\uff1a" : "SVG export settings:";
 		table.svgExportIncludeGrid = isZh ? "\u5305\u542b\u80cc\u666f\u7f51\u683c" : "Include background grid";
-		table.svgExportMargin = isZh ? "\u8fb9\u8ddd (px)" : "Margin (px)";
+		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09\uff1a" : "Margin (pixels):";
 		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
 		table.dialogCancel = isZh ? "\u53d6\u6d88" : "Cancel";
 		return table[key] || "";
@@ -2234,11 +2234,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		marginLabel.className = "paper-relations-export-settings-label";
 		marginLabel.textContent = this.getGraphWorkspaceText("svgExportMargin");
 		let marginInput = doc.createElementNS(XHTML_NS, "input");
-		marginInput.type = "number";
+		marginInput.type = "text";
 		marginInput.inputMode = "decimal";
-		marginInput.min = "0";
-		marginInput.max = "1000";
-		marginInput.step = "1";
+		marginInput.setAttribute("spellcheck", "false");
 		marginInput.value = "24";
 		marginInput.className = "paper-relations-export-settings-input";
 		marginLabel.htmlFor = "paper-relations-export-margin-input";
