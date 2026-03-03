@@ -41,9 +41,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
-		table.svgExportSettingsIntro = isZh ? "SVG \u5bfc\u51fa\u8bbe\u7f6e\uff1a" : "SVG export settings:";
 		table.svgExportIncludeGrid = isZh ? "\u5305\u542b\u80cc\u666f\u7f51\u683c" : "Include background grid";
-		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09\uff1a" : "Margin (pixels):";
+		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09" : "Margin (pixels)";
 		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
 		table.dialogCancel = isZh ? "\u53d6\u6d88" : "Cancel";
 		return table[key] || "";
@@ -2215,24 +2214,29 @@ var PaperRelationsGraphWorkspaceMixin = {
 		dialog.setAttribute("role", "dialog");
 		dialog.setAttribute("aria-modal", "true");
 
-		let intro = doc.createElementNS(XHTML_NS, "div");
-		intro.className = "paper-relations-export-settings-intro";
-		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
-
-		let includeGridRow = doc.createElementNS(XHTML_NS, "label");
-		includeGridRow.className = "paper-relations-export-settings-checkbox";
+		let includeGridRow = doc.createElementNS(XHTML_NS, "div");
+		includeGridRow.className = "paper-relations-export-settings-row";
+		let includeGridLabel = doc.createElementNS(XHTML_NS, "label");
+		includeGridLabel.className = "paper-relations-export-settings-label";
+		includeGridLabel.textContent = this.getGraphWorkspaceText("svgExportIncludeGrid");
+		let includeGridControl = doc.createElementNS(XHTML_NS, "span");
+		includeGridControl.className = "paper-relations-export-settings-control";
 		let includeGridInput = doc.createElementNS(XHTML_NS, "input");
 		includeGridInput.type = "checkbox";
 		includeGridInput.checked = false;
-		let includeGridLabel = doc.createElementNS(XHTML_NS, "span");
-		includeGridLabel.textContent = this.getGraphWorkspaceText("svgExportIncludeGrid");
-		includeGridRow.append(includeGridInput, includeGridLabel);
+		includeGridInput.className = "paper-relations-export-settings-checkbox";
+		includeGridInput.id = "paper-relations-export-include-grid-input";
+		includeGridLabel.htmlFor = "paper-relations-export-include-grid-input";
+		includeGridControl.append(includeGridInput);
+		includeGridRow.append(includeGridLabel, includeGridControl);
 
 		let marginRow = doc.createElementNS(XHTML_NS, "div");
 		marginRow.className = "paper-relations-export-settings-row";
 		let marginLabel = doc.createElementNS(XHTML_NS, "label");
 		marginLabel.className = "paper-relations-export-settings-label";
 		marginLabel.textContent = this.getGraphWorkspaceText("svgExportMargin");
+		let marginControl = doc.createElementNS(XHTML_NS, "span");
+		marginControl.className = "paper-relations-export-settings-control";
 		let marginInput = doc.createElementNS(XHTML_NS, "input");
 		marginInput.type = "text";
 		marginInput.inputMode = "decimal";
@@ -2241,7 +2245,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		marginInput.className = "paper-relations-export-settings-input";
 		marginLabel.htmlFor = "paper-relations-export-margin-input";
 		marginInput.id = "paper-relations-export-margin-input";
-		marginRow.append(marginLabel, marginInput);
+		marginControl.append(marginInput);
+		marginRow.append(marginLabel, marginControl);
 
 		let actions = doc.createElementNS(XHTML_NS, "div");
 		actions.className = "paper-relations-export-settings-actions";
@@ -2255,7 +2260,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
 		actions.append(cancelBtn, confirmBtn);
 
-		dialog.append(intro, includeGridRow, marginRow, actions);
+		dialog.append(includeGridRow, marginRow, actions);
 		backdrop.appendChild(dialog);
 		canvas.appendChild(backdrop);
 		window.setTimeout(() => {

@@ -298,26 +298,26 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 12px;
 }
 
-.paper-relations-export-settings-intro {
-	margin: 0 0 8px;
-	font-weight: 600;
-}
-
-.paper-relations-export-settings-checkbox {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	margin-bottom: 8px;
-}
-
 .paper-relations-export-settings-row {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.paper-relations-export-settings-row + .paper-relations-export-settings-row {
+	margin-top: 8px;
 }
 
 .paper-relations-export-settings-label {
 	white-space: nowrap;
+}
+
+.paper-relations-export-settings-control {
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-end;
+	min-width: 92px;
 }
 
 .paper-relations-export-settings-input {
@@ -326,6 +326,11 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	border: 1px solid #b5c2ce;
 	border-radius: 6px;
 	font-size: 12px;
+	text-align: right;
+}
+
+.paper-relations-export-settings-checkbox {
+	margin: 0;
 }
 
 .paper-relations-export-settings-actions {
