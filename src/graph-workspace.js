@@ -2215,14 +2215,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		dialog.setAttribute("role", "dialog");
 		dialog.setAttribute("aria-modal", "true");
 
-		let introRow = doc.createElementNS(XHTML_NS, "div");
-		introRow.className = "paper-relations-export-settings-row paper-relations-export-settings-intro-row";
-		let introLabel = doc.createElementNS(XHTML_NS, "div");
-		introLabel.className = "paper-relations-export-settings-label paper-relations-export-settings-intro";
-		introLabel.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
-		let introControl = doc.createElementNS(XHTML_NS, "span");
-		introControl.className = "paper-relations-export-settings-control";
-		introRow.append(introLabel, introControl);
+		let intro = doc.createElementNS(XHTML_NS, "div");
+		intro.className = "paper-relations-export-settings-intro";
+		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
 
 		let includeGridRow = doc.createElementNS(XHTML_NS, "div");
 		includeGridRow.className = "paper-relations-export-settings-row";
@@ -2270,7 +2265,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
 		actions.append(confirmBtn, cancelBtn);
 
-		dialog.append(introRow, includeGridRow, marginRow, actions);
+		dialog.append(intro, includeGridRow, marginRow, actions);
 		backdrop.appendChild(dialog);
 		canvas.appendChild(backdrop);
 		window.setTimeout(() => {
