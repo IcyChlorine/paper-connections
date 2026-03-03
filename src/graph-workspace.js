@@ -999,10 +999,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 				await this.promptRemoveActiveTopic(window);
 				return;
 			case "export-svg":
-				await this.promptSelectExportFile(window, "svg");
+				await this.exportActiveTopicAsSVG(window);
 				return;
 			case "export-json":
-				await this.promptSelectExportFile(window, "json");
+				await this.exportActiveTopicAsJSON(window);
 				return;
 			default:
 				return;
@@ -2084,10 +2084,247 @@ var PaperRelationsGraphWorkspaceMixin = {
 			.replace(/\s+/g, " ");
 	},
 
+	escapeXML(value) {
+		return String(value || "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+	},
+
+	formatSVGNumber(value) {
+		let n = Number(value);
+		if (!Number.isFinite(n)) return "0";
+		return String(Math.round(n * 1000) / 1000);
+	},
+
 	getTopicExportBaseName(state) {
 		let name = this.sanitizeFileNameSegment(state?.activeTopicName || "");
 		if (!name) return "topic";
 		return name;
+	},
+
+	getGraphExportBounds(state) {
+		if (!state) return null;
+		let minX = Infinity;
+		let minY = Infinity;
+		let maxX = -Infinity;
+		let maxY = -Infinity;
+		let includePoint = (x, y) => {
+			if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+			minX = Math.min(minX, x);
+			minY = Math.min(minY, y);
+			maxX = Math.max(maxX, x);
+			maxY = Math.max(maxY, y);
+		};
+
+		for (let node of state.nodes || []) {
+			let metrics = this.getNodeRenderMetrics(node);
+			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : metrics.width;
+			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : metrics.height;
+			includePoint(node.x, node.y);
+			includePoint(node.x + width, node.y + height);
+		}
+
+		let nodeMap = new Map((state.nodes || []).map((node) => [node.id, node]));
+		for (let edge of state.edges || []) {
+			let fromNode = nodeMap.get(edge.from);
+			let toNode = nodeMap.get(edge.to);
+			if (!fromNode || !toNode) continue;
+			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+			if (!curve) continue;
+			for (let point of [curve.start, curve.c1, curve.c2, curve.end]) {
+				includePoint(point.x, point.y);
+			}
+		}
+
+		if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+			return null;
+		}
+		return { minX, minY, maxX, maxY };
+	},
+
+	getExportTopicDataFromState(state) {
+		if (!state) return null;
+		let now = this.now();
+		let topicID = state.activeTopicID || "temporary";
+		let topic = {
+			id: topicID,
+			libraryID: state.activeLibraryID || null,
+			name: state.activeTopicName || "Untitled Topic",
+			createdAt: now,
+			updatedAt: now,
+			nodes: {},
+			edges: {},
+		};
+		for (let node of state.nodes || []) {
+			topic.nodes[node.id] = {
+				id: node.id,
+				libraryID: node.libraryID || state.activeLibraryID || null,
+				itemKey: node.itemKey || "",
+				title: node.title || node.label || node.itemKey || "",
+				shortLabel: node.shortLabel || "",
+				note: node.note || "",
+				x: Number.isFinite(node.x) ? node.x : 0,
+				y: Number.isFinite(node.y) ? node.y : 0,
+				createdAt: now,
+				updatedAt: now,
+			};
+		}
+		for (let edge of state.edges || []) {
+			topic.edges[edge.id] = {
+				id: edge.id,
+				fromNodeID: edge.from,
+				toNodeID: edge.to,
+				type: edge.type || "related",
+				note: edge.note || "",
+				createdAt: now,
+				updatedAt: now,
+			};
+		}
+		return topic;
+	},
+
+	async getExportTopicData(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return null;
+		if (state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic) {
+			let topic = await this.getTopic(state.activeLibraryID, state.activeTopicID);
+			if (topic) return topic;
+		}
+		return this.getExportTopicDataFromState(state);
+	},
+
+	promptSVGExportOptions(window) {
+		let marginInput = { value: "24" };
+		let includeGridState = { value: false };
+		let accepted = Services.prompt.prompt(
+			window,
+			this.getGraphWorkspaceText("workspaceMenuExportSVG"),
+			"Margin (px):",
+			marginInput,
+			"Include background grid",
+			includeGridState,
+		);
+		if (!accepted) return null;
+		let parsedMargin = Number.parseFloat(String(marginInput.value || "").trim());
+		let margin = Number.isFinite(parsedMargin) && parsedMargin >= 0 ? parsedMargin : 24;
+		margin = Math.min(1000, margin);
+		return {
+			margin,
+			includeGrid: !!includeGridState.value,
+		};
+	},
+
+	buildSVGExportContent(state, options = {}) {
+		let bounds = this.getGraphExportBounds(state);
+		if (!bounds) return null;
+		let margin = Number.isFinite(options.margin) ? Math.max(0, options.margin) : 24;
+		let includeGrid = !!options.includeGrid;
+		let minX = bounds.minX - margin;
+		let minY = bounds.minY - margin;
+		let width = Math.max(1, bounds.maxX - bounds.minX + margin * 2);
+		let height = Math.max(1, bounds.maxY - bounds.minY + margin * 2);
+		let gridSize = Math.max(4, this.nodeSnapGridSize || 24);
+
+		let parts = [];
+		parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
+		parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this.formatSVGNumber(minX)} ${this.formatSVGNumber(minY)} ${this.formatSVGNumber(width)} ${this.formatSVGNumber(height)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}">`);
+		parts.push(`<defs>`);
+		parts.push(`<marker id="paper-relations-export-arrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto">`);
+		parts.push(`<path d="M0,0 L11,4 L0,8 Z" fill="#4b6073"/>`);
+		parts.push(`</marker>`);
+		if (includeGrid) {
+			parts.push(`<pattern id="paper-relations-export-grid" patternUnits="userSpaceOnUse" width="${this.formatSVGNumber(gridSize)}" height="${this.formatSVGNumber(gridSize)}">`);
+			parts.push(`<path d="M${this.formatSVGNumber(gridSize)} 0 H0 V${this.formatSVGNumber(gridSize)}" fill="none" stroke="rgba(120,140,160,0.18)" stroke-width="1"/>`);
+			parts.push(`</pattern>`);
+		}
+		parts.push(`</defs>`);
+		parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="#ffffff"/>`);
+		if (includeGrid) {
+			parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="url(#paper-relations-export-grid)"/>`);
+		}
+
+		let nodeMap = new Map((state.nodes || []).map((node) => [node.id, node]));
+		for (let edge of state.edges || []) {
+			let fromNode = nodeMap.get(edge.from);
+			let toNode = nodeMap.get(edge.to);
+			if (!fromNode || !toNode) continue;
+			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+			if (!curve) continue;
+			let pathData = this.buildBezierPathFromCurve(curve);
+			parts.push(`<path d="${this.escapeXML(pathData)}" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-relations-export-arrow)" opacity="0.9"/>`);
+		}
+
+		for (let node of state.nodes || []) {
+			let metrics = this.getNodeRenderMetrics(node);
+			let widthPx = Number.isFinite(node.renderWidth) ? node.renderWidth : metrics.width;
+			let heightPx = Number.isFinite(node.renderHeight) ? node.renderHeight : metrics.height;
+			let labelLines = node.renderLabelLines || metrics.labelLines || this.wrapNodeLabel(node.label, widthPx);
+			let fill = node.kind === "root" ? "#ffe7b8" : "#e8f2ff";
+			parts.push(`<g>`);
+			parts.push(`<rect x="${this.formatSVGNumber(node.x)}" y="${this.formatSVGNumber(node.y)}" width="${this.formatSVGNumber(widthPx)}" height="${this.formatSVGNumber(heightPx)}" rx="10" ry="10" fill="${fill}" stroke="#657a8f" stroke-width="1.4"/>`);
+			let textBlockHeight = labelLines.length * this.nodeLineHeight;
+			let firstLineY = node.y + (heightPx - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
+			parts.push(`<text x="${this.formatSVGNumber(node.x + widthPx / 2)}" y="${this.formatSVGNumber(firstLineY)}" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">`);
+			for (let i = 0; i < labelLines.length; i++) {
+				let dy = i > 0 ? ` dy="${this.formatSVGNumber(this.nodeLineHeight)}"` : "";
+				parts.push(`<tspan x="${this.formatSVGNumber(node.x + widthPx / 2)}"${dy}>${this.escapeXML(labelLines[i])}</tspan>`);
+			}
+			parts.push(`</text>`);
+			parts.push(`</g>`);
+		}
+
+		parts.push(`</svg>`);
+		return parts.join("\n");
+	},
+
+	writeTextFileUTF8(filePath, content) {
+		let file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+		file.initWithPath(filePath);
+		let output = Cc["@mozilla.org/network/file-output-stream;1"].createInstance(Ci.nsIFileOutputStream);
+		output.init(file, 0x02 | 0x08 | 0x20, 0o644, 0);
+		let converter = Cc["@mozilla.org/intl/converter-output-stream;1"].createInstance(Ci.nsIConverterOutputStream);
+		converter.init(output, "UTF-8", 0, 0);
+		converter.writeString(String(content || ""));
+		converter.close();
+	},
+
+	async exportActiveTopicAsJSON(window) {
+		try {
+			let topic = await this.getExportTopicData(window);
+			if (!topic) return;
+			let filePath = await this.promptSelectExportFile(window, "json");
+			if (!filePath) return;
+			let payload = {
+				schemaVersion: this.storeSchemaVersion,
+				topic,
+			};
+			this.writeTextFileUTF8(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Export as JSON Failed", String(error?.message || error));
+		}
+	},
+
+	async exportActiveTopicAsSVG(window) {
+		try {
+			let state = this.graphStates.get(window);
+			if (!state) return;
+			let options = this.promptSVGExportOptions(window);
+			if (!options) return;
+			let filePath = await this.promptSelectExportFile(window, "svg");
+			if (!filePath) return;
+			let content = this.buildSVGExportContent(state, options);
+			if (!content) return;
+			this.writeTextFileUTF8(filePath, `${content}\n`);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Export as SVG Failed", String(error?.message || error));
+		}
 	},
 
 	async promptSelectExportFile(window, format) {

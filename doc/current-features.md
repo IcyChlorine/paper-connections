@@ -49,7 +49,8 @@
   - Right-click blank canvas area opens a topic context menu with `Export as SVG`, `Export as JSON`, `Rename`, and `Delete`.
   - Topic-menu `Rename` prompts for a new topic name and updates the active saved topic.
   - Topic-menu `Delete` uses the same confirm-and-remove flow as the right-pane `Remove topic` action.
-  - Topic-menu `Export as SVG` and `Export as JSON` currently open a save-file picker dialog (export file writing is pending).
+  - Topic-menu `Export as SVG` first prompts export options (`Include background grid`, `Margin (px)`), then opens a save dialog and writes an SVG of the content bounds plus margin.
+  - Topic-menu `Export as JSON` opens a save dialog and writes topic data JSON (`schemaVersion` + `topic` payload) for exchange/import workflows.
   - `Remove` deletes the node from the active saved topic and removes all incident edges.
   - `Rename` (or `F2` on selected node) enters inline edit mode; `Enter` confirms and `Esc` cancels.
   - Node left/right anchors appear as black dots only when cursor nears an anchor.
