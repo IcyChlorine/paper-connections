@@ -983,7 +983,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let action = event?.currentTarget?.getAttribute?.("data-action")
 			|| event?.target?.closest?.("[data-action]")?.getAttribute?.("data-action")
 			|| "";
-		this.handleWorkspaceContextMenuAction(window, action).catch((error) => Zotero.logError(error));
+		window.requestAnimationFrame(() => {
+			window.setTimeout(() => {
+				this.handleWorkspaceContextMenuAction(window, action).catch((error) => Zotero.logError(error));
+			}, 0);
+		});
 	},
 
 	async handleWorkspaceContextMenuAction(window, action) {
@@ -1451,6 +1455,22 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.renderGraph(window);
 	},
 
+	promptTopicNameInput(window, dialogTitle, defaultName) {
+		let input = {
+			value: String(defaultName || ""),
+		};
+		let accepted = Services.prompt.prompt(
+			window,
+			dialogTitle,
+			"Topic name:",
+			input,
+			null,
+			{},
+		);
+		if (!accepted) return null;
+		return input.value;
+	},
+
 	async promptCreateTopicFromItem(window, explicitItem = null) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -1459,7 +1479,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		try {
 			let defaultName = this.getItemTitle(item);
-			let inputName = window.prompt("Topic name:", defaultName);
+			let inputName = this.promptTopicNameInput(window, "Create Topic", defaultName);
 			if (inputName === null) return;
 			let topic = await this.createTopic(item.libraryID, {
 				name: inputName || defaultName,
@@ -1484,7 +1504,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state || !this.canRemoveActiveTopic(window)) return;
 		let defaultName = state.activeTopicName || "Untitled Topic";
-		let inputName = window.prompt("Topic name:", defaultName);
+		let inputName = this.promptTopicNameInput(window, "Rename Topic", defaultName);
 		if (inputName === null) return;
 		let nextName = String(inputName || "").trim();
 		if (!nextName) return;
