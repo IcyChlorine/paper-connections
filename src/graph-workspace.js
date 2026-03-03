@@ -39,6 +39,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			};
 		table.workspaceMenuExportSVG = isZh ? "\u5bfc\u51fa\u4e3a SVG" : "Export as SVG";
 		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
+		table.workspaceMenuCreateTopicFromSelected = isZh ? "\u7531\u6b64\u8bba\u6587\u65b0\u5efa topic" : "Create Topic From This Paper";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
 		table.svgExportSettingsIntro = isZh ? "SVG\u5bfc\u51fa\u8bbe\u7f6e" : "SVG export settings";
@@ -248,6 +249,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.removeNodeBtn?.removeEventListener("click", existingState.handlers.menuremoveclick);
 				existingState.renameNodeBtn?.removeEventListener("click", existingState.handlers.menurenameclick);
 				existingState.workspaceContextMenu?.removeEventListener("mousedown", existingState.handlers.workspacemenumousedown);
+				existingState.workspaceCreateTopicFromSelectedBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
 				existingState.workspaceExportSVGBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
 				existingState.workspaceExportJSONBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
 				existingState.workspaceRenameTopicBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
@@ -472,6 +474,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		workspaceContextMenu.style.zIndex = "8";
 		workspaceContextMenu.style.display = "none";
 
+		let workspaceCreateTopicFromSelectedBtn = doc.createElementNS(XHTML_NS, "button");
+		workspaceCreateTopicFromSelectedBtn.type = "button";
+		workspaceCreateTopicFromSelectedBtn.className = "paper-relations-node-context-item";
+		workspaceCreateTopicFromSelectedBtn.setAttribute("data-action", "create-topic-from-selected");
+		workspaceCreateTopicFromSelectedBtn.textContent = this.getGraphWorkspaceText("workspaceMenuCreateTopicFromSelected");
+
 		let workspaceExportSVGBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceExportSVGBtn.type = "button";
 		workspaceExportSVGBtn.className = "paper-relations-node-context-item";
@@ -500,11 +508,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		workspaceDeleteTopicBtn.textContent = this.getGraphWorkspaceText("workspaceMenuDelete");
 
 		workspaceContextMenu.append(
-			workspaceExportSVGBtn,
-			workspaceExportJSONBtn,
-			workspaceSeparator,
+			workspaceCreateTopicFromSelectedBtn,
 			workspaceRenameTopicBtn,
 			workspaceDeleteTopicBtn,
+			workspaceSeparator,
+			workspaceExportSVGBtn,
+			workspaceExportJSONBtn,
 		);
 		canvas.appendChild(workspaceContextMenu);
 
@@ -538,8 +547,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 			renameNodeBtn,
 			renameInput,
 			workspaceContextMenu,
+			workspaceCreateTopicFromSelectedBtn,
 			workspaceExportSVGBtn,
 			workspaceExportJSONBtn,
+			workspaceSeparator,
 			workspaceRenameTopicBtn,
 			workspaceDeleteTopicBtn,
 			toolbarToggleButton,
@@ -641,6 +652,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		removeNodeBtn.addEventListener("click", state.handlers.menuremoveclick);
 		renameNodeBtn.addEventListener("click", state.handlers.menurenameclick);
 		workspaceContextMenu.addEventListener("mousedown", state.handlers.workspacemenumousedown);
+		workspaceCreateTopicFromSelectedBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
 		workspaceExportSVGBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
 		workspaceExportJSONBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
 		workspaceRenameTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
@@ -699,7 +711,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 
 		let status = state.isTemporaryTopic
-			? "Temporary topic is not saved. Use the button to create a real topic."
+			? "Temporary topic is not saved. Use the context menu to create a real topic."
 			: (state.activeTopicID ? `Topic ID: ${state.activeTopicID}` : "No topic loaded");
 		status += state.pinSelection ? " | Pin: on" : " | Pin: off";
 		status += state.snapToGrid ? " | Snap: on" : " | Snap: off";
@@ -937,18 +949,65 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.positionContextMenuInCanvas(state, state.nodeContextMenu, clientX, clientY);
 	},
 
+	setContextMenuItemVisible(item, visible) {
+		if (!item) return;
+		let show = !!visible;
+		item.hidden = !show;
+		item.style.display = show ? "" : "none";
+	},
+
+	getSelectedRegularItem(window) {
+		let item = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+		if (!item) return null;
+		if (typeof item.isRegularItem === "function" && !item.isRegularItem()) return null;
+		return item;
+	},
+
+	updateWorkspaceContextMenuItems(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return { canOpen: false };
+		let hasSavedTopic = this.isSavedTopicMutableState(state);
+		let hasTemporaryTopic = !!state.isTemporaryTopic;
+		let selectedItem = this.getSelectedRegularItem(window);
+		let canCreateFromSelected = hasTemporaryTopic && !!selectedItem;
+
+		let showRename = hasSavedTopic;
+		let showDelete = hasSavedTopic;
+		let showExportSVG = hasSavedTopic || hasTemporaryTopic;
+		let showExportJSON = hasSavedTopic;
+		let showCreateFromSelected = canCreateFromSelected;
+		let showSeparator = false;
+		if (hasSavedTopic) {
+			showSeparator = (showRename || showDelete) && (showExportSVG || showExportJSON);
+		}
+		else if (hasTemporaryTopic) {
+			showSeparator = showCreateFromSelected && showExportSVG;
+		}
+
+		this.setContextMenuItemVisible(state.workspaceCreateTopicFromSelectedBtn, showCreateFromSelected);
+		this.setContextMenuItemVisible(state.workspaceRenameTopicBtn, showRename);
+		this.setContextMenuItemVisible(state.workspaceDeleteTopicBtn, showDelete);
+		this.setContextMenuItemVisible(state.workspaceSeparator, showSeparator);
+		this.setContextMenuItemVisible(state.workspaceExportSVGBtn, showExportSVG);
+		this.setContextMenuItemVisible(state.workspaceExportJSONBtn, showExportJSON);
+
+		return {
+			canOpen: !!(showCreateFromSelected || showRename || showDelete || showExportSVG || showExportJSON),
+		};
+	},
+
 	showWorkspaceContextMenu(window, clientX, clientY) {
 		let state = this.graphStates.get(window);
-		if (!state?.workspaceContextMenu) return;
-		let hasTopic = !!(state.activeTopicID || state.isTemporaryTopic);
-		let canMutateTopic = this.isSavedTopicMutableState(state);
-		state.workspaceExportSVGBtn.disabled = !hasTopic;
-		state.workspaceExportJSONBtn.disabled = !hasTopic;
-		state.workspaceRenameTopicBtn.disabled = !canMutateTopic;
-		state.workspaceDeleteTopicBtn.disabled = !canMutateTopic;
+		if (!state?.workspaceContextMenu) return false;
+		let menuState = this.updateWorkspaceContextMenuItems(window);
+		if (!menuState.canOpen) {
+			this.hideWorkspaceContextMenu(window);
+			return false;
+		}
 		state.workspaceContextMenu.hidden = false;
 		state.workspaceContextMenu.style.display = "flex";
 		this.positionContextMenuInCanvas(state, state.workspaceContextMenu, clientX, clientY);
+		return true;
 	},
 
 	onNodeContextMenuMouseDown(window, event) {
@@ -997,6 +1056,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 	async handleWorkspaceContextMenuAction(window, action) {
 		switch (action) {
+			case "create-topic-from-selected": {
+				let selectedItem = this.getSelectedRegularItem(window);
+				if (!selectedItem) return;
+				await this.promptCreateTopicFromItem(window, selectedItem);
+				return;
+			}
 			case "rename-topic":
 				await this.promptRenameActiveTopic(window);
 				return;

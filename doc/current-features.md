@@ -46,9 +46,13 @@
   - Click node to select; click blank area to clear selection.
   - Selecting a graph node reverse-syncs selection to the top Zotero item list.
   - Right-click a node to open a context menu with `Remove` and `Rename`.
-  - Right-click blank canvas area opens a topic context menu with `Export as SVG`, `Export as JSON`, `Rename`, and `Delete`.
+  - Right-click blank canvas area opens a topic context menu based on context:
+    - temporary topic: `由此论文新建 topic`, separator, `Export as SVG`.
+    - saved topic: `Rename`, `Delete`, separator, `Export as SVG`, `Export as JSON`.
+    - no topic loaded: workspace right-click menu is suppressed (no disabled placeholder entries).
   - Topic-menu `Rename` prompts for a new topic name and updates the active saved topic.
   - Topic-menu `Delete` uses the same confirm-and-remove flow as the right-pane `Remove topic` action.
+  - Topic-menu `由此论文新建 topic` triggers the same create-topic flow as `Create topic from selected paper`.
   - Topic-menu `Export as SVG` first opens an export-settings dialog (header `SVG导出设置`; zh rows `包含背景网格` and `边距（像素）`, with compact two-column alignment), then opens a save dialog and writes an SVG of the content bounds plus margin.
   - Topic-menu `Export as JSON` opens a save dialog and writes topic data JSON (`schemaVersion` + `topic` payload) for exchange/import workflows.
   - `Remove` deletes the node from the active saved topic and removes all incident edges.
