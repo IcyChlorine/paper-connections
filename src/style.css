@@ -276,6 +276,81 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	outline: none;
 }
 
+.paper-relations-export-settings-backdrop {
+	position: absolute;
+	inset: 0;
+	z-index: 12;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(30, 42, 56, 0.12);
+}
+
+.paper-relations-export-settings-dialog {
+	min-width: 260px;
+	max-width: min(92%, 360px);
+	padding: 12px;
+	border: 1px solid #b8c6d3;
+	border-radius: 10px;
+	background: #ffffff;
+	box-shadow: 0 10px 24px rgba(34, 48, 64, 0.28);
+	color: #223548;
+	font-size: 12px;
+}
+
+.paper-relations-export-settings-intro {
+	margin: 0 0 8px;
+	font-weight: 600;
+}
+
+.paper-relations-export-settings-checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.paper-relations-export-settings-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.paper-relations-export-settings-label {
+	white-space: nowrap;
+}
+
+.paper-relations-export-settings-input {
+	flex: 1;
+	min-width: 0;
+	padding: 3px 6px;
+	border: 1px solid #b5c2ce;
+	border-radius: 6px;
+	font-size: 12px;
+}
+
+.paper-relations-export-settings-actions {
+	margin-top: 10px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+.paper-relations-export-settings-btn {
+	padding: 4px 9px;
+	border: 1px solid #acb9c5;
+	border-radius: 6px;
+	background: #f4f7fa;
+	color: #223548;
+	font-size: 12px;
+}
+
+.paper-relations-export-settings-btn-primary {
+	border-color: #2b6fae;
+	background: #2f79bc;
+	color: #ffffff;
+}
+
 .paper-relations-pane-actions {
 	margin-top: 10px;
 	display: flex;

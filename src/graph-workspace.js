@@ -41,6 +41,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
+		table.svgExportSettingsIntro = isZh ? "SVG \u5bfc\u51fa\u8bbe\u7f6e\uff1a" : "SVG export settings:";
+		table.svgExportIncludeGrid = isZh ? "\u5305\u542b\u80cc\u666f\u7f51\u683c" : "Include background grid";
+		table.svgExportMargin = isZh ? "\u8fb9\u8ddd (px)" : "Margin (px)";
+		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
+		table.dialogCancel = isZh ? "\u53d6\u6d88" : "Cancel";
 		return table[key] || "";
 	},
 
@@ -2196,25 +2201,140 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return this.getExportTopicDataFromState(state);
 	},
 
-	promptSVGExportOptions(window) {
-		let marginInput = { value: "24" };
-		let includeGridState = { value: false };
-		let accepted = Services.prompt.prompt(
-			window,
-			this.getGraphWorkspaceText("workspaceMenuExportSVG"),
-			"Margin (px):",
-			marginInput,
-			"Include background grid",
-			includeGridState,
-		);
-		if (!accepted) return null;
-		let parsedMargin = Number.parseFloat(String(marginInput.value || "").trim());
-		let margin = Number.isFinite(parsedMargin) && parsedMargin >= 0 ? parsedMargin : 24;
-		margin = Math.min(1000, margin);
-		return {
-			margin,
-			includeGrid: !!includeGridState.value,
-		};
+	async promptSVGExportOptions(window) {
+		let state = this.graphStates.get(window);
+		let canvas = state?.canvas;
+		let doc = window?.document;
+		if (!canvas || !doc) return null;
+		const XHTML_NS = "http://www.w3.org/1999/xhtml";
+
+		let backdrop = doc.createElementNS(XHTML_NS, "div");
+		backdrop.className = "paper-relations-export-settings-backdrop";
+		let dialog = doc.createElementNS(XHTML_NS, "div");
+		dialog.className = "paper-relations-export-settings-dialog";
+		dialog.setAttribute("role", "dialog");
+		dialog.setAttribute("aria-modal", "true");
+
+		let intro = doc.createElementNS(XHTML_NS, "div");
+		intro.className = "paper-relations-export-settings-intro";
+		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
+
+		let includeGridRow = doc.createElementNS(XHTML_NS, "label");
+		includeGridRow.className = "paper-relations-export-settings-checkbox";
+		let includeGridInput = doc.createElementNS(XHTML_NS, "input");
+		includeGridInput.type = "checkbox";
+		includeGridInput.checked = false;
+		let includeGridLabel = doc.createElementNS(XHTML_NS, "span");
+		includeGridLabel.textContent = this.getGraphWorkspaceText("svgExportIncludeGrid");
+		includeGridRow.append(includeGridInput, includeGridLabel);
+
+		let marginRow = doc.createElementNS(XHTML_NS, "div");
+		marginRow.className = "paper-relations-export-settings-row";
+		let marginLabel = doc.createElementNS(XHTML_NS, "label");
+		marginLabel.className = "paper-relations-export-settings-label";
+		marginLabel.textContent = this.getGraphWorkspaceText("svgExportMargin");
+		let marginInput = doc.createElementNS(XHTML_NS, "input");
+		marginInput.type = "number";
+		marginInput.inputMode = "decimal";
+		marginInput.min = "0";
+		marginInput.max = "1000";
+		marginInput.step = "1";
+		marginInput.value = "24";
+		marginInput.className = "paper-relations-export-settings-input";
+		marginLabel.htmlFor = "paper-relations-export-margin-input";
+		marginInput.id = "paper-relations-export-margin-input";
+		marginRow.append(marginLabel, marginInput);
+
+		let actions = doc.createElementNS(XHTML_NS, "div");
+		actions.className = "paper-relations-export-settings-actions";
+		let cancelBtn = doc.createElementNS(XHTML_NS, "button");
+		cancelBtn.type = "button";
+		cancelBtn.className = "paper-relations-export-settings-btn";
+		cancelBtn.textContent = this.getGraphWorkspaceText("dialogCancel");
+		let confirmBtn = doc.createElementNS(XHTML_NS, "button");
+		confirmBtn.type = "button";
+		confirmBtn.className = "paper-relations-export-settings-btn paper-relations-export-settings-btn-primary";
+		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
+		actions.append(cancelBtn, confirmBtn);
+
+		dialog.append(intro, includeGridRow, marginRow, actions);
+		backdrop.appendChild(dialog);
+		canvas.appendChild(backdrop);
+		window.setTimeout(() => {
+			if (!backdrop.isConnected || !marginInput || typeof marginInput.focus !== "function") return;
+			marginInput.focus();
+			if (typeof marginInput.select === "function") {
+				marginInput.select();
+			}
+		}, 0);
+
+		let previousActiveElement = doc.activeElement;
+		let options = await new Promise((resolve) => {
+			let completed = false;
+			let finish = (value) => {
+				if (completed) return;
+				completed = true;
+				window.removeEventListener("keydown", onWindowKeyDown, true);
+				backdrop.removeEventListener("mousedown", onBackdropMouseDown, true);
+				if (backdrop.parentNode) {
+					backdrop.parentNode.removeChild(backdrop);
+				}
+				if (previousActiveElement && typeof previousActiveElement.focus === "function") {
+					try {
+						previousActiveElement.focus();
+					}
+					catch (_error) {
+						// Ignore focus restore failures in stale windows.
+					}
+				}
+				resolve(value);
+			};
+			let parseResult = () => {
+				let parsedMargin = Number.parseFloat(String(marginInput.value || "").trim());
+				let margin = Number.isFinite(parsedMargin) && parsedMargin >= 0 ? parsedMargin : 24;
+				margin = Math.min(1000, margin);
+				return {
+					margin,
+					includeGrid: !!includeGridInput.checked,
+				};
+			};
+			let onConfirm = (event) => {
+				event?.preventDefault?.();
+				event?.stopPropagation?.();
+				finish(parseResult());
+			};
+			let onCancel = (event) => {
+				event?.preventDefault?.();
+				event?.stopPropagation?.();
+				finish(null);
+			};
+			let onWindowKeyDown = (event) => {
+				if (event.key === "Escape") {
+					onCancel(event);
+					return;
+				}
+				if (event.key === "Enter") {
+					onConfirm(event);
+				}
+			};
+			let onBackdropMouseDown = (event) => {
+				event.stopPropagation();
+				if (event.target === backdrop) {
+					onCancel(event);
+				}
+			};
+
+			cancelBtn.addEventListener("click", onCancel);
+			confirmBtn.addEventListener("click", onConfirm);
+			backdrop.addEventListener("mousedown", onBackdropMouseDown, true);
+			dialog.addEventListener("mousedown", (event) => event.stopPropagation(), true);
+			window.addEventListener("keydown", onWindowKeyDown, true);
+		});
+
+		if (backdrop.isConnected) {
+			backdrop.remove();
+		}
+		return options;
 	},
 
 	buildSVGExportContent(state, options = {}) {
@@ -2313,7 +2433,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		try {
 			let state = this.graphStates.get(window);
 			if (!state) return;
-			let options = this.promptSVGExportOptions(window);
+			let options = await this.promptSVGExportOptions(window);
 			if (!options) return;
 			let filePath = await this.promptSelectExportFile(window, "svg");
 			if (!filePath) return;
