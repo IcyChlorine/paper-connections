@@ -37,8 +37,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 				renameFailedTitle: "Rename Failed",
 				removeNodeFailedTitle: "Remove Node Failed",
 			};
-		table.workspaceMenuExportSVG = isZh ? "\u5bfc\u51fa\u4e3aSVG" : "Export as SVG";
-		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3ajson" : "Export as json";
+		table.workspaceMenuExportSVG = isZh ? "\u5bfc\u51fa\u4e3a SVG" : "Export as SVG";
+		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
 		return table[key] || "";
@@ -935,6 +935,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 	showWorkspaceContextMenu(window, clientX, clientY) {
 		let state = this.graphStates.get(window);
 		if (!state?.workspaceContextMenu) return;
+		let hasTopic = !!(state.activeTopicID || state.isTemporaryTopic);
+		let canMutateTopic = this.isSavedTopicMutableState(state);
+		state.workspaceExportSVGBtn.disabled = !hasTopic;
+		state.workspaceExportJSONBtn.disabled = !hasTopic;
+		state.workspaceRenameTopicBtn.disabled = !canMutateTopic;
+		state.workspaceDeleteTopicBtn.disabled = !canMutateTopic;
 		state.workspaceContextMenu.hidden = false;
 		state.workspaceContextMenu.style.display = "flex";
 		this.positionContextMenuInCanvas(state, state.workspaceContextMenu, clientX, clientY);
@@ -974,6 +980,29 @@ var PaperRelationsGraphWorkspaceMixin = {
 		event.preventDefault();
 		event.stopPropagation();
 		this.hideWorkspaceContextMenu(window);
+		let action = event?.currentTarget?.getAttribute?.("data-action")
+			|| event?.target?.closest?.("[data-action]")?.getAttribute?.("data-action")
+			|| "";
+		this.handleWorkspaceContextMenuAction(window, action).catch((error) => Zotero.logError(error));
+	},
+
+	async handleWorkspaceContextMenuAction(window, action) {
+		switch (action) {
+			case "rename-topic":
+				await this.promptRenameActiveTopic(window);
+				return;
+			case "delete-topic":
+				await this.promptRemoveActiveTopic(window);
+				return;
+			case "export-svg":
+				await this.promptSelectExportFile(window, "svg");
+				return;
+			case "export-json":
+				await this.promptSelectExportFile(window, "json");
+				return;
+			default:
+				return;
+		}
 	},
 
 	async handleNodeContextMenuAction(window, action, nodeID) {
@@ -1448,6 +1477,32 @@ var PaperRelationsGraphWorkspaceMixin = {
 		catch (error) {
 			Zotero.logError(error);
 			Services.prompt.alert(window, "Create Topic Failed", String(error?.message || error));
+		}
+	},
+
+	async promptRenameActiveTopic(window) {
+		let state = this.graphStates.get(window);
+		if (!state || !this.canRemoveActiveTopic(window)) return;
+		let defaultName = state.activeTopicName || "Untitled Topic";
+		let inputName = window.prompt("Topic name:", defaultName);
+		if (inputName === null) return;
+		let nextName = String(inputName || "").trim();
+		if (!nextName) return;
+
+		try {
+			let updated = await this.updateTopic(state.activeLibraryID, state.activeTopicID, {
+				name: nextName,
+			});
+			if (!updated) {
+				throw new Error("Topic not found");
+			}
+			state.activeTopicName = updated.name || nextName;
+			this.refreshGraphChrome(window);
+			this.notifyGraphContextChanged(window);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(window, "Rename Topic Failed", String(error?.message || error));
 		}
 	},
 
@@ -2000,6 +2055,52 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (state?.window) {
 			this.syncNodeRenameInputLayout(state.window);
 		}
+	},
+
+	sanitizeFileNameSegment(name) {
+		return String(name || "")
+			.trim()
+			.replace(/[\\/:*?"<>|]+/g, "_")
+			.replace(/\s+/g, " ");
+	},
+
+	getTopicExportBaseName(state) {
+		let name = this.sanitizeFileNameSegment(state?.activeTopicName || "");
+		if (!name) return "topic";
+		return name;
+	},
+
+	async promptSelectExportFile(window, format) {
+		let state = this.graphStates.get(window);
+		if (!state) return null;
+		let ext = format === "svg" ? "svg" : "json";
+		let title = format === "svg" ? this.getGraphWorkspaceText("workspaceMenuExportSVG") : this.getGraphWorkspaceText("workspaceMenuExportJSON");
+		let baseName = this.getTopicExportBaseName(state);
+		let nsIFilePicker = Ci.nsIFilePicker;
+		let picker = Cc["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+		picker.init(window, title, nsIFilePicker.modeSave);
+		if (ext === "svg") {
+			picker.appendFilter("SVG (*.svg)", "*.svg");
+		}
+		else {
+			picker.appendFilter("JSON (*.json)", "*.json");
+		}
+		picker.defaultExtension = ext;
+		picker.defaultString = `${baseName}.${ext}`;
+		let result;
+		if (typeof picker.open === "function") {
+			result = await new Promise((resolve) => picker.open(resolve));
+		}
+		else if (typeof picker.show === "function") {
+			result = picker.show();
+		}
+		else {
+			return null;
+		}
+		if (result !== nsIFilePicker.returnOK && result !== nsIFilePicker.returnReplace) {
+			return null;
+		}
+		return picker.file?.path || null;
 	},
 
 	clampScale(scale) {
