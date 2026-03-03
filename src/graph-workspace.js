@@ -40,6 +40,150 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return table[key] || "";
 	},
 
+	getGraphWorkspaceToggleTooltip(graphVisible) {
+		let isZh = this.getCurrentLocaleTag().startsWith("zh");
+		if (isZh) {
+			return graphVisible
+				? "\u9690\u85cf\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (Ctrl+`)"
+				: "\u663e\u793a\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (Ctrl+`)";
+		}
+		return graphVisible
+			? "Hide Relation Graph Workspace (Ctrl+`)"
+			: "Show Relation Graph Workspace (Ctrl+`)";
+	},
+
+	getGraphWorkspaceToggleButton(window) {
+		return window?.document?.getElementById("paper-relations-graph-toggle-btn") || null;
+	},
+
+	ensureGraphWorkspaceToggleButton(window) {
+		let doc = window?.document;
+		if (!doc) return null;
+		let toolbar = doc.getElementById("zotero-items-toolbar");
+		if (!toolbar) return null;
+
+		let button = this.getGraphWorkspaceToggleButton(window);
+		if (!button) {
+			button = doc.createXULElement("toolbarbutton");
+			button.id = "paper-relations-graph-toggle-btn";
+			button.className = "zotero-tb-button";
+			button.setAttribute("type", "button");
+			button.setAttribute("tabindex", "-1");
+			this.storeAddedElement(button);
+		}
+
+		this.placeGraphWorkspaceToggleButton(window, button);
+		return button;
+	},
+
+	placeGraphWorkspaceToggleButton(window, toggleButton = null) {
+		let doc = window?.document;
+		if (!doc) return false;
+		let toolbar = doc.getElementById("zotero-items-toolbar");
+		if (!toolbar) return false;
+		let button = toggleButton || this.getGraphWorkspaceToggleButton(window);
+		if (!button) return false;
+
+		let children = Array.from(toolbar.children || []);
+		let spacer = children.find((child) =>
+			child?.localName === "spacer" && child.getAttribute?.("flex") === "1",
+		) || null;
+		let spacerIndex = spacer ? children.indexOf(spacer) : -1;
+		let beforeSpacer = spacerIndex >= 0 ? children.slice(0, spacerIndex) : children;
+		let anchor = null;
+		for (let child of beforeSpacer) {
+			if (child === button) continue;
+			if (child?.localName === "toolbarbutton" || child?.classList?.contains("zotero-tb-button")) {
+				anchor = child;
+			}
+		}
+		let insertBeforeNode = anchor ? anchor.nextSibling : spacer;
+		if (insertBeforeNode === button) {
+			return true;
+		}
+		if (button.parentNode !== toolbar || button.nextSibling !== insertBeforeNode) {
+			toolbar.insertBefore(button, insertBeforeNode);
+		}
+		return true;
+	},
+
+	clearGraphWorkspaceTogglePlacementTimers(state) {
+		if (!state?.window) return;
+		if (!Array.isArray(state.togglePlacementTimerIDs)) {
+			state.togglePlacementTimerIDs = [];
+			return;
+		}
+		for (let timerID of state.togglePlacementTimerIDs) {
+			state.window.clearTimeout(timerID);
+		}
+		state.togglePlacementTimerIDs = [];
+	},
+
+	scheduleGraphWorkspaceTogglePlacement(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		this.clearGraphWorkspaceTogglePlacementTimers(state);
+		for (let delay of [0, 80, 220, 520]) {
+			let timerID = window.setTimeout(() => {
+				let nextState = this.graphStates.get(window);
+				if (!nextState) return;
+				this.placeGraphWorkspaceToggleButton(window, nextState.toolbarToggleButton);
+			}, delay);
+			state.togglePlacementTimerIDs.push(timerID);
+		}
+	},
+
+	updateGraphWorkspaceToggleButton(window) {
+		let state = this.graphStates.get(window);
+		let button = state?.toolbarToggleButton || this.getGraphWorkspaceToggleButton(window);
+		if (!button) return;
+		let graphVisible = state ? state.graphVisible !== false : true;
+		let tooltip = this.getGraphWorkspaceToggleTooltip(graphVisible);
+		button.setAttribute("tooltiptext", tooltip);
+		button.setAttribute("aria-label", tooltip);
+		button.setAttribute("data-graph-visible", graphVisible ? "true" : "false");
+		button.classList.toggle("active", graphVisible);
+	},
+
+	setGraphWorkspaceVisibility(window, visible) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let nextVisible = !!visible;
+		state.graphVisible = nextVisible;
+		if (state.pane) {
+			state.pane.hidden = !nextVisible;
+		}
+		if (state.splitter) {
+			state.splitter.hidden = !nextVisible;
+		}
+		if (!nextVisible) {
+			this.hideNodeContextMenu(window);
+			this.cancelNodeRename(window);
+		}
+		else {
+			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
+		}
+		this.updateGraphWorkspaceToggleButton(window);
+		this.notifyGraphContextChanged(window);
+		if (typeof window.ZoteroPane?.updateLayoutConstraints === "function") {
+			window.ZoteroPane.updateLayoutConstraints();
+		}
+	},
+
+	toggleGraphWorkspaceVisibility(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		this.setGraphWorkspaceVisibility(window, !state.graphVisible);
+	},
+
+	onGraphWorkspaceToggleButtonCommand(window, event) {
+		if (event) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
+		this.toggleGraphWorkspaceVisibility(window);
+	},
+
 	addGraphPane(window) {
 		let doc = window.document;
 		let existingPane = doc.getElementById("paper-relations-graph-pane");
@@ -73,7 +217,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 				existingState.renameInput?.removeEventListener("input", existingState.handlers.renameinput);
 				existingState.renameInput?.removeEventListener("keydown", existingState.handlers.renameinputkeydown);
 				existingState.renameInput?.removeEventListener("blur", existingState.handlers.renameinputblur);
+				existingState.toolbarToggleButton?.removeEventListener("command", existingState.handlers.togglebtncommand);
 			}
+			this.clearGraphWorkspaceTogglePlacementTimers(existingState);
 			this.graphStates?.delete(window);
 			doc.getElementById("paper-relations-graph-splitter")?.remove();
 			existingPane.remove();
@@ -284,9 +430,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		this.storeAddedElement(splitter);
 		this.storeAddedElement(pane);
+		let toolbarToggleButton = this.ensureGraphWorkspaceToggleButton(window);
 
 		let state = {
 			window,
+			pane,
+			splitter,
 			canvas,
 			header,
 			headerMain,
@@ -305,7 +454,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			removeNodeBtn,
 			renameNodeBtn,
 			renameInput,
+			toolbarToggleButton,
 			controlPanelWidth,
+			graphVisible: true,
 			nodes: [],
 			edges: [],
 			activeTopicID: null,
@@ -340,6 +491,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			renameSnapshot: null,
 			renameBusy: false,
 			suppressRenameInputBlur: false,
+			togglePlacementTimerIDs: [],
 			handlers: null,
 		};
 
@@ -369,6 +521,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			renameinput: (event) => this.onNodeRenameInput(window, event),
 			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
 			renameinputblur: (event) => this.onNodeRenameInputBlur(window, event),
+			togglebtncommand: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
 			resize: () => this.updateCanvasControlsLayout(window),
 		};
 
@@ -398,9 +551,12 @@ var PaperRelationsGraphWorkspaceMixin = {
 		renameInput.addEventListener("input", state.handlers.renameinput);
 		renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
 		renameInput.addEventListener("blur", state.handlers.renameinputblur);
+		toolbarToggleButton?.addEventListener("command", state.handlers.togglebtncommand);
 		window.addEventListener("resize", state.handlers.resize);
 
 		this.graphStates.set(window, state);
+		this.updateGraphWorkspaceToggleButton(window);
+		this.scheduleGraphWorkspaceTogglePlacement(window);
 		this.updateCanvasCursorState(window);
 		this.renderGraph(window);
 		this.refreshGraphChrome(window);
@@ -481,6 +637,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
 		state.boardGrid.classList.remove("paper-relations-board-grid-disabled");
 		this.updateCanvasControlsLayout(window);
+		this.updateGraphWorkspaceToggleButton(window);
+		this.placeGraphWorkspaceToggleButton(window, state.toolbarToggleButton);
 		if (state.isTemporaryTopic) {
 			state.canvas.classList.add("paper-relations-temporary-topic");
 		}
@@ -1784,6 +1942,18 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		this.syncAltModifierByEvent(window, event);
+		let isToggleShortcut = !!(
+			event?.ctrlKey &&
+			!event?.altKey &&
+			!event?.metaKey &&
+			(event?.code === "Backquote" || event?.key === "`")
+		);
+		if (isToggleShortcut) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.toggleGraphWorkspaceVisibility(window);
+			return;
+		}
 		if (!event?.key) return;
 		if (event.key === "F2") {
 			if (state.selectedNodeID && !state.dragMode && !state.renameBusy) {

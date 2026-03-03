@@ -843,6 +843,10 @@ PaperRelations = {
 			state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
 			window.removeEventListener("mousemove", state.handlers.mousemove);
 			window.removeEventListener("mouseup", state.handlers.mouseup);
+			window.removeEventListener("mousedown", state.handlers.windowmousedown, true);
+			window.removeEventListener("click", state.handlers.windowclick, true);
+			window.document.removeEventListener("mousedown", state.handlers.documentmousedown, true);
+			window.document.removeEventListener("click", state.handlers.documentclick, true);
 			window.removeEventListener("keydown", state.handlers.keydown);
 			window.removeEventListener("keyup", state.handlers.keyup);
 			window.removeEventListener("blur", state.handlers.blur);
@@ -853,8 +857,16 @@ PaperRelations = {
 			state.snapButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
 			state.pinButton?.removeEventListener("click", state.handlers.pinbtnclick);
 			state.snapButton?.removeEventListener("click", state.handlers.snapbtnclick);
+			state.nodeContextMenu?.removeEventListener("mousedown", state.handlers.nodemenumousedown);
+			state.removeNodeBtn?.removeEventListener("click", state.handlers.menuremoveclick);
+			state.renameNodeBtn?.removeEventListener("click", state.handlers.menurenameclick);
+			state.renameInput?.removeEventListener("mousedown", state.handlers.renameinputmousedown);
+			state.renameInput?.removeEventListener("input", state.handlers.renameinput);
+			state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
+			state.renameInput?.removeEventListener("blur", state.handlers.renameinputblur);
+			state.toolbarToggleButton?.removeEventListener("command", state.handlers.togglebtncommand);
 			window.removeEventListener("resize", state.handlers.resize);
-			state.pinCheckbox?.removeEventListener("change", state.handlers.pinchange);
+			this.clearGraphWorkspaceTogglePlacementTimers(state);
 		}
 		this.graphStates.delete(window);
 		this.selectionItemsByWindow.delete(window);

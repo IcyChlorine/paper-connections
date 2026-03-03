@@ -24,6 +24,8 @@
   - Resizable with splitter (top edge drag).
   - Grid board and nodes pan together.
   - Pane resize does not auto-scale graph objects.
+  - Item-list toolbar includes a graph workspace toggle button (node icon) to show/hide the workspace pane.
+  - Keyboard shortcut `Ctrl+\`` also toggles graph workspace visibility.
   - SVG canvas top-right includes two icon toggle buttons:
     - left magnet button toggles magnetic snap-to-grid.
     - right pin button toggles pinned graph context while selecting other items.

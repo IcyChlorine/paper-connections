@@ -3,6 +3,14 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	line-height: 1.45;
 }
 
+#paper-relations-graph-toggle-btn {
+	list-style-image: url("assets/node-red-svgrepo-com.svg");
+}
+
+#paper-relations-graph-toggle-btn[data-graph-visible="false"] {
+	opacity: 0.6;
+}
+
 #paper-relations-graph-pane {
 	display: flex;
 	flex-direction: column;
