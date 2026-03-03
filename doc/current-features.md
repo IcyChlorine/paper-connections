@@ -46,6 +46,7 @@
   - Click node to select; click blank area to clear selection.
   - Selecting a graph node reverse-syncs selection to the top Zotero item list.
   - Right-click a node to open a context menu with `Remove` and `Rename`.
+  - Right-click blank canvas area opens a topic context menu with `Export as SVG`, `Export as json`, `Rename`, and `Delete` (current stage: placeholder UI only; no action yet).
   - `Remove` deletes the node from the active saved topic and removes all incident edges.
   - `Rename` (or `F2` on selected node) enters inline edit mode; `Enter` confirms and `Esc` cancels.
   - Node left/right anchors appear as black dots only when cursor nears an anchor.

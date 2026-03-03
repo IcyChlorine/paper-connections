@@ -253,6 +253,12 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	opacity: 0.45;
 }
 
+.paper-relations-context-menu-separator {
+	height: 1px;
+	margin: 4px 5px;
+	background: #d2dde8;
+}
+
 .paper-relations-node-rename-input {
 	position: absolute;
 	z-index: 7;

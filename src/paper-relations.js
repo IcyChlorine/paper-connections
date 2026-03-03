@@ -864,6 +864,11 @@ PaperRelations = {
 			state.nodeContextMenu?.removeEventListener("mousedown", state.handlers.nodemenumousedown);
 			state.removeNodeBtn?.removeEventListener("click", state.handlers.menuremoveclick);
 			state.renameNodeBtn?.removeEventListener("click", state.handlers.menurenameclick);
+			state.workspaceContextMenu?.removeEventListener("mousedown", state.handlers.workspacemenumousedown);
+			state.workspaceExportSVGBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+			state.workspaceExportJSONBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+			state.workspaceRenameTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+			state.workspaceDeleteTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
 			state.renameInput?.removeEventListener("mousedown", state.handlers.renameinputmousedown);
 			state.renameInput?.removeEventListener("input", state.handlers.renameinput);
 			state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
