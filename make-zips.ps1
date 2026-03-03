@@ -1,9 +1,9 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $MyInvocation.MyCommand.Path))
 $buildDir = Join-Path $repoRoot "build"
-$srcDir = Join-Path $repoRoot "src"
+$srcDir = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "src"))
 $xpiPath = Join-Path $buildDir "paper-relations.xpi"
 $zipPath = Join-Path $buildDir "paper-relations.zip"
 $templatePath = Join-Path $repoRoot "updates.json.tmpl"
@@ -26,12 +26,45 @@ if (Test-Path $buildDir) {
 }
 New-Item -ItemType Directory -Path $buildDir | Out-Null
 
-Push-Location $srcDir
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+$archive = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
-	Compress-Archive -Path $packList -DestinationPath $zipPath -CompressionLevel Optimal
+	foreach ($relPath in $packList) {
+		$fullPath = [System.IO.Path]::GetFullPath((Join-Path $srcDir $relPath))
+		if (-not $fullPath.StartsWith($srcDir, [System.StringComparison]::OrdinalIgnoreCase)) {
+			throw "Invalid pack path outside src: $relPath"
+		}
+		if (Test-Path -Path $fullPath -PathType Leaf) {
+			$entryName = ($relPath -replace "\\", "/")
+			[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+				$archive,
+				$fullPath,
+				$entryName,
+				[System.IO.Compression.CompressionLevel]::Optimal
+			) | Out-Null
+			continue
+		}
+		if (Test-Path -Path $fullPath -PathType Container) {
+			Get-ChildItem -Path $fullPath -Recurse -File | ForEach-Object {
+				$childFullPath = [System.IO.Path]::GetFullPath($_.FullName)
+				$entryRelative = $childFullPath.Substring($srcDir.Length).TrimStart("\", "/")
+				$entryName = ($entryRelative -replace "\\", "/")
+				[System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+					$archive,
+					$childFullPath,
+					$entryName,
+					[System.IO.Compression.CompressionLevel]::Optimal
+				) | Out-Null
+			}
+			continue
+		}
+		throw "Missing pack path: $relPath"
+	}
 }
 finally {
-	Pop-Location
+	$archive.Dispose()
 }
 Move-Item -Path $zipPath -Destination $xpiPath -Force
 
