@@ -849,6 +849,8 @@ PaperRelations = {
 			window.document.removeEventListener("click", state.handlers.documentclick, true);
 			window.removeEventListener("keydown", state.handlers.keydown, true);
 			window.removeEventListener("keydown", state.handlers.keydown);
+			window.removeEventListener("keypress", state.handlers.keypress, true);
+			window.removeEventListener("keypress", state.handlers.keypress);
 			window.removeEventListener("keyup", state.handlers.keyup, true);
 			window.removeEventListener("keyup", state.handlers.keyup);
 			window.removeEventListener("blur", state.handlers.blur);

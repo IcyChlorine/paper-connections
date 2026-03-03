@@ -145,17 +145,38 @@ var PaperRelationsGraphWorkspaceMixin = {
 		button.classList.toggle("active", graphVisible);
 	},
 
+	applyGraphWorkspaceVisibilityToDOM(state) {
+		if (!state) return;
+		let graphVisible = state.graphVisible !== false;
+		let applyElemVisibility = (elem, displayWhenVisible = "") => {
+			if (!elem) return;
+			elem.hidden = !graphVisible;
+			if (graphVisible) {
+				elem.removeAttribute("hidden");
+				elem.removeAttribute("collapsed");
+				if (displayWhenVisible) {
+					elem.style.display = displayWhenVisible;
+				}
+				else {
+					elem.style.removeProperty("display");
+				}
+			}
+			else {
+				elem.setAttribute("hidden", "true");
+				elem.setAttribute("collapsed", "true");
+				elem.style.display = "none";
+			}
+		};
+		applyElemVisibility(state.pane, "flex");
+		applyElemVisibility(state.splitter);
+	},
+
 	setGraphWorkspaceVisibility(window, visible) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let nextVisible = !!visible;
 		state.graphVisible = nextVisible;
-		if (state.pane) {
-			state.pane.hidden = !nextVisible;
-		}
-		if (state.splitter) {
-			state.splitter.hidden = !nextVisible;
-		}
+		this.applyGraphWorkspaceVisibilityToDOM(state);
 		if (!nextVisible) {
 			this.hideNodeContextMenu(window);
 			this.cancelNodeRename(window);
@@ -201,6 +222,8 @@ var PaperRelationsGraphWorkspaceMixin = {
 				doc.removeEventListener("click", existingState.handlers.documentclick, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown, true);
 				window.removeEventListener("keydown", existingState.handlers.keydown);
+				window.removeEventListener("keypress", existingState.handlers.keypress, true);
+				window.removeEventListener("keypress", existingState.handlers.keypress);
 				window.removeEventListener("keyup", existingState.handlers.keyup, true);
 				window.removeEventListener("keyup", existingState.handlers.keyup);
 				window.removeEventListener("blur", existingState.handlers.blur);
@@ -509,6 +532,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			documentmousedown: (event) => this.onWindowMouseDown(window, event),
 			documentclick: (event) => this.onWindowMouseDown(window, event),
 			keydown: (event) => this.onWindowKeyDown(window, event),
+			keypress: (event) => this.onWindowKeyDown(window, event),
 			keyup: (event) => this.onWindowKeyUp(window, event),
 			blur: () => this.onWindowBlur(window),
 			dragover: (event) => this.onGraphDragOver(window, event),
@@ -539,6 +563,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
 		doc.addEventListener("click", state.handlers.documentclick, true);
 		window.addEventListener("keydown", state.handlers.keydown, true);
+		window.addEventListener("keypress", state.handlers.keypress, true);
 		window.addEventListener("keyup", state.handlers.keyup, true);
 		window.addEventListener("blur", state.handlers.blur);
 		canvas.addEventListener("dragover", state.handlers.dragover);
@@ -560,6 +585,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		window.addEventListener("resize", state.handlers.resize);
 
 		this.graphStates.set(window, state);
+		this.applyGraphWorkspaceVisibilityToDOM(state);
 		this.updateGraphWorkspaceToggleButton(window);
 		this.scheduleGraphWorkspaceTogglePlacement(window);
 		this.updateCanvasCursorState(window);
