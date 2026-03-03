@@ -41,6 +41,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.workspaceMenuExportJSON = isZh ? "\u5bfc\u51fa\u4e3a JSON" : "Export as JSON";
 		table.workspaceMenuRename = isZh ? "\u91cd\u547d\u540d" : "Rename";
 		table.workspaceMenuDelete = isZh ? "\u5220\u9664" : "Delete";
+		table.svgExportSettingsIntro = isZh ? "SVG \u5bfc\u51fa\u8bbe\u7f6e" : "SVG export settings";
 		table.svgExportIncludeGrid = isZh ? "\u5305\u542b\u80cc\u666f\u7f51\u683c" : "Include background grid";
 		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09" : "Margin (pixels)";
 		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
@@ -2214,6 +2215,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 		dialog.setAttribute("role", "dialog");
 		dialog.setAttribute("aria-modal", "true");
 
+		let intro = doc.createElementNS(XHTML_NS, "div");
+		intro.className = "paper-relations-export-settings-intro";
+		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
+
 		let includeGridRow = doc.createElementNS(XHTML_NS, "div");
 		includeGridRow.className = "paper-relations-export-settings-row";
 		let includeGridLabel = doc.createElementNS(XHTML_NS, "label");
@@ -2260,7 +2265,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
 		actions.append(cancelBtn, confirmBtn);
 
-		dialog.append(includeGridRow, marginRow, actions);
+		dialog.append(intro, includeGridRow, marginRow, actions);
 		backdrop.appendChild(dialog);
 		canvas.appendChild(backdrop);
 		window.setTimeout(() => {

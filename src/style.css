@@ -287,8 +287,8 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 }
 
 .paper-relations-export-settings-dialog {
-	min-width: 260px;
-	max-width: min(92%, 360px);
+	min-width: 230px;
+	max-width: min(92%, 320px);
 	padding: 12px;
 	border: 1px solid #b8c6d3;
 	border-radius: 10px;
@@ -298,11 +298,17 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 12px;
 }
 
+.paper-relations-export-settings-intro {
+	margin: 0 0 8px;
+	font-weight: 600;
+}
+
 .paper-relations-export-settings-row {
-	display: flex;
+	display: grid;
+	grid-template-columns: 118px 92px;
 	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
+	justify-content: center;
+	column-gap: 8px;
 }
 
 .paper-relations-export-settings-row + .paper-relations-export-settings-row {
@@ -311,13 +317,14 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 
 .paper-relations-export-settings-label {
 	white-space: nowrap;
+	text-align: right;
 }
 
 .paper-relations-export-settings-control {
 	display: inline-flex;
 	align-items: center;
-	justify-content: flex-end;
-	min-width: 92px;
+	justify-content: flex-start;
+	width: 92px;
 }
 
 .paper-relations-export-settings-input {
