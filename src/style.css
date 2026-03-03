@@ -5,11 +5,21 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 
 #paper-relations-graph-toggle-btn {
 	list-style-image: url("assets/code-merge-svgrepo-com.svg");
+	-moz-box-pack: center;
+	padding-inline: 0;
+	min-width: 0;
+	justify-content: center;
 }
 
 #paper-relations-graph-toggle-btn .toolbarbutton-icon {
-	width: 16px;
-	height: 16px;
+	width: 17px;
+	height: 17px;
+	margin-inline: auto;
+	display: block;
+}
+
+#paper-relations-graph-toggle-btn .toolbarbutton-text {
+	display: none;
 }
 
 #paper-relations-graph-toggle-btn[data-graph-visible="false"] {
