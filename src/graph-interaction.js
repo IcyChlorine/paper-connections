@@ -137,6 +137,202 @@ var PaperRelationsGraphInteractionMixin = {
 		this.updateCanvasCursorState(window);
 	},
 
+	getCurrentSelectedItem(window) {
+		let selected = window.ZoteroPane?.getSelectedItems?.();
+		if (!selected || !selected.length) return null;
+		return selected[0] || null;
+	},
+
+	getGraphContextSummary(window) {
+		let state = this.graphStates.get(window);
+		if (!state) {
+			return {
+				topicLabel: "Topic: (graph pane not ready)",
+				topicStatus: "Pin: off | Snap: on",
+			};
+		}
+
+		let label = "Topic: -";
+		if (state.activeTopicName) {
+			label = `Topic: ${state.activeTopicName}`;
+			if (state.isTemporaryTopic) {
+				label += " (temporary)";
+			}
+		}
+
+		let status = state.isTemporaryTopic
+			? "Temporary topic is not saved. Use the context menu to create a real topic."
+			: (state.activeTopicID ? `Topic ID: ${state.activeTopicID}` : "No topic loaded");
+		status += state.pinSelection ? " | Pin: on" : " | Pin: off";
+		status += state.snapToGrid ? " | Snap: on" : " | Snap: off";
+		return { topicLabel: label, topicStatus: status };
+	},
+
+	notifyGraphContextChanged(window) {
+		window.dispatchEvent(new window.CustomEvent("paper-relations:graph-context-changed"));
+	},
+
+	canRemoveActiveTopic(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return false;
+		return !!(state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic);
+	},
+
+	refreshGraphChrome(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+
+		let summary = this.getGraphContextSummary(window);
+		let headerTitle = state.activeTopicName || "-";
+		if (state.headerMain) {
+			state.headerMain.textContent = headerTitle;
+		}
+		else {
+			let fallbackTitle = summary.topicLabel.replace(/^Topic:\s*/, "").replace(/\s+\(temporary\)\s*$/, "");
+			state.header.textContent = fallbackTitle;
+		}
+		if (state.headerTemporaryHint) {
+			state.headerTemporaryHint.hidden = !state.isTemporaryTopic;
+		}
+		state.subheader.textContent = summary.topicStatus;
+		this.setCanvasButtonVisual(state.pinButton, !!state.pinSelection);
+		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
+		state.boardGrid.classList.remove("paper-relations-board-grid-disabled");
+		this.updateCanvasControlsLayout(window);
+		this.updateGraphWorkspaceToggleButton(window);
+		this.placeGraphWorkspaceToggleButton(window, state.toolbarToggleButton);
+		if (state.isTemporaryTopic) {
+			state.canvas.classList.add("paper-relations-temporary-topic");
+		}
+		else {
+			state.canvas.classList.remove("paper-relations-temporary-topic");
+		}
+	},
+
+	setCanvasButtonVisual(button, active) {
+		if (!button) return;
+		let isActive = !!active;
+		button.classList.toggle("active", isActive);
+		button.style.opacity = isActive ? "1" : "0.3";
+		let iconImage = button.querySelector(".paper-relations-canvas-btn-icon-image");
+		if (iconImage) {
+			iconImage.style.filter = isActive
+				? "grayscale(1) brightness(0.48) contrast(0.95)"
+				: "grayscale(1) brightness(1.04)";
+		}
+		let fillColor = isActive ? "#313a43" : "#9aa6b2";
+		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-fill")) {
+			elem.style.fill = fillColor;
+		}
+
+		let strokeColor = isActive ? "#313a43" : "#9aa6b2";
+		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-stroke")) {
+			elem.style.fill = "none";
+			elem.style.stroke = strokeColor;
+			elem.style.strokeWidth = "1.8";
+			elem.style.strokeLinecap = "round";
+			elem.style.strokeLinejoin = "round";
+		}
+	},
+
+	updateCanvasControlsLayout(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let rect = state.svg.getBoundingClientRect();
+		let width = Number.isFinite(rect.width) ? rect.width : 0;
+		let x = Math.max(10, width - 10 - state.controlPanelWidth);
+		state.canvasControls.setAttribute("transform", `translate(${x} 10)`);
+	},
+
+	onCanvasControlMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+	},
+
+	onPinButtonToggle(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.pinSelection = !state.pinSelection;
+		this.refreshGraphChrome(window);
+		this.notifyGraphContextChanged(window);
+	},
+
+	onSnapButtonToggle(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.snapToGrid = !state.snapToGrid;
+		this.refreshGraphChrome(window);
+		this.notifyGraphContextChanged(window);
+	},
+
+	isSavedTopicMutableState(state) {
+		return !!(state?.activeTopicID && state?.activeLibraryID && !state?.isTemporaryTopic);
+	},
+
+	getNodeByID(state, nodeID) {
+		if (!state?.nodes?.length || !nodeID) return null;
+		return state.nodes.find((node) => node.id === nodeID) || null;
+	},
+
+	getNodeIDFromEventTarget(target) {
+		let current = target;
+		while (current) {
+			if (typeof current.getAttribute === "function") {
+				let nodeID = current.getAttribute("data-node-id");
+				if (nodeID) {
+					return nodeID;
+				}
+			}
+			current = current.parentNode;
+		}
+		return null;
+	},
+
+	getNodeAtClient(window, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodes?.length) return null;
+		let point = this.clientToGraphPoint(state, clientX, clientY);
+		for (let i = state.nodes.length - 1; i >= 0; i--) {
+			let node = state.nodes[i];
+			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
+			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
+			if (
+				point.x >= node.x &&
+				point.x <= node.x + width &&
+				point.y >= node.y &&
+				point.y <= node.y + height
+			) {
+				return node;
+			}
+		}
+		return null;
+	},
+
+	isTargetInsideElement(target, rootElem) {
+		if (!target || !rootElem) return false;
+		let current = target;
+		while (current) {
+			if (current === rootElem) return true;
+			current = current.parentNode;
+		}
+		return false;
+	},
+
+	isClientPointInsideElementRect(elem, clientX, clientY) {
+		if (!elem || elem.hidden || elem.style?.display === "none") return false;
+		if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return false;
+		let rect = elem.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return false;
+		return (
+			clientX >= rect.left &&
+			clientX <= rect.right &&
+			clientY >= rect.top &&
+			clientY <= rect.bottom
+		);
+	},
+
 	getItemForNode(node) {
 		if (!node?.libraryID || !node?.itemKey) return null;
 		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
@@ -810,4 +1006,5 @@ var PaperRelationsGraphInteractionMixin = {
 			outgoing,
 		};
 	},
+
 };
