@@ -19,6 +19,7 @@ zip -r ../build/paper-relations.xpi \
 	storage.js \
 	graph-workspace.js \
 	graph-render.js \
+	graph-interaction.js \
 	graph-export.js \
 	paper-relations.js \
 	manifest.json \
