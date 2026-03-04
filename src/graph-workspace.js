@@ -357,21 +357,90 @@ var PaperRelationsGraphWorkspaceMixin = {
 		}
 	},
 
-	addGraphPane(window) {
-		let doc = window.document;
+	cleanupExistingGraphPane(window, doc) {
 		let existingPane = doc.getElementById("paper-relations-graph-pane");
-		if (existingPane) {
-			let existingState = this.graphStates?.get(window);
-			this.unbindGraphPaneEvents(window, doc, existingState);
-			this.clearGraphWorkspaceTogglePlacementTimers(existingState);
-			this.graphStates?.delete(window);
-			doc.getElementById("paper-relations-graph-splitter")?.remove();
-			existingPane.remove();
-		}
+		if (!existingPane) return;
+		let existingState = this.graphStates?.get(window);
+		this.unbindGraphPaneEvents(window, doc, existingState);
+		this.clearGraphWorkspaceTogglePlacementTimers(existingState);
+		this.graphStates?.delete(window);
+		doc.getElementById("paper-relations-graph-splitter")?.remove();
+		existingPane.remove();
+	},
 
-		let itemsContainer = doc.getElementById("zotero-items-pane-container");
-		if (!itemsContainer) return;
+	createGraphPaneState(window, refs, toolbarToggleButton, controlPanelWidth) {
+		return {
+			window,
+			pane: refs.pane,
+			splitter: refs.splitter,
+			canvas: refs.canvas,
+			header: refs.header,
+			headerMain: refs.headerMain,
+			headerTemporaryHint: refs.headerTemporaryHint,
+			subheader: refs.subheader,
+			boardGrid: refs.boardGrid,
+			svg: refs.svg,
+			viewport: refs.viewport,
+			edgesGroup: refs.edgesGroup,
+			nodesGroup: refs.nodesGroup,
+			overlayGroup: refs.overlayGroup,
+			canvasControls: refs.canvasControls,
+			pinButton: refs.pinButton,
+			snapButton: refs.snapButton,
+			nodeContextMenu: refs.nodeContextMenu,
+			removeNodeBtn: refs.removeNodeBtn,
+			renameNodeBtn: refs.renameNodeBtn,
+			renameInput: refs.renameInput,
+			workspaceContextMenu: refs.workspaceContextMenu,
+			workspaceCreateTopicFromSelectedBtn: refs.workspaceCreateTopicFromSelectedBtn,
+			workspaceExportSVGBtn: refs.workspaceExportSVGBtn,
+			workspaceExportJSONBtn: refs.workspaceExportJSONBtn,
+			workspaceSeparator: refs.workspaceSeparator,
+			workspaceRenameTopicBtn: refs.workspaceRenameTopicBtn,
+			workspaceDeleteTopicBtn: refs.workspaceDeleteTopicBtn,
+			toolbarToggleButton,
+			controlPanelWidth,
+			graphVisible: true,
+			nodes: [],
+			edges: [],
+			activeTopicID: null,
+			activeLibraryID: null,
+			activeTopicName: "",
+			isTemporaryTopic: false,
+			pinSelection: false,
+			snapToGrid: true,
+			activeItemKey: null,
+			activeItemLibraryID: null,
+			selectedNodeID: null,
+			hoverAnchor: null,
+			edgeDraft: null,
+			edgeCutDraft: null,
+			anchorHoverRadiusPx: 14,
+			altModifierPressed: false,
+			pointerInCanvas: false,
+			pointerOverNode: false,
+			pointerOverControl: false,
+			scale: 1,
+			panX: 40,
+			panY: 26,
+			dragMode: null,
+			dragNodeID: null,
+			dragNodeRawX: null,
+			dragNodeRawY: null,
+			lastClientX: 0,
+			lastClientY: 0,
+			contextMenuNodeID: null,
+			renamingNodeID: null,
+			renameFallbackTitle: "",
+			renameSnapshot: null,
+			renameBusy: false,
+			suppressRenameInputBlur: false,
+			togglePlacementTimerIDs: [],
+			handlers: null,
+		};
+	},
 
+	buildGraphPaneElements(window, doc, itemsContainer) {
 		const XHTML_NS = "http://www.w3.org/1999/xhtml";
 		const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -563,10 +632,10 @@ var PaperRelationsGraphWorkspaceMixin = {
 		renameInput.type = "text";
 		renameInput.className = "paper-relations-node-rename-input";
 		renameInput.hidden = true;
-			renameInput.setAttribute("spellcheck", "false");
-			renameInput.style.position = "absolute";
-			renameInput.style.zIndex = "7";
-			renameInput.style.textAlign = "center";
+		renameInput.setAttribute("spellcheck", "false");
+		renameInput.style.position = "absolute";
+		renameInput.style.zIndex = "7";
+		renameInput.style.textAlign = "center";
 		canvas.appendChild(renameInput);
 
 		let workspaceContextMenu = doc.createElementNS(XHTML_NS, "div");
@@ -622,12 +691,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		pane.append(toolbar, canvas);
 		itemsContainer.append(splitter, pane);
 
-		this.storeAddedElement(splitter);
-		this.storeAddedElement(pane);
-		let toolbarToggleButton = this.ensureGraphWorkspaceToggleButton(window);
-
-		let state = {
-			window,
+		return {
 			pane,
 			splitter,
 			canvas,
@@ -655,46 +719,21 @@ var PaperRelationsGraphWorkspaceMixin = {
 			workspaceSeparator,
 			workspaceRenameTopicBtn,
 			workspaceDeleteTopicBtn,
-			toolbarToggleButton,
 			controlPanelWidth,
-			graphVisible: true,
-			nodes: [],
-			edges: [],
-			activeTopicID: null,
-			activeLibraryID: null,
-			activeTopicName: "",
-			isTemporaryTopic: false,
-			pinSelection: false,
-			snapToGrid: true,
-			activeItemKey: null,
-			activeItemLibraryID: null,
-			selectedNodeID: null,
-			hoverAnchor: null,
-			edgeDraft: null,
-			edgeCutDraft: null,
-			anchorHoverRadiusPx: 14,
-			altModifierPressed: false,
-			pointerInCanvas: false,
-			pointerOverNode: false,
-			pointerOverControl: false,
-			scale: 1,
-			panX: 40,
-			panY: 26,
-			dragMode: null,
-			dragNodeID: null,
-			dragNodeRawX: null,
-			dragNodeRawY: null,
-			lastClientX: 0,
-			lastClientY: 0,
-			contextMenuNodeID: null,
-			renamingNodeID: null,
-			renameFallbackTitle: "",
-			renameSnapshot: null,
-			renameBusy: false,
-			suppressRenameInputBlur: false,
-			togglePlacementTimerIDs: [],
-			handlers: null,
 		};
+	},
+
+	addGraphPane(window) {
+		let doc = window.document;
+		this.cleanupExistingGraphPane(window, doc);
+
+		let itemsContainer = doc.getElementById("zotero-items-pane-container");
+		if (!itemsContainer) return;
+		let refs = this.buildGraphPaneElements(window, doc, itemsContainer);
+		this.storeAddedElement(refs.splitter);
+		this.storeAddedElement(refs.pane);
+		let toolbarToggleButton = this.ensureGraphWorkspaceToggleButton(window);
+		let state = this.createGraphPaneState(window, refs, toolbarToggleButton, refs.controlPanelWidth);
 
 		state.handlers = this.createGraphPaneHandlers(window);
 		this.bindGraphPaneEvents(window, doc, state);
