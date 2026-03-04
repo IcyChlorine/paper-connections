@@ -908,5 +908,10 @@ PaperRelations = {
 };
 
 
-Object.assign(PaperRelations, PaperRelationsStorageMixin, PaperRelationsGraphWorkspaceMixin);
+Object.assign(
+	PaperRelations,
+	PaperRelationsStorageMixin,
+	PaperRelationsGraphWorkspaceMixin,
+	PaperRelationsGraphWorkspaceContextExportMixin,
+);
 

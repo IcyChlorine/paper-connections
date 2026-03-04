@@ -19,6 +19,7 @@ async function startup({ id, version, rootURI }) {
 	
 	Services.scriptloader.loadSubScript(rootURI + 'storage.js');
 	Services.scriptloader.loadSubScript(rootURI + 'graph-workspace.js');
+	Services.scriptloader.loadSubScript(rootURI + 'graph-workspace-context-export.js');
 	Services.scriptloader.loadSubScript(rootURI + 'paper-relations.js');
 	PaperRelations.init({ id, version, rootURI });
 	PaperRelations.addToAllWindows();
