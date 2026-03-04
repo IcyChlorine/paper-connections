@@ -215,52 +215,154 @@ var PaperRelationsGraphWorkspaceMixin = {
 		this.toggleGraphWorkspaceVisibility(window);
 	},
 
+	createGraphPaneHandlers(window) {
+		return {
+			wheel: (event) => this.onGraphWheel(window, event),
+			mousedown: (event) => this.onGraphMouseDown(window, event),
+			contextmenu: (event) => this.onGraphContextMenu(window, event),
+			mousemove: (event) => this.onGraphMouseMove(window, event),
+			mouseup: (event) => this.onGraphMouseUp(window, event),
+			windowmousedown: (event) => this.onWindowMouseDown(window, event),
+			windowclick: (event) => this.onWindowMouseDown(window, event),
+			documentmousedown: (event) => this.onWindowMouseDown(window, event),
+			documentclick: (event) => this.onWindowMouseDown(window, event),
+			keydown: (event) => this.onWindowKeyDown(window, event),
+			keypress: (event) => this.onWindowKeyDown(window, event),
+			keyup: (event) => this.onWindowKeyUp(window, event),
+			blur: () => this.onWindowBlur(window),
+			dragover: (event) => this.onGraphDragOver(window, event),
+			drop: (event) => this.onGraphDrop(window, event),
+			dragleave: (event) => this.onGraphDragLeave(window, event),
+			controlmousedown: (event) => this.onCanvasControlMouseDown(window, event),
+			pinbtnclick: () => this.onPinButtonToggle(window),
+			snapbtnclick: () => this.onSnapButtonToggle(window),
+			nodemenumousedown: (event) => this.onNodeContextMenuMouseDown(window, event),
+			menuremoveclick: (event) => this.onNodeMenuRemoveClick(window, event),
+			menurenameclick: (event) => this.onNodeMenuRenameClick(window, event),
+			workspacemenumousedown: (event) => this.onWorkspaceContextMenuMouseDown(window, event),
+			workspacemenuitemclick: (event) => this.onWorkspaceMenuItemClick(window, event),
+			renameinputmousedown: (event) => this.onNodeRenameInputMouseDown(window, event),
+			renameinput: (event) => this.onNodeRenameInput(window, event),
+			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
+			renameinputblur: (event) => this.onNodeRenameInputBlur(window, event),
+			togglebtnclick: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
+			togglebtncommand: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
+			resize: () => this.updateCanvasControlsLayout(window),
+		};
+	},
+
+	bindGraphPaneEvents(window, doc, state) {
+		if (!state?.handlers) return;
+		state.svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
+		state.svg.addEventListener("mousedown", state.handlers.mousedown);
+		state.svg.addEventListener("contextmenu", state.handlers.contextmenu);
+		window.addEventListener("mousemove", state.handlers.mousemove);
+		window.addEventListener("mouseup", state.handlers.mouseup);
+		window.addEventListener("mousedown", state.handlers.windowmousedown, true);
+		window.addEventListener("click", state.handlers.windowclick, true);
+		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
+		doc.addEventListener("click", state.handlers.documentclick, true);
+		window.addEventListener("keydown", state.handlers.keydown, true);
+		window.addEventListener("keypress", state.handlers.keypress, true);
+		window.addEventListener("keyup", state.handlers.keyup, true);
+		window.addEventListener("blur", state.handlers.blur);
+		state.canvas.addEventListener("dragover", state.handlers.dragover);
+		state.canvas.addEventListener("drop", state.handlers.drop);
+		state.canvas.addEventListener("dragleave", state.handlers.dragleave);
+		state.pinButton.addEventListener("mousedown", state.handlers.controlmousedown);
+		state.snapButton.addEventListener("mousedown", state.handlers.controlmousedown);
+		state.pinButton.addEventListener("click", state.handlers.pinbtnclick);
+		state.snapButton.addEventListener("click", state.handlers.snapbtnclick);
+		state.nodeContextMenu.addEventListener("mousedown", state.handlers.nodemenumousedown);
+		state.removeNodeBtn.addEventListener("click", state.handlers.menuremoveclick);
+		state.renameNodeBtn.addEventListener("click", state.handlers.menurenameclick);
+		state.workspaceContextMenu.addEventListener("mousedown", state.handlers.workspacemenumousedown);
+		state.workspaceCreateTopicFromSelectedBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceExportSVGBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceExportJSONBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceRenameTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceDeleteTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.renameInput.addEventListener("mousedown", state.handlers.renameinputmousedown);
+		state.renameInput.addEventListener("input", state.handlers.renameinput);
+		state.renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
+		state.renameInput.addEventListener("blur", state.handlers.renameinputblur);
+		state.toolbarToggleButton?.addEventListener("click", state.handlers.togglebtnclick);
+		state.toolbarToggleButton?.addEventListener("command", state.handlers.togglebtncommand);
+		window.addEventListener("resize", state.handlers.resize);
+	},
+
+	unbindGraphPaneEvents(window, doc, state) {
+		if (!state?.handlers) return;
+		state.svg?.removeEventListener("wheel", state.handlers.wheel);
+		state.svg?.removeEventListener("mousedown", state.handlers.mousedown);
+		state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
+		window.removeEventListener("mousemove", state.handlers.mousemove);
+		window.removeEventListener("mouseup", state.handlers.mouseup);
+		window.removeEventListener("mousedown", state.handlers.windowmousedown, true);
+		window.removeEventListener("click", state.handlers.windowclick, true);
+		doc.removeEventListener("mousedown", state.handlers.documentmousedown, true);
+		doc.removeEventListener("click", state.handlers.documentclick, true);
+		window.removeEventListener("keydown", state.handlers.keydown, true);
+		window.removeEventListener("keydown", state.handlers.keydown);
+		window.removeEventListener("keypress", state.handlers.keypress, true);
+		window.removeEventListener("keypress", state.handlers.keypress);
+		window.removeEventListener("keyup", state.handlers.keyup, true);
+		window.removeEventListener("keyup", state.handlers.keyup);
+		window.removeEventListener("blur", state.handlers.blur);
+		state.canvas?.removeEventListener("dragover", state.handlers.dragover);
+		state.canvas?.removeEventListener("drop", state.handlers.drop);
+		state.canvas?.removeEventListener("dragleave", state.handlers.dragleave);
+		state.pinButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
+		state.snapButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
+		state.pinButton?.removeEventListener("click", state.handlers.pinbtnclick);
+		state.snapButton?.removeEventListener("click", state.handlers.snapbtnclick);
+		state.nodeContextMenu?.removeEventListener("mousedown", state.handlers.nodemenumousedown);
+		state.removeNodeBtn?.removeEventListener("click", state.handlers.menuremoveclick);
+		state.renameNodeBtn?.removeEventListener("click", state.handlers.menurenameclick);
+		state.workspaceContextMenu?.removeEventListener("mousedown", state.handlers.workspacemenumousedown);
+		state.workspaceCreateTopicFromSelectedBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceExportSVGBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceExportJSONBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceRenameTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.workspaceDeleteTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.renameInput?.removeEventListener("mousedown", state.handlers.renameinputmousedown);
+		state.renameInput?.removeEventListener("input", state.handlers.renameinput);
+		state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
+		state.renameInput?.removeEventListener("blur", state.handlers.renameinputblur);
+		state.toolbarToggleButton?.removeEventListener("click", state.handlers.togglebtnclick);
+		state.toolbarToggleButton?.removeEventListener("command", state.handlers.togglebtncommand);
+		window.removeEventListener("resize", state.handlers.resize);
+	},
+
+	finalizeGraphPaneMount(window, state) {
+		this.graphStates.set(window, state);
+		this.applyGraphWorkspaceVisibilityToDOM(state);
+		this.updateGraphWorkspaceToggleButton(window);
+		this.scheduleGraphWorkspaceTogglePlacement(window);
+		this.updateCanvasCursorState(window);
+		this.renderGraph(window);
+		this.refreshGraphChrome(window);
+		this.notifyGraphSelectionChanged(window);
+		window.requestAnimationFrame(() => {
+			this.updateCanvasControlsLayout(window);
+			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
+		});
+		window.setTimeout(() => this.updateCanvasControlsLayout(window), 80);
+		window.setTimeout(() => this.updateCanvasControlsLayout(window), 220);
+
+		let selectedItem = this.getCurrentSelectedItem(window);
+		if (selectedItem) {
+			this.selectionItemsByWindow.set(window, selectedItem);
+			this.handlePrimaryItemChanged(window, selectedItem).catch((error) => Zotero.logError(error));
+		}
+	},
+
 	addGraphPane(window) {
 		let doc = window.document;
 		let existingPane = doc.getElementById("paper-relations-graph-pane");
 		if (existingPane) {
 			let existingState = this.graphStates?.get(window);
-			if (existingState?.handlers) {
-				existingState.svg?.removeEventListener("wheel", existingState.handlers.wheel);
-				existingState.svg?.removeEventListener("mousedown", existingState.handlers.mousedown);
-				existingState.svg?.removeEventListener("contextmenu", existingState.handlers.contextmenu);
-				window.removeEventListener("mousemove", existingState.handlers.mousemove);
-				window.removeEventListener("mouseup", existingState.handlers.mouseup);
-				window.removeEventListener("mousedown", existingState.handlers.windowmousedown, true);
-				window.removeEventListener("click", existingState.handlers.windowclick, true);
-				doc.removeEventListener("mousedown", existingState.handlers.documentmousedown, true);
-				doc.removeEventListener("click", existingState.handlers.documentclick, true);
-				window.removeEventListener("keydown", existingState.handlers.keydown, true);
-				window.removeEventListener("keydown", existingState.handlers.keydown);
-				window.removeEventListener("keypress", existingState.handlers.keypress, true);
-				window.removeEventListener("keypress", existingState.handlers.keypress);
-				window.removeEventListener("keyup", existingState.handlers.keyup, true);
-				window.removeEventListener("keyup", existingState.handlers.keyup);
-				window.removeEventListener("blur", existingState.handlers.blur);
-				existingState.canvas?.removeEventListener("dragover", existingState.handlers.dragover);
-				existingState.canvas?.removeEventListener("drop", existingState.handlers.drop);
-				existingState.canvas?.removeEventListener("dragleave", existingState.handlers.dragleave);
-				existingState.pinButton?.removeEventListener("mousedown", existingState.handlers.controlmousedown);
-				existingState.snapButton?.removeEventListener("mousedown", existingState.handlers.controlmousedown);
-				existingState.pinButton?.removeEventListener("click", existingState.handlers.pinbtnclick);
-				existingState.snapButton?.removeEventListener("click", existingState.handlers.snapbtnclick);
-				window.removeEventListener("resize", existingState.handlers.resize);
-				existingState.nodeContextMenu?.removeEventListener("mousedown", existingState.handlers.nodemenumousedown);
-				existingState.removeNodeBtn?.removeEventListener("click", existingState.handlers.menuremoveclick);
-				existingState.renameNodeBtn?.removeEventListener("click", existingState.handlers.menurenameclick);
-				existingState.workspaceContextMenu?.removeEventListener("mousedown", existingState.handlers.workspacemenumousedown);
-				existingState.workspaceCreateTopicFromSelectedBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
-				existingState.workspaceExportSVGBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
-				existingState.workspaceExportJSONBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
-				existingState.workspaceRenameTopicBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
-				existingState.workspaceDeleteTopicBtn?.removeEventListener("click", existingState.handlers.workspacemenuitemclick);
-				existingState.renameInput?.removeEventListener("mousedown", existingState.handlers.renameinputmousedown);
-				existingState.renameInput?.removeEventListener("input", existingState.handlers.renameinput);
-				existingState.renameInput?.removeEventListener("keydown", existingState.handlers.renameinputkeydown);
-				existingState.renameInput?.removeEventListener("blur", existingState.handlers.renameinputblur);
-				existingState.toolbarToggleButton?.removeEventListener("click", existingState.handlers.togglebtnclick);
-				existingState.toolbarToggleButton?.removeEventListener("command", existingState.handlers.togglebtncommand);
-			}
+			this.unbindGraphPaneEvents(window, doc, existingState);
 			this.clearGraphWorkspaceTogglePlacementTimers(existingState);
 			this.graphStates?.delete(window);
 			doc.getElementById("paper-relations-graph-splitter")?.remove();
@@ -594,97 +696,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			handlers: null,
 		};
 
-		state.handlers = {
-			wheel: (event) => this.onGraphWheel(window, event),
-			mousedown: (event) => this.onGraphMouseDown(window, event),
-			contextmenu: (event) => this.onGraphContextMenu(window, event),
-			mousemove: (event) => this.onGraphMouseMove(window, event),
-			mouseup: (event) => this.onGraphMouseUp(window, event),
-			windowmousedown: (event) => this.onWindowMouseDown(window, event),
-			windowclick: (event) => this.onWindowMouseDown(window, event),
-			documentmousedown: (event) => this.onWindowMouseDown(window, event),
-			documentclick: (event) => this.onWindowMouseDown(window, event),
-			keydown: (event) => this.onWindowKeyDown(window, event),
-			keypress: (event) => this.onWindowKeyDown(window, event),
-			keyup: (event) => this.onWindowKeyUp(window, event),
-			blur: () => this.onWindowBlur(window),
-			dragover: (event) => this.onGraphDragOver(window, event),
-			drop: (event) => this.onGraphDrop(window, event),
-			dragleave: (event) => this.onGraphDragLeave(window, event),
-			controlmousedown: (event) => this.onCanvasControlMouseDown(window, event),
-			pinbtnclick: () => this.onPinButtonToggle(window),
-			snapbtnclick: () => this.onSnapButtonToggle(window),
-			nodemenumousedown: (event) => this.onNodeContextMenuMouseDown(window, event),
-			menuremoveclick: (event) => this.onNodeMenuRemoveClick(window, event),
-			menurenameclick: (event) => this.onNodeMenuRenameClick(window, event),
-			workspacemenumousedown: (event) => this.onWorkspaceContextMenuMouseDown(window, event),
-			workspacemenuitemclick: (event) => this.onWorkspaceMenuItemClick(window, event),
-			renameinputmousedown: (event) => this.onNodeRenameInputMouseDown(window, event),
-			renameinput: (event) => this.onNodeRenameInput(window, event),
-			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
-			renameinputblur: (event) => this.onNodeRenameInputBlur(window, event),
-			togglebtnclick: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
-			togglebtncommand: (event) => this.onGraphWorkspaceToggleButtonCommand(window, event),
-			resize: () => this.updateCanvasControlsLayout(window),
-		};
-
-		svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
-		svg.addEventListener("mousedown", state.handlers.mousedown);
-		svg.addEventListener("contextmenu", state.handlers.contextmenu);
-		window.addEventListener("mousemove", state.handlers.mousemove);
-		window.addEventListener("mouseup", state.handlers.mouseup);
-		window.addEventListener("mousedown", state.handlers.windowmousedown, true);
-		window.addEventListener("click", state.handlers.windowclick, true);
-		doc.addEventListener("mousedown", state.handlers.documentmousedown, true);
-		doc.addEventListener("click", state.handlers.documentclick, true);
-		window.addEventListener("keydown", state.handlers.keydown, true);
-		window.addEventListener("keypress", state.handlers.keypress, true);
-		window.addEventListener("keyup", state.handlers.keyup, true);
-		window.addEventListener("blur", state.handlers.blur);
-		canvas.addEventListener("dragover", state.handlers.dragover);
-		canvas.addEventListener("drop", state.handlers.drop);
-		canvas.addEventListener("dragleave", state.handlers.dragleave);
-		pinButton.addEventListener("mousedown", state.handlers.controlmousedown);
-		snapButton.addEventListener("mousedown", state.handlers.controlmousedown);
-		pinButton.addEventListener("click", state.handlers.pinbtnclick);
-		snapButton.addEventListener("click", state.handlers.snapbtnclick);
-		nodeContextMenu.addEventListener("mousedown", state.handlers.nodemenumousedown);
-		removeNodeBtn.addEventListener("click", state.handlers.menuremoveclick);
-		renameNodeBtn.addEventListener("click", state.handlers.menurenameclick);
-		workspaceContextMenu.addEventListener("mousedown", state.handlers.workspacemenumousedown);
-		workspaceCreateTopicFromSelectedBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
-		workspaceExportSVGBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
-		workspaceExportJSONBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
-		workspaceRenameTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
-		workspaceDeleteTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
-		renameInput.addEventListener("mousedown", state.handlers.renameinputmousedown);
-		renameInput.addEventListener("input", state.handlers.renameinput);
-		renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
-		renameInput.addEventListener("blur", state.handlers.renameinputblur);
-		toolbarToggleButton?.addEventListener("click", state.handlers.togglebtnclick);
-		toolbarToggleButton?.addEventListener("command", state.handlers.togglebtncommand);
-		window.addEventListener("resize", state.handlers.resize);
-
-		this.graphStates.set(window, state);
-		this.applyGraphWorkspaceVisibilityToDOM(state);
-		this.updateGraphWorkspaceToggleButton(window);
-		this.scheduleGraphWorkspaceTogglePlacement(window);
-		this.updateCanvasCursorState(window);
-		this.renderGraph(window);
-		this.refreshGraphChrome(window);
-		this.notifyGraphSelectionChanged(window);
-		window.requestAnimationFrame(() => {
-			this.updateCanvasControlsLayout(window);
-			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
-		});
-		window.setTimeout(() => this.updateCanvasControlsLayout(window), 80);
-		window.setTimeout(() => this.updateCanvasControlsLayout(window), 220);
-
-		let selectedItem = this.getCurrentSelectedItem(window);
-		if (selectedItem) {
-			this.selectionItemsByWindow.set(window, selectedItem);
-			this.handlePrimaryItemChanged(window, selectedItem).catch((error) => Zotero.logError(error));
-		}
+		state.handlers = this.createGraphPaneHandlers(window);
+		this.bindGraphPaneEvents(window, doc, state);
+		this.finalizeGraphPaneMount(window, state);
 	},
 
 	getCurrentSelectedItem(window) {

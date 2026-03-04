@@ -838,44 +838,7 @@ PaperRelations = {
 	removeFromWindow(window) {
 		let state = this.graphStates.get(window);
 		if (state?.handlers) {
-			state.svg?.removeEventListener("wheel", state.handlers.wheel);
-			state.svg?.removeEventListener("mousedown", state.handlers.mousedown);
-			state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
-			window.removeEventListener("mousemove", state.handlers.mousemove);
-			window.removeEventListener("mouseup", state.handlers.mouseup);
-			window.removeEventListener("mousedown", state.handlers.windowmousedown, true);
-			window.removeEventListener("click", state.handlers.windowclick, true);
-			window.document.removeEventListener("mousedown", state.handlers.documentmousedown, true);
-			window.document.removeEventListener("click", state.handlers.documentclick, true);
-			window.removeEventListener("keydown", state.handlers.keydown, true);
-			window.removeEventListener("keydown", state.handlers.keydown);
-			window.removeEventListener("keypress", state.handlers.keypress, true);
-			window.removeEventListener("keypress", state.handlers.keypress);
-			window.removeEventListener("keyup", state.handlers.keyup, true);
-			window.removeEventListener("keyup", state.handlers.keyup);
-			window.removeEventListener("blur", state.handlers.blur);
-			state.canvas?.removeEventListener("dragover", state.handlers.dragover);
-			state.canvas?.removeEventListener("drop", state.handlers.drop);
-			state.canvas?.removeEventListener("dragleave", state.handlers.dragleave);
-			state.pinButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
-			state.snapButton?.removeEventListener("mousedown", state.handlers.controlmousedown);
-			state.pinButton?.removeEventListener("click", state.handlers.pinbtnclick);
-			state.snapButton?.removeEventListener("click", state.handlers.snapbtnclick);
-			state.nodeContextMenu?.removeEventListener("mousedown", state.handlers.nodemenumousedown);
-			state.removeNodeBtn?.removeEventListener("click", state.handlers.menuremoveclick);
-			state.renameNodeBtn?.removeEventListener("click", state.handlers.menurenameclick);
-			state.workspaceContextMenu?.removeEventListener("mousedown", state.handlers.workspacemenumousedown);
-			state.workspaceExportSVGBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
-			state.workspaceExportJSONBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
-			state.workspaceRenameTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
-			state.workspaceDeleteTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
-			state.renameInput?.removeEventListener("mousedown", state.handlers.renameinputmousedown);
-			state.renameInput?.removeEventListener("input", state.handlers.renameinput);
-			state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
-			state.renameInput?.removeEventListener("blur", state.handlers.renameinputblur);
-			state.toolbarToggleButton?.removeEventListener("click", state.handlers.togglebtnclick);
-			state.toolbarToggleButton?.removeEventListener("command", state.handlers.togglebtncommand);
-			window.removeEventListener("resize", state.handlers.resize);
+			this.unbindGraphPaneEvents(window, window.document, state);
 			this.clearGraphWorkspaceTogglePlacementTimers(state);
 		}
 		this.graphStates.delete(window);
