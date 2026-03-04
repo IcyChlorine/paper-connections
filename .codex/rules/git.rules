@@ -1,0 +1,23 @@
+# .codex/rules/git.rules
+# Allow git staging + commits outside the sandbox for THIS repo only.
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "allow",
+    justification = "Allow staging in this repo (git needs to write .git/objects/.git/index).",
+    match = [
+        "git add .",
+        "git add -A",
+        "git add src/graph-interaction.js",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "allow",
+    justification = "Allow commits in this repo.",
+    match = [
+        "git commit -m \"test\"",
+        "git commit --amend --no-edit",
+    ],
+)
