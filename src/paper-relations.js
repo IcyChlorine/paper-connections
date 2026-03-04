@@ -912,6 +912,7 @@ Object.assign(
 	PaperRelations,
 	PaperRelationsStorageMixin,
 	PaperRelationsGraphWorkspaceMixin,
-	PaperRelationsGraphWorkspaceContextExportMixin,
+	PaperRelationsGraphRenderMixin,
+	PaperRelationsGraphExportMixin,
 );
 

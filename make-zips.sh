@@ -18,7 +18,8 @@ zip -r ../build/paper-relations.xpi \
 	assets \
 	storage.js \
 	graph-workspace.js \
-	graph-workspace-context-export.js \
+	graph-render.js \
+	graph-export.js \
 	paper-relations.js \
 	manifest.json \
 	prefs.js \

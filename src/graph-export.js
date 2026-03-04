@@ -1,4 +1,4 @@
-var PaperRelationsGraphWorkspaceContextExportMixin = {
+var PaperRelationsGraphExportMixin = {
 	positionContextMenuInCanvas(state, menuElem, clientX, clientY) {
 		if (!state?.canvas || !menuElem) return;
 		let canvasRect = state.canvas.getBoundingClientRect();
