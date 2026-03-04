@@ -1,6 +1,6 @@
 # Paper Relations Storage and CRUD
 
-Date: 2026-02-27  
+Date: 2026-03-04  
 Target: Zotero 7 (`src`)
 
 ## 1. Storage backend
@@ -63,7 +63,10 @@ Notes:
 
 ## 3. Implemented CRUD API
 
-Implemented in `src/paper-relations-storage.js` (storage/CRUD) and used by `src/paper-relations-graph-workspace.js`.
+Implemented in `src/storage.js` (storage/CRUD), and consumed by graph runtime mixins in:
+- `src/graph-topic.js` (topic lifecycle/context loading),
+- `src/graph-interaction.js` (edge/node interaction persistence),
+- `src/graph-export.js` (topic export payload assembly).
 
 ### Topic CRUD
 

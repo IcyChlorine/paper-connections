@@ -1,7 +1,7 @@
 # Paper Relations - Current Features
 
 ## Snapshot
-- Date: 2026-02-28
+- Date: 2026-03-04
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-relations@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
@@ -17,22 +17,22 @@
 - Remark system
   - Adds a custom main-list column `Remark` via `Zotero.ItemTreeManager`.
   - Adds a custom editable info-row `Remark` in right item info pane (`afterCreators`).
-  - Stores remark in item `extra` as `remark: ...` (directly compatible with Ethereal Style remark data already in this format).
+  - Stores remark in item `extra` as `remark: ...` (compatible with Ethereal Style data already in this format).
   - Editing `Remark` in right info pane immediately refreshes graph node labels for that paper in open workspaces.
-  - `Topic Context Section` includes a one-time `Migrate ES Remarks` action to import legacy ES note-tag based remark data into `extra`.
+  - `Topic Context Section` includes a one-time `Migrate ES Remarks` action to import legacy ES note-tag remark data into `extra`.
 - Middle-bottom `Relation Graph Workspace` under item list
-  - Resizable with splitter (top edge drag).
+  - Resizable with splitter.
   - Grid board and nodes pan together.
   - Pane resize does not auto-scale graph objects.
-  - Item-list toolbar includes a graph workspace toggle button (node icon) to show/hide the workspace pane.
+  - Item-list toolbar includes a graph workspace toggle button to show/hide workspace.
   - Keyboard shortcut `Ctrl+\`` also toggles graph workspace visibility.
   - SVG canvas top-right includes two icon toggle buttons:
-    - left magnet button toggles magnetic snap-to-grid.
-    - right pin button toggles pinned graph context while selecting other items.
-  - Controls are icon-only (no button border/background): dim gray at 30% opacity when inactive, solid dark gray when active.
+    - magnet button toggles magnetic snap-to-grid.
+    - pin button toggles pinned graph context while selecting other items.
+  - Controls are icon-only (dim gray inactive, solid dark gray active).
   - Snap-to-grid is enabled by default on workspace init.
 - Topic/context loading behavior
-  - On item selection, if item belongs to one or more topics, loads latest-updated topic.
+  - On item selection, if item belongs to topics, loads latest-updated topic.
   - If item belongs to no topic, renders a temporary in-memory topic (not persisted).
   - Creating topic from selected paper persists topic and switches graph context immediately.
   - Removing topic deletes topic and item-index mappings, then reloads context.
@@ -41,45 +41,51 @@
   - Temporary topic and no-topic state reject drop.
   - Duplicate item nodes in same topic are skipped.
 - Graph interactions
-  - Mouse wheel zoom (zoom around cursor position).
+  - Mouse wheel zoom around cursor.
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
-  - Selecting a graph node reverse-syncs selection to the top Zotero item list.
-  - Right-click a node to open a context menu with `Remove` and `Rename`.
-  - Right-click blank canvas area opens a topic context menu based on context:
-    - temporary topic: `由此论文新建 topic`, separator, `Export as SVG`.
+  - Selecting a graph node reverse-syncs selection to Zotero item list.
+  - Right-click node menu: `Remove`, `Rename`.
+  - Right-click blank-canvas menu is context-aware:
+    - temporary topic: `Create topic from this paper`, separator, `Export as SVG`.
     - saved topic: `Rename`, `Delete`, separator, `Export as SVG`, `Export as JSON`.
-    - no topic loaded: workspace right-click menu is suppressed (no disabled placeholder entries).
-  - Topic-menu `Rename` prompts for a new topic name and updates the active saved topic.
-  - Topic-menu `Delete` uses the same confirm-and-remove flow as the right-pane `Remove topic` action.
-  - Topic-menu `由此论文新建 topic` triggers the same create-topic flow as `Create topic from selected paper`.
-  - Topic-menu `Export as SVG` first opens an export-settings dialog (header `SVG导出设置`; zh rows `包含背景网格` and `边距（像素）`, with compact two-column alignment), then opens a save dialog and writes an SVG of the content bounds plus margin.
-  - Topic-menu `Export as JSON` opens a save dialog and writes topic data JSON (`schemaVersion` + `topic` payload) for exchange/import workflows.
-  - `Remove` deletes the node from the active saved topic and removes all incident edges.
-  - `Rename` (or `F2` on selected node) enters inline edit mode; `Enter` confirms and `Esc` cancels.
-  - Node left/right anchors appear as black dots only when cursor nears an anchor.
-  - Drag from one anchor to another to create relation edge; preview edge follows cursor while dragging.
-  - Edge creation allows only left-right anchor pairing (left-left and right-right are rejected).
-  - Backward links (target anchor left of source anchor) use wrap-around bezier routing while keeping rightward tangents at both endpoints.
-  - Hold `Alt` and drag with right mouse button to draw a dotted cut line and remove intersected relation edges on release.
-  - Cut preview shows a scissors icon near cut-path start.
-  - Background grid remains visible regardless of snap toggle state.
-  - Drag selected node with 24px magnetic snap-to-grid by node center and persist snapped position to storage.
-- Node rendering improvements
-  - Graph node text prefers item `Remark` (if present); falls back to full paper title when remark is empty.
-  - Confirming inline node rename writes back to item `Remark` (`extra` field `remark: ...`) and refreshes all open graph labels.
-  - During inline rename typing, node width/height reflow immediately and node center stays stable.
-  - When label changes (for example after editing `Remark`), node center is preserved while width/height recompute, keeping snap-grid alignment stable.
-  - Node position persistence during drag and remark-driven relayout uses displayed label metrics, preventing topic reload selection changes from introducing tiny grid misalignment drift.
-  - Node width adapts by title length within a wider range to reduce excessive wrapping.
-  - Multi-line title wrapping prefers word boundaries; if forced to split a long word, adds hyphen.
-  - Dynamic node height based on wrapped lines.
-  - Line spacing increased by about 10% for better readability.
-  - Reduced corner radius and tighter spacing.
+    - no topic loaded: menu suppressed (no disabled placeholder entries).
+  - Topic-menu `Rename` updates active saved topic name.
+  - Topic-menu `Delete` uses same confirm/remove flow as right-pane `Remove topic`.
+  - Topic-menu `Create topic from this paper` reuses the same create-topic flow.
+  - Topic-menu `Export as SVG`:
+    - opens SVG export settings dialog (`SVG 导出设置`: include grid + margin),
+    - opens save dialog,
+    - exports content-bounds plus margin as SVG.
+  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`schemaVersion` + `topic` payload).
+  - Node `Remove` deletes node and incident edges from active saved topic.
+  - Node `Rename` (or `F2`) enters inline edit mode; `Enter` confirms, `Esc` cancels.
+  - Node left/right anchors appear near cursor and support drag-to-create edge.
+  - Edge creation only allows left-right anchor pairing.
+  - Backward links use wrap-around bezier routing with rightward endpoint tangents.
+  - Hold `Alt` + right-drag to cut intersected edges.
+  - Background grid remains visible regardless of snap toggle.
+  - Drag node with 24px magnetic snap-to-grid by node center and persist snapped position.
+- Node rendering behavior
+  - Node text prefers item `Remark`; falls back to paper title.
+  - Confirming node rename writes back to item `Remark` (`extra` field) and refreshes all open graph labels.
+  - During rename typing, node size reflows live while preserving node center.
+  - Label-change relayout preserves center and grid stability.
+  - Persisted drag/relayout positions use displayed label metrics (`snapLabel`) to avoid subtle drift.
+  - Node width adapts by text length.
+  - Multi-line wrapping prefers word boundaries; long-word split uses hyphen.
+  - Dynamic node height and improved line spacing/readability.
 
 ## Data Layer
-- Implemented topic/node/edge CRUD in `src/paper-relations-storage.js`.
+- Implemented topic/node/edge CRUD in `src/storage.js`.
 - Data schema and API details documented in `doc/storage-crud.md`.
+
+## Runtime Script Architecture
+- `src/graph-workspace.js`: pane mount/unmount, visibility toggle, event wiring, DOM assembly.
+- `src/graph-render.js`: SVG render and geometry helpers.
+- `src/graph-interaction.js`: pointer/keyboard interaction, selection, drag/drop, rename interaction.
+- `src/graph-topic.js`: topic lifecycle and selection-driven topic/temporary-topic transitions.
+- `src/graph-export.js`: node/workspace context menus and SVG/JSON export flows.
 
 ## Build/Package
 - Build command (Git Bash): `./make-zips.sh`
@@ -88,13 +94,12 @@
 - Update template: `updates.json.tmpl`
 
 ## Developer Tooling
-- `tools/screenshot.py` now prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
-- `tools/screenshot.py --list-windows` lists matched top-level windows for debugging query strings.
-- `tools/screenshot_server.py` mirrors the same behavior in MCP tools (`take_screenshot`, `take_screenshot_base64`) and adds `list_windows`.
+- `tools/screenshot.py` prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
+- `tools/screenshot.py --list-windows` lists matched top-level windows for debugging.
+- `tools/screenshot_server.py` mirrors the same behavior in MCP tools and adds `list_windows`.
 
 ## Pending TODO (Next Stage)
 - Topic chooser UI when a paper belongs to multiple topics.
 - Edge editing UI (relation type and note).
 - Integration with real relation semantics in right pane (beyond debug scaffolding).
 - Schema migration helpers for future storage versions.
-
