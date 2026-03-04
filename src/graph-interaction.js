@@ -664,6 +664,79 @@ var PaperRelationsGraphInteractionMixin = {
 		}
 	},
 
+	canDataTransferContainZoteroItems(dataTransfer) {
+		if (!dataTransfer) return false;
+		let types = dataTransfer.types;
+		if (!types) return false;
+		if (typeof types.contains === "function") {
+			return types.contains("zotero/item");
+		}
+		return Array.from(types).includes("zotero/item");
+	},
+
+	parseDraggedItemIDs(dataTransfer) {
+		if (!dataTransfer) return [];
+		let raw = dataTransfer.getData("zotero/item");
+		if (!raw) return [];
+		return String(raw)
+			.split(",")
+			.map((value) => parseInt(value, 10))
+			.filter((value) => Number.isInteger(value) && value > 0);
+	},
+
+	onGraphDragOver(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (!this.canDataTransferContainZoteroItems(event.dataTransfer)) return;
+		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
+		event.preventDefault();
+		event.dataTransfer.dropEffect = "copy";
+		state.canvas.classList.add("paper-relations-drop-active");
+	},
+
+	onGraphDragLeave(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		if (!event.currentTarget?.contains(event.relatedTarget)) {
+			state.canvas.classList.remove("paper-relations-drop-active");
+		}
+	},
+
+	async onGraphDrop(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.canvas.classList.remove("paper-relations-drop-active");
+		if (!this.canDataTransferContainZoteroItems(event.dataTransfer)) return;
+		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
+
+		event.preventDefault();
+		let itemIDs = this.parseDraggedItemIDs(event.dataTransfer);
+		if (!itemIDs.length) return;
+
+		let added = false;
+		for (let itemID of itemIDs) {
+			let item = await Zotero.Items.getAsync(itemID);
+			if (!item || !item.isRegularItem?.()) continue;
+			if (item.libraryID !== state.activeLibraryID) continue;
+			let exists = state.nodes.some((node) => node.itemKey === item.key && node.libraryID === item.libraryID);
+			if (exists) continue;
+			let node = await this.addNode(state.activeLibraryID, state.activeTopicID, {
+				itemKey: item.key,
+				title: this.getItemTitle(item),
+			});
+			if (node) added = true;
+		}
+
+		if (!added) return;
+		let updatedTopic = await this.getTopic(state.activeLibraryID, state.activeTopicID);
+		if (!updatedTopic) return;
+		let selectedItem = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+		this.applyTopicToGraphState(window, updatedTopic, selectedItem);
+		this.refreshGraphChrome(window);
+		this.notifyGraphSelectionChanged(window);
+		this.notifyGraphContextChanged(window);
+	},
+
 	selectGraphNode(window, nodeID) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
