@@ -877,6 +877,7 @@ Object.assign(
 	PaperRelationsGraphWorkspaceMixin,
 	PaperRelationsGraphRenderMixin,
 	PaperRelationsGraphInteractionMixin,
+	PaperRelationsGraphTopicMixin,
 	PaperRelationsGraphExportMixin,
 );
 

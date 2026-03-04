@@ -17,6 +17,7 @@ $packList = @(
 	"graph-workspace.js",
 	"graph-render.js",
 	"graph-interaction.js",
+	"graph-topic.js",
 	"graph-export.js",
 	"paper-relations.js",
 	"manifest.json",
