@@ -101,6 +101,10 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	cursor: default;
 }
 
+#paper-relations-graph-canvas.paper-relations-bundle-ready {
+	cursor: default;
+}
+
 #paper-relations-graph-canvas svg {
 	display: block;
 	width: 100%;
@@ -154,13 +158,20 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	stroke-width: 2;
 	stroke-linecap: round;
 	stroke-linejoin: round;
-	marker-end: url(#paper-relations-arrow);
 	opacity: 0.9;
 }
 
 .paper-relations-edge-draft {
 	stroke: #2f3f4f;
 	opacity: 0.75;
+}
+
+.paper-relations-edge-bundle-trunk {
+	stroke: #4d5f70;
+}
+
+.paper-relations-edge-bundle-branch {
+	stroke: #5a6b7a;
 }
 
 .paper-relations-edge-cut-preview {
@@ -171,8 +182,28 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	opacity: 0.82;
 }
 
+.paper-relations-edge-bundle-preview {
+	stroke: #101214;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-dasharray: 5 4;
+	opacity: 0.84;
+	fill: none;
+}
+
 .paper-relations-edge-cut-scissors {
 	pointer-events: none;
+	opacity: 0.96;
+}
+
+.paper-relations-bundle-hub {
+	fill: #101214;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease-out;
+}
+
+.paper-relations-bundle-hub.active {
 	opacity: 0.96;
 }
 
@@ -236,6 +267,10 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 }
 
 .paper-relations-node-context-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
 	padding: 6px 9px;
 	border: none;
 	border-radius: 6px;
@@ -243,6 +278,21 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	color: #223548;
 	font-size: 12px;
 	text-align: left;
+}
+
+.paper-relations-node-context-label {
+	flex: 1;
+	text-align: left;
+}
+
+.paper-relations-node-context-check {
+	min-width: 10px;
+	text-align: right;
+	visibility: hidden;
+}
+
+.paper-relations-node-context-item[data-checked="true"] .paper-relations-node-context-check {
+	visibility: visible;
 }
 
 .paper-relations-node-context-item:hover:not(:disabled) {

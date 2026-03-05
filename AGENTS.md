@@ -15,7 +15,7 @@
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-03-04a-summary.md`.
+- Session summary (latest): `doc/session-2026-03-05b-summary.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.

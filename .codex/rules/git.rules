@@ -18,6 +18,7 @@ prefix_rule(
     justification = "Allow commits in this repo.",
     match = [
         "git commit -m \"test\"",
+        "git commit -m \"refactor(graph): move graph chrome helpers to interaction mixin\"",
         "git commit --amend --no-edit",
     ],
 )

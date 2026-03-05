@@ -31,9 +31,18 @@ var PaperRelationsGraphExportMixin = {
 		state.workspaceContextMenu.style.display = "none";
 	},
 
+	hideBundleContextMenu(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.bundleContextMenu) return;
+		state.bundleContextMenu.hidden = true;
+		state.bundleContextMenu.style.display = "none";
+		state.contextMenuBundleID = null;
+	},
+
 	hideGraphContextMenus(window) {
 		this.hideNodeContextMenu(window);
 		this.hideWorkspaceContextMenu(window);
+		this.hideBundleContextMenu(window);
 	},
 
 	showNodeContextMenu(window, nodeID, clientX, clientY) {
@@ -114,6 +123,20 @@ var PaperRelationsGraphExportMixin = {
 		return true;
 	},
 
+	showBundleContextMenu(window, bundleID, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state?.bundleContextMenu || !bundleID) return false;
+		let bundle = this.getBundleByID(state, bundleID);
+		if (!bundle) return false;
+		let slopeMode = this.normalizeBundleSlopeMode(bundle.slopeMode);
+		state.bundleModeFlatBtn?.setAttribute("data-checked", slopeMode === "flat" ? "true" : "false");
+		state.contextMenuBundleID = bundleID;
+		state.bundleContextMenu.hidden = false;
+		state.bundleContextMenu.style.display = "flex";
+		this.positionContextMenuInCanvas(state, state.bundleContextMenu, clientX, clientY);
+		return true;
+	},
+
 	onNodeContextMenuMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -121,6 +144,12 @@ var PaperRelationsGraphExportMixin = {
 	},
 
 	onWorkspaceContextMenuMouseDown(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.stopPropagation();
+	},
+
+	onBundleContextMenuMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		event.stopPropagation();
@@ -158,6 +187,25 @@ var PaperRelationsGraphExportMixin = {
 		});
 	},
 
+	onBundleMenuDissolveClick(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+		this.handleBundleContextMenuAction(window, "dissolve", state.contextMenuBundleID).catch((error) => Zotero.logError(error));
+	},
+
+	onBundleMenuModeClick(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		event.preventDefault();
+		event.stopPropagation();
+		let action = event?.currentTarget?.getAttribute?.("data-action")
+			|| event?.target?.closest?.("[data-action]")?.getAttribute?.("data-action")
+			|| "";
+		this.handleBundleContextMenuAction(window, action, state.contextMenuBundleID).catch((error) => Zotero.logError(error));
+	},
+
 	async handleWorkspaceContextMenuAction(window, action) {
 		switch (action) {
 			case "create-topic-from-selected": {
@@ -192,6 +240,66 @@ var PaperRelationsGraphExportMixin = {
 		}
 		if (action === "rename") {
 			this.startNodeRename(window, nodeID);
+		}
+	},
+
+	async handleBundleContextMenuAction(window, action, bundleID) {
+		if (!action || !bundleID) return;
+		this.hideBundleContextMenu(window);
+		let state = this.graphStates.get(window);
+		if (!state || !this.isSavedTopicMutableState(state)) return;
+		if (action === "mode-flat-toggle") {
+			let bundle = this.getBundleByID(state, bundleID);
+			if (!bundle) return;
+			let currentMode = this.normalizeBundleSlopeMode(bundle.slopeMode);
+			let nextMode = currentMode === "flat" ? "free" : "flat";
+			try {
+				let updated = await this.updateNode(state.activeLibraryID, state.activeTopicID, bundleID, {
+					slopeMode: nextMode,
+				});
+				if (updated) {
+					bundle.slopeMode = this.normalizeBundleSlopeMode(updated.slopeMode);
+					bundle.updatedAt = updated.updatedAt;
+				}
+				this.renderGraph(window);
+				this.notifyGraphContextChanged(window);
+			}
+			catch (error) {
+				Zotero.logError(error);
+			}
+			return;
+		}
+		if (action !== "dissolve") return;
+		try {
+			let result = await this.dissolveBundleNode(state.activeLibraryID, state.activeTopicID, bundleID);
+			if (!result?.ok) {
+				if (result?.warning) {
+					Services.prompt.alert(
+						window,
+						this.getGraphWorkspaceText("bundleDissolveFailedTitle"),
+						String(result.warning),
+					);
+				}
+				return;
+			}
+			let updatedTopic = await this.getTopic(state.activeLibraryID, state.activeTopicID);
+			if (updatedTopic) {
+				let selectedItem = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+				this.applyTopicToGraphState(window, updatedTopic, selectedItem);
+				this.refreshGraphChrome(window);
+			}
+			this.notifyGraphContextChanged(window);
+			if (Array.isArray(result?.warnings) && result.warnings.length) {
+				this.showBundleTopologyWarnings(window, result.warnings);
+			}
+		}
+		catch (error) {
+			Zotero.logError(error);
+			Services.prompt.alert(
+				window,
+				this.getGraphWorkspaceText("bundleDissolveFailedTitle"),
+				String(error?.message || error),
+			);
 		}
 	},
 
@@ -238,6 +346,10 @@ var PaperRelationsGraphExportMixin = {
 		};
 
 		for (let node of state.nodes || []) {
+			if (this.isBundleNodeState(node)) {
+				includePoint(node.x, node.y);
+				continue;
+			}
 			let metrics = this.getNodeRenderMetrics(node);
 			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : metrics.width;
 			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : metrics.height;
@@ -245,16 +357,16 @@ var PaperRelationsGraphExportMixin = {
 			includePoint(node.x + width, node.y + height);
 		}
 
-		let nodeMap = new Map((state.nodes || []).map((node) => [node.id, node]));
-		for (let edge of state.edges || []) {
-			let fromNode = nodeMap.get(edge.from);
-			let toNode = nodeMap.get(edge.to);
-			if (!fromNode || !toNode) continue;
-			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+		let visibleEdges = this.getVisibleEdgeRenderData(state);
+		for (let edgePath of visibleEdges.paths || []) {
+			let curve = edgePath.curve;
 			if (!curve) continue;
 			for (let point of [curve.start, curve.c1, curve.c2, curve.end]) {
 				includePoint(point.x, point.y);
 			}
+		}
+		for (let bundle of visibleEdges.bundles || []) {
+			includePoint(bundle.x, bundle.y);
 		}
 
 		if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
@@ -277,8 +389,21 @@ var PaperRelationsGraphExportMixin = {
 			edges: {},
 		};
 		for (let node of state.nodes || []) {
+			if (this.isBundleNodeState(node)) {
+				topic.nodes[node.id] = {
+					id: node.id,
+					nodeType: "bundle",
+					x: Number.isFinite(node.x) ? node.x : 0,
+					y: Number.isFinite(node.y) ? node.y : 0,
+					slopeMode: this.normalizeBundleSlopeMode(node.slopeMode),
+					createdAt: Number.isFinite(node.createdAt) ? node.createdAt : now,
+					updatedAt: Number.isFinite(node.updatedAt) ? node.updatedAt : now,
+				};
+				continue;
+			}
 			topic.nodes[node.id] = {
 				id: node.id,
+				nodeType: "paper",
 				libraryID: node.libraryID || state.activeLibraryID || null,
 				itemKey: node.itemKey || "",
 				title: node.title || node.label || node.itemKey || "",
@@ -286,8 +411,8 @@ var PaperRelationsGraphExportMixin = {
 				note: node.note || "",
 				x: Number.isFinite(node.x) ? node.x : 0,
 				y: Number.isFinite(node.y) ? node.y : 0,
-				createdAt: now,
-				updatedAt: now,
+				createdAt: Number.isFinite(node.createdAt) ? node.createdAt : now,
+				updatedAt: Number.isFinite(node.updatedAt) ? node.updatedAt : now,
 			};
 		}
 		for (let edge of state.edges || []) {
@@ -474,7 +599,7 @@ var PaperRelationsGraphExportMixin = {
 		parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this.formatSVGNumber(minX)} ${this.formatSVGNumber(minY)} ${this.formatSVGNumber(width)} ${this.formatSVGNumber(height)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}">`);
 		parts.push(`<defs>`);
 		parts.push(`<marker id="paper-relations-export-arrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto">`);
-		parts.push(`<path d="M0,0 L11,4 L0,8 Z" fill="#4b6073"/>`);
+		parts.push(`<path d="M0,0 L11,4 L0,8 Z" fill="#4b6073" stroke="none"/>`);
 		parts.push(`</marker>`);
 		if (includeGrid) {
 			parts.push(`<pattern id="paper-relations-export-grid" patternUnits="userSpaceOnUse" width="${this.formatSVGNumber(gridSize)}" height="${this.formatSVGNumber(gridSize)}">`);
@@ -487,18 +612,15 @@ var PaperRelationsGraphExportMixin = {
 			parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="url(#paper-relations-export-grid)"/>`);
 		}
 
-		let nodeMap = new Map((state.nodes || []).map((node) => [node.id, node]));
-		for (let edge of state.edges || []) {
-			let fromNode = nodeMap.get(edge.from);
-			let toNode = nodeMap.get(edge.to);
-			if (!fromNode || !toNode) continue;
-			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
-			if (!curve) continue;
-			let pathData = this.buildBezierPathFromCurve(curve);
-			parts.push(`<path d="${this.escapeXML(pathData)}" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-relations-export-arrow)" opacity="0.9"/>`);
+		let visibleEdges = this.getVisibleEdgeRenderData(state);
+		for (let edgePath of visibleEdges.paths || []) {
+			let pathData = edgePath.pathD || "";
+			if (!pathData) continue;
+			let markerEnd = edgePath.markerEnd ? ` marker-end="url(#paper-relations-export-arrow)"` : "";
+			parts.push(`<path d="${this.escapeXML(pathData)}" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${markerEnd} opacity="0.9"/>`);
 		}
-
 		for (let node of state.nodes || []) {
+			if (this.isBundleNodeState(node)) continue;
 			let metrics = this.getNodeRenderMetrics(node);
 			let widthPx = Number.isFinite(node.renderWidth) ? node.renderWidth : metrics.width;
 			let heightPx = Number.isFinite(node.renderHeight) ? node.renderHeight : metrics.height;

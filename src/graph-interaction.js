@@ -38,20 +38,32 @@ var PaperRelationsGraphInteractionMixin = {
 	updateCanvasCursorState(window) {
 		let state = this.graphStates.get(window);
 		if (!state?.canvas) return;
+		let hoverBundleActive = !!(
+			state.hoverBundleID &&
+			!state.dragMode
+		);
 		let panReady = !!(
 			state.pointerInCanvas &&
 			!state.altModifierPressed &&
+			!state.shiftModifierPressed &&
 			!state.dragMode &&
 			!state.pointerOverNode &&
-			!state.pointerOverControl
+			!state.pointerOverControl &&
+			!hoverBundleActive
 		);
 		let cutReady = !!(
 			state.pointerInCanvas &&
 			(state.altModifierPressed || state.dragMode === "edge-cut")
 		);
+		let bundleReady = !!(
+			state.pointerInCanvas &&
+			!state.altModifierPressed &&
+			(state.shiftModifierPressed || hoverBundleActive || state.dragMode === "edge-bundle" || state.dragMode === "bundle-node")
+		);
 		state.canvas.classList.toggle("paper-relations-pan-ready", panReady);
 		state.canvas.classList.toggle("paper-relations-panning", state.dragMode === "pan");
 		state.canvas.classList.toggle("paper-relations-cut-ready", cutReady);
+		state.canvas.classList.toggle("paper-relations-bundle-ready", bundleReady);
 	},
 
 	updatePointerContextFromEvent(window, event) {
@@ -64,19 +76,25 @@ var PaperRelationsGraphInteractionMixin = {
 		this.updateCanvasCursorState(window);
 	},
 
-	syncAltModifierByEvent(window, event) {
+	syncModifierStateByEvent(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		let next = !!event?.altKey;
-		if (state.altModifierPressed === next) return;
-		state.altModifierPressed = next;
+		let nextAlt = !!event?.altKey;
+		let nextShift = !!event?.shiftKey;
+		if (state.altModifierPressed === nextAlt && state.shiftModifierPressed === nextShift) return;
+		state.altModifierPressed = nextAlt;
+		state.shiftModifierPressed = nextShift;
 		this.updateCanvasCursorState(window);
+	},
+
+	syncAltModifierByEvent(window, event) {
+		this.syncModifierStateByEvent(window, event);
 	},
 
 	onWindowKeyDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		this.syncAltModifierByEvent(window, event);
+		this.syncModifierStateByEvent(window, event);
 		let isBackquoteLike = !!(
 			event?.code === "Backquote" ||
 			event?.key === "`" ||
@@ -122,7 +140,7 @@ var PaperRelationsGraphInteractionMixin = {
 	onWindowKeyUp(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		this.syncAltModifierByEvent(window, event);
+		this.syncModifierStateByEvent(window, event);
 	},
 
 	onWindowBlur(window) {
@@ -131,9 +149,16 @@ var PaperRelationsGraphInteractionMixin = {
 		this.hideGraphContextMenus(window);
 		this.cancelNodeRename(window);
 		state.altModifierPressed = false;
+		state.shiftModifierPressed = false;
 		state.pointerInCanvas = false;
 		state.pointerOverNode = false;
 		state.pointerOverControl = false;
+		state.hoverBundleID = null;
+		state.dragBundleID = null;
+		state.dragBundleRawX = null;
+		state.dragBundleRawY = null;
+		state.edgeBundleDraft = null;
+		state.suppressNextContextMenu = false;
 		this.updateCanvasCursorState(window);
 	},
 
@@ -276,6 +301,186 @@ var PaperRelationsGraphInteractionMixin = {
 		return state.nodes.find((node) => node.id === nodeID) || null;
 	},
 
+	getBundleByID(state, bundleID) {
+		if (!state?.nodes?.length || !bundleID) return null;
+		let node = state.nodes.find((candidate) => candidate.id === bundleID) || null;
+		if (!node || !this.isBundleNodeState(node)) return null;
+		return node;
+	},
+
+	cleanupIsolatedBundleNodesInState(state) {
+		if (!state?.nodes?.length) return [];
+		let inDegree = new Map();
+		let outDegree = new Map();
+		for (let node of state.nodes || []) {
+			if (!this.isBundleNodeState(node)) continue;
+			inDegree.set(node.id, 0);
+			outDegree.set(node.id, 0);
+		}
+		for (let edge of state.edges || []) {
+			if (inDegree.has(edge.to)) {
+				inDegree.set(edge.to, inDegree.get(edge.to) + 1);
+			}
+			if (outDegree.has(edge.from)) {
+				outDegree.set(edge.from, outDegree.get(edge.from) + 1);
+			}
+		}
+		let removedIDs = [];
+		state.nodes = (state.nodes || []).filter((node) => {
+			if (!this.isBundleNodeState(node)) return true;
+			let inCount = inDegree.get(node.id) || 0;
+			let outCount = outDegree.get(node.id) || 0;
+			if (inCount === 0 && outCount === 0) {
+				removedIDs.push(node.id);
+				return false;
+			}
+			return true;
+		});
+		let nextNodeByID = new Map((state.nodes || []).map((node) => [node.id, node]));
+		if (state.selectedNodeID && !nextNodeByID.has(state.selectedNodeID)) {
+			state.selectedNodeID = null;
+		}
+		return removedIDs;
+	},
+
+	getBundleTopologyWarningsFromState(state) {
+		if (!state?.nodes?.length) return [];
+		let inDegree = new Map();
+		for (let node of state.nodes || []) {
+			if (!this.isBundleNodeState(node)) continue;
+			inDegree.set(node.id, 0);
+		}
+		for (let edge of state.edges || []) {
+			if (inDegree.has(edge.to)) {
+				inDegree.set(edge.to, inDegree.get(edge.to) + 1);
+			}
+		}
+		let warnings = [];
+		for (let [nodeID, count] of inDegree.entries()) {
+			if (count > 1) {
+				warnings.push(`Bundle node ${nodeID} has multiple incoming edges (${count})`);
+			}
+		}
+		return warnings;
+	},
+
+	showBundleTopologyWarnings(window, warnings) {
+		if (!Array.isArray(warnings) || !warnings.length) return;
+		Services.prompt.alert(
+			window,
+			"Bundle Topology Warning",
+			warnings.slice(0, 5).join("\n"),
+		);
+	},
+
+	getBundleHitRadiusInGraph(state) {
+		let radiusPx = Number.isFinite(state?.bundleHoverRadiusPx) ? state.bundleHoverRadiusPx : 12;
+		let scale = Number.isFinite(state?.scale) ? state.scale : 1;
+		return Math.max(4, radiusPx / Math.max(0.3, scale));
+	},
+
+	getBundleAtClient(window, clientX, clientY) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodes?.length) return null;
+		let point = this.clientToGraphPoint(state, clientX, clientY);
+		let maxDistance = this.getBundleHitRadiusInGraph(state);
+		let maxDistanceSq = maxDistance * maxDistance;
+		let nearest = null;
+		for (let bundle of state.nodes || []) {
+			if (!this.isBundleNodeState(bundle)) continue;
+			if (!bundle || !Number.isFinite(bundle.x) || !Number.isFinite(bundle.y)) continue;
+			let dx = point.x - bundle.x;
+			let dy = point.y - bundle.y;
+			let distSq = dx * dx + dy * dy;
+			if (distSq > maxDistanceSq) continue;
+			if (!nearest || distSq < nearest.distSq) {
+				nearest = {
+					id: bundle.id,
+					bundle,
+					x: bundle.x,
+					y: bundle.y,
+					distSq,
+				};
+			}
+		}
+		return nearest;
+	},
+
+	updateHoverBundleByClient(window, clientX, clientY, options = {}) {
+		let state = this.graphStates.get(window);
+		if (!state) return null;
+		let nextHover = this.isClientInsideSVG(state, clientX, clientY)
+			? this.getBundleAtClient(window, clientX, clientY)
+			: null;
+		let nextID = nextHover?.id || null;
+		if (state.hoverBundleID === nextID) return nextHover;
+		state.hoverBundleID = nextID;
+		if (options.render !== false) {
+			this.renderGraph(window);
+		}
+		return nextHover;
+	},
+
+	getBundleIntersectionGroupsByLine(state, start, end) {
+		if (!state || !start || !end) return [];
+		let grouped = new Map();
+		for (let edge of state.edges || []) {
+			let point = this.getEdgeIntersectionPointForLine(state, edge, start, end);
+			if (!point) continue;
+			let sourceNodeID = edge.from;
+			if (!grouped.has(sourceNodeID)) {
+				grouped.set(sourceNodeID, []);
+			}
+			grouped.get(sourceNodeID).push({
+				edgeID: edge.id,
+				point,
+			});
+		}
+		let groups = [];
+		for (let [sourceNodeID, hits] of grouped.entries()) {
+			if (!hits || !hits.length) continue;
+			let sx = 0;
+			let sy = 0;
+			for (let hit of hits) {
+				sx += hit.point.x;
+				sy += hit.point.y;
+			}
+			let count = hits.length;
+			groups.push({
+				sourceNodeID,
+				edgeIDs: hits.map((hit) => hit.edgeID),
+				x: sx / count,
+				y: sy / count,
+			});
+		}
+		return groups;
+	},
+
+	async bundleEdgesByLine(window, start, end) {
+		let state = this.graphStates.get(window);
+		if (!state || !this.isSavedTopicMutableState(state)) return 0;
+		let groups = this.getBundleIntersectionGroupsByLine(state, start, end);
+		if (!groups.length) return 0;
+		let result = await this.applyBundleGroups(
+			state.activeLibraryID,
+			state.activeTopicID,
+			groups,
+			{ defaultSlopeMode: "flat" },
+		);
+		let updatedTopic = await this.getTopic(state.activeLibraryID, state.activeTopicID);
+		if (updatedTopic) {
+			let selectedItem = this.selectionItemsByWindow.get(window) || this.getCurrentSelectedItem(window);
+			this.applyTopicToGraphState(window, updatedTopic, selectedItem);
+			this.refreshGraphChrome(window);
+			let warnings = [
+				...(result?.warnings || []),
+				...this.getBundleTopologyWarningsFromState(this.graphStates.get(window)),
+			];
+			this.showBundleTopologyWarnings(window, warnings);
+		}
+		return Number(result?.created || 0);
+	},
+
 	getNodeIDFromEventTarget(target) {
 		let current = target;
 		while (current) {
@@ -296,6 +501,7 @@ var PaperRelationsGraphInteractionMixin = {
 		let point = this.clientToGraphPoint(state, clientX, clientY);
 		for (let i = state.nodes.length - 1; i >= 0; i--) {
 			let node = state.nodes[i];
+			if (this.isBundleNodeState(node)) continue;
 			let width = Number.isFinite(node.renderWidth) ? node.renderWidth : this.getNodeRenderMetrics(node).width;
 			let height = Number.isFinite(node.renderHeight) ? node.renderHeight : this.getNodeRenderMetrics(node).height;
 			if (
@@ -358,6 +564,18 @@ var PaperRelationsGraphInteractionMixin = {
 			|| this.isClientPointInsideElementRect(state.workspaceContextMenu, event?.clientX, event?.clientY);
 		if (!clickInWorkspaceMenu) {
 			this.hideWorkspaceContextMenu(window);
+		}
+		let clickInBundleMenu = this.isTargetInsideElement(target, state.bundleContextMenu)
+			|| this.isClientPointInsideElementRect(state.bundleContextMenu, event?.clientX, event?.clientY);
+		if (!clickInBundleMenu) {
+			this.hideBundleContextMenu(window);
+		}
+		if (!state.dragMode) {
+			let nearbyBundle = this.getBundleAtClient(window, event?.clientX, event?.clientY);
+			if (!nearbyBundle && state.hoverBundleID) {
+				state.hoverBundleID = null;
+				this.applyBundleVisibilityToDOM(state);
+			}
 		}
 		if (state.renamingNodeID && !state.renameBusy) {
 			let clickInRenameInput = this.isTargetInsideElement(target, state.renameInput)
@@ -608,8 +826,30 @@ var PaperRelationsGraphInteractionMixin = {
 	onGraphContextMenu(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		if (state.dragMode === "edge-cut" || (event.altKey && event.button === 2)) {
+		if (state.suppressNextContextMenu) {
+			state.suppressNextContextMenu = false;
 			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (
+			state.dragMode === "edge-cut" ||
+			state.dragMode === "edge-bundle" ||
+			(event.altKey && event.button === 2) ||
+			((event.shiftKey || state.shiftModifierPressed) && event.button === 2) ||
+			(event.shiftKey && state.edgeBundleDraft)
+		) {
+			event.preventDefault();
+			return;
+		}
+		let bundleHit = this.getBundleAtClient(window, event.clientX, event.clientY);
+		if (bundleHit) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.hideGraphContextMenus(window);
+			state.hoverBundleID = bundleHit.id;
+			this.showBundleContextMenu(window, bundleHit.id, event.clientX, event.clientY);
+			this.applyBundleVisibilityToDOM(state);
 			return;
 		}
 		let nodeID = this.getNodeIDFromEventTarget(event.target);
@@ -625,6 +865,7 @@ var PaperRelationsGraphInteractionMixin = {
 			return;
 		}
 		this.hideWorkspaceContextMenu(window);
+		this.hideBundleContextMenu(window);
 		this.selectGraphNode(window, nodeID);
 		this.showNodeContextMenu(window, nodeID, event.clientX, event.clientY);
 	},
@@ -633,7 +874,7 @@ var PaperRelationsGraphInteractionMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		this.hideGraphContextMenus(window);
-		this.syncAltModifierByEvent(window, event);
+		this.syncModifierStateByEvent(window, event);
 		this.updatePointerContextFromEvent(window, event);
 		if (event.button === 2 && event.altKey) {
 			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
@@ -641,10 +882,15 @@ var PaperRelationsGraphInteractionMixin = {
 			state.dragNodeID = null;
 			state.dragNodeRawX = null;
 			state.dragNodeRawY = null;
+			state.dragBundleID = null;
+			state.dragBundleRawX = null;
+			state.dragBundleRawY = null;
 			state.lastClientX = event.clientX;
 			state.lastClientY = event.clientY;
 			state.hoverAnchor = null;
+			state.hoverBundleID = null;
 			state.edgeDraft = null;
+			state.edgeBundleDraft = null;
 			state.edgeCutDraft = {
 				start,
 				end: start,
@@ -656,21 +902,86 @@ var PaperRelationsGraphInteractionMixin = {
 			event.stopPropagation();
 			return;
 		}
+
+		if (
+			event.button === 2 &&
+			(event.shiftKey || state.shiftModifierPressed) &&
+			this.isSavedTopicMutableState(state)
+		) {
+			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
+			state.suppressNextContextMenu = true;
+			window.setTimeout(() => {
+				let nextState = this.graphStates.get(window);
+				if (!nextState) return;
+				if (nextState.suppressNextContextMenu) {
+					nextState.suppressNextContextMenu = false;
+				}
+			}, 450);
+			state.dragMode = "edge-bundle";
+			state.dragNodeID = null;
+			state.dragNodeRawX = null;
+			state.dragNodeRawY = null;
+			state.dragBundleID = null;
+			state.dragBundleRawX = null;
+			state.dragBundleRawY = null;
+			state.lastClientX = event.clientX;
+			state.lastClientY = event.clientY;
+			state.hoverAnchor = null;
+			state.edgeDraft = null;
+			state.edgeCutDraft = null;
+			state.edgeBundleDraft = {
+				start,
+				end: start,
+			};
+			this.applyAnchorVisibilityToDOM(state);
+			this.updateCanvasCursorState(window);
+			this.renderGraph(window);
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+
 		if (event.button !== 0) return;
+		let bundleHit = this.getBundleAtClient(window, event.clientX, event.clientY);
+		if (bundleHit) {
+			state.dragMode = "bundle-node";
+			state.dragNodeID = null;
+			state.dragNodeRawX = null;
+			state.dragNodeRawY = null;
+			state.dragBundleID = bundleHit.id;
+			state.dragBundleRawX = bundleHit.x;
+			state.dragBundleRawY = bundleHit.y;
+			state.hoverBundleID = bundleHit.id;
+			state.edgeDraft = null;
+			state.edgeCutDraft = null;
+			state.edgeBundleDraft = null;
+			state.lastClientX = event.clientX;
+			state.lastClientY = event.clientY;
+			this.updateCanvasCursorState(window);
+			this.renderGraph(window);
+			event.preventDefault();
+			return;
+		}
 		let hoverAnchor = this.getNearestAnchorAtClient(state, event.clientX, event.clientY);
 		if (hoverAnchor) {
 			state.dragMode = "edge-draft";
 			state.dragNodeID = null;
 			state.dragNodeRawX = null;
 			state.dragNodeRawY = null;
+			state.dragBundleID = null;
+			state.dragBundleRawX = null;
+			state.dragBundleRawY = null;
 			state.lastClientX = event.clientX;
 			state.lastClientY = event.clientY;
 			state.hoverAnchor = hoverAnchor;
+			state.hoverBundleID = null;
 			state.edgeDraft = {
 				startAnchor: hoverAnchor,
 				targetAnchor: null,
 				pointer: { x: hoverAnchor.x, y: hoverAnchor.y },
 			};
+			state.edgeCutDraft = null;
+			state.edgeBundleDraft = null;
 			this.renderGraph(window);
 			event.preventDefault();
 			return;
@@ -681,7 +992,14 @@ var PaperRelationsGraphInteractionMixin = {
 		state.dragNodeID = nodeElem ? nodeElem.getAttribute("data-node-id") : null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		state.dragBundleID = null;
+		state.dragBundleRawX = null;
+		state.dragBundleRawY = null;
 		state.hoverAnchor = null;
+		state.hoverBundleID = null;
+		state.edgeDraft = null;
+		state.edgeCutDraft = null;
+		state.edgeBundleDraft = null;
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
 		this.updateCanvasCursorState(window);
@@ -703,11 +1021,14 @@ var PaperRelationsGraphInteractionMixin = {
 	onGraphMouseMove(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		this.syncAltModifierByEvent(window, event);
+		this.syncModifierStateByEvent(window, event);
 		this.updatePointerContextFromEvent(window, event);
 
 		if (!state.dragMode) {
-			this.updateHoverAnchorByClient(window, event.clientX, event.clientY);
+			this.updateHoverAnchorByClient(window, event.clientX, event.clientY, { render: false });
+			this.updateHoverBundleByClient(window, event.clientX, event.clientY, { render: false });
+			this.applyAnchorVisibilityToDOM(state);
+			this.applyBundleVisibilityToDOM(state);
 			return;
 		}
 
@@ -726,6 +1047,13 @@ var PaperRelationsGraphInteractionMixin = {
 
 		if (state.dragMode === "edge-cut" && state.edgeCutDraft?.start) {
 			state.edgeCutDraft.end = this.clientToGraphPoint(state, event.clientX, event.clientY);
+			this.renderGraph(window);
+			event.preventDefault();
+			return;
+		}
+
+		if (state.dragMode === "edge-bundle" && state.edgeBundleDraft?.start) {
+			state.edgeBundleDraft.end = this.clientToGraphPoint(state, event.clientX, event.clientY);
 			this.renderGraph(window);
 			event.preventDefault();
 			return;
@@ -765,6 +1093,28 @@ var PaperRelationsGraphInteractionMixin = {
 				this.notifyGraphSelectionChanged(window);
 			}
 		}
+		else if (state.dragMode === "bundle-node" && state.dragBundleID) {
+			let bundle = this.getBundleByID(state, state.dragBundleID);
+			if (bundle) {
+				if (!Number.isFinite(state.dragBundleRawX) || !Number.isFinite(state.dragBundleRawY)) {
+					state.dragBundleRawX = Number.isFinite(bundle.x) ? bundle.x : 0;
+					state.dragBundleRawY = Number.isFinite(bundle.y) ? bundle.y : 0;
+				}
+				state.dragBundleRawX += dx / state.scale;
+				state.dragBundleRawY += dy / state.scale;
+				if (state.snapToGrid) {
+					bundle.x = this.snapValueToGrid(state.dragBundleRawX);
+					bundle.y = this.snapValueToGrid(state.dragBundleRawY);
+				}
+				else {
+					bundle.x = state.dragBundleRawX;
+					bundle.y = state.dragBundleRawY;
+				}
+				bundle.updatedAt = this.now();
+				state.hoverBundleID = bundle.id;
+				this.renderGraph(window);
+			}
+		}
 
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
@@ -774,18 +1124,24 @@ var PaperRelationsGraphInteractionMixin = {
 	async onGraphMouseUp(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		this.syncAltModifierByEvent(window, event);
+		this.syncModifierStateByEvent(window, event);
 		this.updatePointerContextFromEvent(window, event);
 		let dragMode = state.dragMode;
 		let dragNodeID = state.dragNodeID;
+		let dragBundleID = state.dragBundleID;
 		let edgeDraft = state.edgeDraft;
 		let edgeCutDraft = state.edgeCutDraft;
+		let edgeBundleDraft = state.edgeBundleDraft;
 		state.dragMode = null;
 		state.dragNodeID = null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		state.dragBundleID = null;
+		state.dragBundleRawX = null;
+		state.dragBundleRawY = null;
 		state.edgeDraft = null;
 		state.edgeCutDraft = null;
+		state.edgeBundleDraft = null;
 		this.updateCanvasCursorState(window);
 		if (dragMode === "edge-cut") {
 			if (edgeCutDraft?.start && edgeCutDraft?.end) {
@@ -793,6 +1149,22 @@ var PaperRelationsGraphInteractionMixin = {
 			}
 			this.renderGraph(window);
 			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
+			if (event) {
+				event.preventDefault();
+			}
+			return;
+		}
+		if (dragMode === "edge-bundle") {
+			if (edgeBundleDraft?.start && edgeBundleDraft?.end) {
+				try {
+					await this.bundleEdgesByLine(window, edgeBundleDraft.start, edgeBundleDraft.end);
+				}
+				catch (error) {
+					Zotero.logError(error);
+				}
+			}
+			this.renderGraph(window);
 			this.notifyGraphContextChanged(window);
 			if (event) {
 				event.preventDefault();
@@ -830,6 +1202,32 @@ var PaperRelationsGraphInteractionMixin = {
 			}
 			this.renderGraph(window);
 			this.notifyGraphSelectionChanged(window);
+			this.notifyGraphContextChanged(window);
+			return;
+		}
+		if (
+			dragMode === "bundle-node" &&
+			dragBundleID &&
+			this.isSavedTopicMutableState(state)
+		) {
+			let bundle = this.getBundleByID(state, dragBundleID);
+			if (bundle) {
+				try {
+					let updated = await this.updateNode(state.activeLibraryID, state.activeTopicID, dragBundleID, {
+						x: bundle.x,
+						y: bundle.y,
+					});
+					if (updated) {
+						bundle.x = Number.isFinite(updated.x) ? updated.x : bundle.x;
+						bundle.y = Number.isFinite(updated.y) ? updated.y : bundle.y;
+					}
+				}
+				catch (error) {
+					Zotero.logError(error);
+				}
+			}
+			state.hoverBundleID = dragBundleID;
+			this.renderGraph(window);
 			this.notifyGraphContextChanged(window);
 			return;
 		}

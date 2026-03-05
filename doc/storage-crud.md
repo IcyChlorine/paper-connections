@@ -1,6 +1,6 @@
 # Paper Relations Storage and CRUD
 
-Date: 2026-03-04  
+Date: 2026-03-05  
 Target: Zotero 7 (`src`)
 
 ## 1. Storage backend
@@ -10,13 +10,13 @@ Target: Zotero 7 (`src`)
 - Scope: per `libraryID` (not global preference)
 - Sync behavior: uses Zotero synced settings channel (library-scoped)
 
-## 2. Store schema
+## 2. Store schema (v2)
 
 Top-level JSON shape:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "topics": {
     "<topicID>": {
       "id": "<topicID>",
@@ -25,8 +25,9 @@ Top-level JSON shape:
       "createdAt": 1730000000000,
       "updatedAt": 1730000000000,
       "nodes": {
-        "<nodeID>": {
-          "id": "<nodeID>",
+        "<paperNodeID>": {
+          "id": "<paperNodeID>",
+          "nodeType": "paper",
           "libraryID": 1,
           "itemKey": "ABCD1234",
           "title": "Paper title",
@@ -34,6 +35,15 @@ Top-level JSON shape:
           "note": "",
           "x": 120,
           "y": 100,
+          "createdAt": 1730000000000,
+          "updatedAt": 1730000000000
+        },
+        "<bundleNodeID>": {
+          "id": "<bundleNodeID>",
+          "nodeType": "bundle",
+          "x": 236.5,
+          "y": 180.2,
+          "slopeMode": "flat",
           "createdAt": 1730000000000,
           "updatedAt": 1730000000000
         }
@@ -58,15 +68,16 @@ Top-level JSON shape:
 ```
 
 Notes:
-- `itemTopicIndex` key format is `${libraryID}/${itemKey}`.
-- One paper can belong to multiple topics via index array.
+- Legacy `topic.bundles` metadata is removed in v2.
+- `itemTopicIndex` only indexes `nodeType="paper"` nodes.
+- `slopeMode` allowed values: `flat` (default) / `free`.
 
 ## 3. Implemented CRUD API
 
-Implemented in `src/storage.js` (storage/CRUD), and consumed by graph runtime mixins in:
-- `src/graph-topic.js` (topic lifecycle/context loading),
-- `src/graph-interaction.js` (edge/node interaction persistence),
-- `src/graph-export.js` (topic export payload assembly).
+Implemented in `src/storage.js`, consumed by:
+- `src/graph-topic.js`
+- `src/graph-interaction.js`
+- `src/graph-export.js`
 
 ### Topic CRUD
 
@@ -80,8 +91,11 @@ Implemented in `src/storage.js` (storage/CRUD), and consumed by graph runtime mi
 ### Node CRUD
 
 - `addNode(libraryID, topicID, nodeInput, options = {})`
+  - default `nodeType` is `paper`.
+  - `bundle` nodes are used as real middle hubs.
 - `updateNode(libraryID, topicID, nodeID, patch)`
-  - When patching `x/y`, optional `patch.snapLabel` can be passed so grid snapping uses current displayed label width instead of fallback title width.
+  - paper node: supports `shortLabel/note/title/x/y`.
+  - bundle node: supports `x/y/slopeMode`.
 - `removeNode(libraryID, topicID, nodeID)`
 - `listNodes(libraryID, topicID)`
 
@@ -92,53 +106,62 @@ Implemented in `src/storage.js` (storage/CRUD), and consumed by graph runtime mi
 - `removeEdge(libraryID, topicID, edgeID)`
 - `listEdges(libraryID, topicID)`
 
-## 4. Internal helper contracts
+### Bundle-node operations
 
-- `ensureSyncedSettingsLoaded(libraryID)`: must run `Zotero.SyncedSettings.loadAll(libraryID)` before `get/set`.
-- `loadStore(libraryID)` / `saveStore(libraryID, store)`: normalized IO boundary.
-- `normalizeStore(rawStore)`: schema guard for missing fields and invalid values.
-- `updateItemTopicIndexForTopic(store, topic)`: keeps reverse index consistent with topic nodes.
+- `applyBundleGroups(libraryID, topicID, groups, options)`
+  - creates real `bundle` nodes,
+  - rewrites grouped hit edges to `bundleNode -> target`,
+  - creates trunk edges `source -> bundleNode`.
+- `dissolveBundleNode(libraryID, topicID, bundleNodeID)`
+  - requires `bundleNode` in-degree exactly `1`,
+  - rewires predecessor to each outgoing target and removes hub.
+- `analyzeBundleTopology(topic)`
+  - reports bundle topology issues/warnings (multi-inbound detection).
 
-## 5. Frontend integration (current behavior)
+### Deprecated compatibility wrappers
 
-- UI surfaces:
-  - `Topic Context Section`: right item-pane custom section for context and topic actions.
-  - `Selection Debug Section`: right item-pane custom section for selected-node debug info.
-  - `Relation Graph Workspace`: middle graph pane/canvas for graph interaction.
-- Selection-driven context loader:
-  - `handlePrimaryItemChanged(window, item, options)`
-  - If item has topics: load latest-updated topic.
-  - If item has no topics: create temporary in-memory topic graph.
-- Topic creation:
-  - `promptCreateTopicFromItem(window, item)` prompts name and persists topic.
-- Topic removal:
-  - `promptRemoveActiveTopic(window, item)` confirms and removes active topic.
-- Drag in items:
-  - `onGraphDrop(window, event)` reads `dataTransfer.getData("zotero/item")`.
-  - Adds dropped regular items as nodes into active saved topic.
+These remain as wrappers only and should not be used by new logic:
+- `listBundles(...)`
+- `createBundle(...)`
+- `updateBundle(...)`
+- `deleteBundle(...)`
+- `replaceBundles(...)`
 
-## 6. Data integrity rules
+## 4. Migration and normalization
 
-- Use stable identity: `libraryID + itemKey`.
-- Skip duplicate nodes for same item in same topic.
-- Remove incident edges when node is removed.
-- Persist node coordinates after drag in saved topic context.
-- Reject cross-library dropped items.
+- `loadStore()` performs normalization and auto-migration.
+- If store is v1 (or topic still has legacy `bundles`):
+  - each legacy bundle becomes a real `bundle` node,
+  - member edges are rewritten to originate from the new hub,
+  - a trunk edge `source -> hub` is created,
+  - legacy `topic.bundles` is removed.
+- Store is rewritten with `schemaVersion = 2` after migration.
+
+## 5. Data integrity rules
+
+- Stable paper identity uses `libraryID + itemKey`.
+- Duplicate paper nodes in same topic are skipped.
+- Edge endpoints must reference existing nodes.
+- Removing a node removes all incident edges.
+- After edge/node mutation, only isolated bundle hubs (`in=0 && out=0`) are auto-removed.
+- Multi-inbound bundle hubs are warned, not auto-repaired.
+
+## 6. Frontend integration notes
+
+- Shift+RMB bundling now persists real graph edits through `applyBundleGroups(...)`.
+- Hub drag persists by `updateNode(...)` on `bundle` node.
+- Hub dissolve uses `dissolveBundleNode(...)`.
+- JSON export contains v2 node/edge model directly (no `topic.bundles`).
 
 ## 7. Known constraints
 
-- No visual topic chooser yet for papers that belong to multiple topics.
-- No edge-editing UI yet (API exists, UI pending).
-- Versioned migration path for future schema changes not yet implemented.
+- No visual topic chooser yet for papers in multiple topics.
+- No dedicated edge-editing UI yet (API exists).
+- Multi-inbound bundle hubs are not auto-corrected by storage.
 
-## 8. Remark storage (new)
+## 8. Remark storage
 
 - Scope: per Zotero item (not in `paper-relations.graph.v1`).
-- Backend: Zotero built-in item field `extra`.
-- Format: a single line in `extra`, case-insensitive prefix:
-  - `remark: <text>`
-- Compatibility:
-  - Ethereal Style data already written as `remark:` in `extra` is directly readable/writable by Paper Relations.
-- One-time migration utility:
-  - `Migrate ES Remarks` scans regular items in a library.
-  - If an item has no `extra remark`, it tries legacy ES note-tag remark fallback (child note tagged `remark`) and writes into `extra`.
+- Backend: Zotero item field `extra`.
+- Format: `remark: <text>` line.
+- Ethereal Style-compatible and migration-supported.

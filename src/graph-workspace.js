@@ -47,6 +47,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		table.svgExportMargin = isZh ? "\u8fb9\u8ddd\uff08\u50cf\u7d20\uff09" : "Margin (pixels)";
 		table.dialogConfirm = isZh ? "\u786e\u5b9a" : "Confirm";
 		table.dialogCancel = isZh ? "\u53d6\u6d88" : "Cancel";
+		table.bundleMenuDissolve = isZh ? "\u6eb6\u89e3" : "Dissolve";
+		table.bundleDissolveFailedTitle = isZh ? "\u6eb6\u89e3\u5931\u8d25" : "Dissolve Bundle Failed";
+		table.bundleModeFlat = isZh ? "\u659c\u7387\u62c9\u5e73" : "Flat Tangent";
 		return table[key] || "";
 	},
 
@@ -241,6 +244,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			menurenameclick: (event) => this.onNodeMenuRenameClick(window, event),
 			workspacemenumousedown: (event) => this.onWorkspaceContextMenuMouseDown(window, event),
 			workspacemenuitemclick: (event) => this.onWorkspaceMenuItemClick(window, event),
+			bundlemenumousedown: (event) => this.onBundleContextMenuMouseDown(window, event),
+			bundlemenudissolveclick: (event) => this.onBundleMenuDissolveClick(window, event),
+			bundlemenumodeclick: (event) => this.onBundleMenuModeClick(window, event),
 			renameinputmousedown: (event) => this.onNodeRenameInputMouseDown(window, event),
 			renameinput: (event) => this.onNodeRenameInput(window, event),
 			renameinputkeydown: (event) => this.onNodeRenameInputKeyDown(window, event),
@@ -282,6 +288,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.workspaceExportJSONBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
 		state.workspaceRenameTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
 		state.workspaceDeleteTopicBtn.addEventListener("click", state.handlers.workspacemenuitemclick);
+		state.bundleContextMenu.addEventListener("mousedown", state.handlers.bundlemenumousedown);
+		state.dissolveBundleBtn.addEventListener("click", state.handlers.bundlemenudissolveclick);
+		state.bundleModeFlatBtn.addEventListener("click", state.handlers.bundlemenumodeclick);
 		state.renameInput.addEventListener("mousedown", state.handlers.renameinputmousedown);
 		state.renameInput.addEventListener("input", state.handlers.renameinput);
 		state.renameInput.addEventListener("keydown", state.handlers.renameinputkeydown);
@@ -325,6 +334,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 		state.workspaceExportJSONBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
 		state.workspaceRenameTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
 		state.workspaceDeleteTopicBtn?.removeEventListener("click", state.handlers.workspacemenuitemclick);
+		state.bundleContextMenu?.removeEventListener("mousedown", state.handlers.bundlemenumousedown);
+		state.dissolveBundleBtn?.removeEventListener("click", state.handlers.bundlemenudissolveclick);
+		state.bundleModeFlatBtn?.removeEventListener("click", state.handlers.bundlemenumodeclick);
 		state.renameInput?.removeEventListener("mousedown", state.handlers.renameinputmousedown);
 		state.renameInput?.removeEventListener("input", state.handlers.renameinput);
 		state.renameInput?.removeEventListener("keydown", state.handlers.renameinputkeydown);
@@ -398,6 +410,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			workspaceSeparator: refs.workspaceSeparator,
 			workspaceRenameTopicBtn: refs.workspaceRenameTopicBtn,
 			workspaceDeleteTopicBtn: refs.workspaceDeleteTopicBtn,
+			bundleContextMenu: refs.bundleContextMenu,
+			dissolveBundleBtn: refs.dissolveBundleBtn,
+			bundleModeFlatBtn: refs.bundleModeFlatBtn,
 			toolbarToggleButton,
 			controlPanelWidth,
 			graphVisible: true,
@@ -415,8 +430,11 @@ var PaperRelationsGraphWorkspaceMixin = {
 			hoverAnchor: null,
 			edgeDraft: null,
 			edgeCutDraft: null,
+			edgeBundleDraft: null,
 			anchorHoverRadiusPx: 14,
+			bundleHoverRadiusPx: 14,
 			altModifierPressed: false,
+			shiftModifierPressed: false,
 			pointerInCanvas: false,
 			pointerOverNode: false,
 			pointerOverControl: false,
@@ -427,9 +445,15 @@ var PaperRelationsGraphWorkspaceMixin = {
 			dragNodeID: null,
 			dragNodeRawX: null,
 			dragNodeRawY: null,
+			dragBundleID: null,
+			dragBundleRawX: null,
+			dragBundleRawY: null,
 			lastClientX: 0,
 			lastClientY: 0,
 			contextMenuNodeID: null,
+			hoverBundleID: null,
+			contextMenuBundleID: null,
+			suppressNextContextMenu: false,
 			renamingNodeID: null,
 			renameFallbackTitle: "",
 			renameSnapshot: null,
@@ -688,6 +712,42 @@ var PaperRelationsGraphWorkspaceMixin = {
 		);
 		canvas.appendChild(workspaceContextMenu);
 
+		let bundleContextMenu = doc.createElementNS(XHTML_NS, "div");
+		bundleContextMenu.className = "paper-relations-node-context-menu paper-relations-bundle-context-menu";
+		bundleContextMenu.hidden = true;
+		bundleContextMenu.style.position = "absolute";
+		bundleContextMenu.style.zIndex = "9";
+		bundleContextMenu.style.display = "none";
+		let dissolveBundleBtn = doc.createElementNS(XHTML_NS, "button");
+		dissolveBundleBtn.type = "button";
+		dissolveBundleBtn.className = "paper-relations-node-context-item";
+		dissolveBundleBtn.setAttribute("data-action", "dissolve");
+		dissolveBundleBtn.textContent = this.getGraphWorkspaceText("bundleMenuDissolve");
+		let bundleModeSeparator = doc.createElementNS(XHTML_NS, "div");
+		bundleModeSeparator.className = "paper-relations-context-menu-separator";
+		let makeBundleModeBtn = (action, labelText) => {
+			let btn = doc.createElementNS(XHTML_NS, "button");
+			btn.type = "button";
+			btn.className = "paper-relations-node-context-item";
+			btn.setAttribute("data-action", action);
+			btn.setAttribute("data-checked", "false");
+			let label = doc.createElementNS(XHTML_NS, "span");
+			label.className = "paper-relations-node-context-label";
+			label.textContent = labelText;
+			let check = doc.createElementNS(XHTML_NS, "span");
+			check.className = "paper-relations-node-context-check";
+			check.textContent = "\u2713";
+			btn.append(label, check);
+			return btn;
+		};
+		let bundleModeFlatBtn = makeBundleModeBtn("mode-flat-toggle", this.getGraphWorkspaceText("bundleModeFlat"));
+		bundleContextMenu.append(
+			dissolveBundleBtn,
+			bundleModeSeparator,
+			bundleModeFlatBtn,
+		);
+		canvas.appendChild(bundleContextMenu);
+
 		pane.append(toolbar, canvas);
 		itemsContainer.append(splitter, pane);
 
@@ -719,6 +779,9 @@ var PaperRelationsGraphWorkspaceMixin = {
 			workspaceSeparator,
 			workspaceRenameTopicBtn,
 			workspaceDeleteTopicBtn,
+			bundleContextMenu,
+			dissolveBundleBtn,
+			bundleModeFlatBtn,
 			controlPanelWidth,
 		};
 	},

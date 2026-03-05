@@ -12,6 +12,12 @@
 		overlayGroup.replaceChildren();
 
 		for (let node of nodes) {
+			if (this.isBundleNodeState(node)) {
+				node.renderWidth = 0;
+				node.renderHeight = 0;
+				node.renderLabelLines = [];
+				continue;
+			}
 			let metrics = this.getNodeRenderMetrics(node);
 			let width = metrics.width;
 			let height = metrics.height;
@@ -21,14 +27,31 @@
 			node.renderLabelLines = labelLines;
 		}
 
-		for (let edge of edges) {
-			let fromNode = nodes.find((n) => n.id === edge.from);
-			let toNode = nodes.find((n) => n.id === edge.to);
-			if (!fromNode || !toNode) continue;
+		let visibleEdges = this.getVisibleEdgeRenderData(state);
+		for (let edgePath of visibleEdges.paths) {
 			let path = doc.createElementNS(SVG_NS, "path");
 			path.setAttribute("class", "paper-relations-edge");
-			path.setAttribute("d", this.buildBezierPath(fromNode, toNode));
+			path.setAttribute("d", edgePath.pathD || "");
+			if (edgePath.markerEnd) {
+				path.setAttribute("marker-end", "url(#paper-relations-arrow)");
+			}
+			else {
+				path.setAttribute("marker-end", "none");
+			}
+			if (edgePath.markerStart) {
+				path.setAttribute("marker-start", "url(#paper-relations-arrow)");
+			}
 			edgesGroup.appendChild(path);
+		}
+
+		for (let bundle of visibleEdges.bundles) {
+			let hub = doc.createElementNS(SVG_NS, "circle");
+			hub.setAttribute("class", "paper-relations-bundle-hub");
+			hub.setAttribute("data-bundle-id", bundle.id);
+			hub.setAttribute("cx", String(bundle.x));
+			hub.setAttribute("cy", String(bundle.y));
+			hub.setAttribute("r", "4.6");
+			overlayGroup.appendChild(hub);
 		}
 
 		if (state.edgeDraft?.startAnchor && state.edgeDraft?.pointer) {
@@ -83,7 +106,24 @@
 			overlayGroup.appendChild(scissorsGroup);
 		}
 
+		if (state.edgeBundleDraft?.start && state.edgeBundleDraft?.end) {
+			let bundleLine = doc.createElementNS(SVG_NS, "line");
+			bundleLine.setAttribute("class", "paper-relations-edge-bundle-preview");
+			bundleLine.setAttribute("x1", String(state.edgeBundleDraft.start.x));
+			bundleLine.setAttribute("y1", String(state.edgeBundleDraft.start.y));
+			bundleLine.setAttribute("x2", String(state.edgeBundleDraft.end.x));
+			bundleLine.setAttribute("y2", String(state.edgeBundleDraft.end.y));
+			bundleLine.setAttribute("stroke", "#101214");
+			bundleLine.setAttribute("stroke-width", "2");
+			bundleLine.setAttribute("stroke-linecap", "round");
+			bundleLine.setAttribute("stroke-dasharray", "5 4");
+			bundleLine.setAttribute("opacity", "0.84");
+			bundleLine.setAttribute("fill", "none");
+			overlayGroup.appendChild(bundleLine);
+		}
+
 		for (let node of nodes) {
+			if (this.isBundleNodeState(node)) continue;
 			let group = doc.createElementNS(SVG_NS, "g");
 			let selectedClass = state.selectedNodeID === node.id ? " selected" : "";
 			let isRenamingNode = state.renamingNodeID === node.id;
@@ -152,23 +192,51 @@
 		}
 
 		this.applyAnchorVisibilityToDOM(state);
+		this.applyBundleVisibilityToDOM(state);
 		this.updateGraphTransform(state);
 		this.updateCanvasControlsLayout(window);
 		this.syncNodeRenameInputLayout(window);
 	},
 
+	getVisibleBundleNodes(state) {
+		if (!state) return [];
+		return (state.nodes || [])
+			.filter((node) => this.isBundleNodeState(node))
+			.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y))
+			.map((node) => ({
+				id: node.id,
+				x: node.x,
+				y: node.y,
+			}));
+	},
+
+	getVisibleEdgeRenderData(state) {
+		let nodeMap = new Map((state?.nodes || []).map((node) => [node.id, node]));
+		let bundles = this.getVisibleBundleNodes(state);
+		let paths = [];
+		for (let edge of state?.edges || []) {
+			let fromNode = nodeMap.get(edge.from);
+			let toNode = nodeMap.get(edge.to);
+			if (!fromNode || !toNode) continue;
+			let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+			if (!curve) continue;
+			paths.push({
+				kind: "direct",
+				edgeID: edge.id,
+				pathD: this.buildBezierPathFromCurve(curve),
+				curve,
+				markerEnd: !this.isBundleNodeState(toNode),
+			});
+		}
+		return {
+			paths,
+			bundles,
+			edgeToBundleID: {},
+		};
+	},
+
 	buildBezierPath(fromNode, toNode) {
-		let fromWidth = Number.isFinite(fromNode.renderWidth) ? fromNode.renderWidth :
-			(Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth);
-		let fromHeight = Number.isFinite(fromNode.renderHeight) ? fromNode.renderHeight :
-			(Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight);
-		let toHeight = Number.isFinite(toNode.renderHeight) ? toNode.renderHeight :
-			(Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight);
-		let startX = fromNode.x + fromWidth;
-		let startY = fromNode.y + fromHeight / 2;
-		let endX = toNode.x;
-		let endY = toNode.y + toHeight / 2;
-		let curve = this.getBezierCurveByEndpoints(startX, startY, endX, endY);
+		let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
 		return this.buildBezierPathFromCurve(curve);
 	},
 
@@ -197,6 +265,113 @@
 		};
 	},
 
+	clampBundleSlope(value) {
+		if (!Number.isFinite(value)) return 0;
+		return Math.max(-2.2, Math.min(2.2, value));
+	},
+
+	getBezierCurveByEndpointsWithSlopes(startX, startY, endX, endY, options = {}) {
+		let curve = this.getBezierCurveByEndpoints(startX, startY, endX, endY);
+		let startSlope = Number.isFinite(options.startSlope) ? this.clampBundleSlope(options.startSlope) : null;
+		let endSlope = Number.isFinite(options.endSlope) ? this.clampBundleSlope(options.endSlope) : null;
+		if (Number.isFinite(startSlope)) {
+			curve.c1.y = startY + startSlope * (curve.c1.x - startX);
+		}
+		if (Number.isFinite(endSlope)) {
+			curve.c2.y = endY - endSlope * (endX - curve.c2.x);
+		}
+		return curve;
+	},
+
+	normalizeBezierHandleScale(value) {
+		let scale = Number(value);
+		if (!Number.isFinite(scale)) return 1;
+		return Math.max(0, Math.min(1, scale));
+	},
+
+	getBezierCurveByEndpointsWithEndpointHandleScale(startX, startY, endX, endY, options = {}) {
+		let curve = this.getBezierCurveByEndpoints(startX, startY, endX, endY);
+		let startHandleScale = this.normalizeBezierHandleScale(options.startHandleScale);
+		let endHandleScale = this.normalizeBezierHandleScale(options.endHandleScale);
+		curve.c1.x = curve.start.x + (curve.c1.x - curve.start.x) * startHandleScale;
+		curve.c1.y = curve.start.y + (curve.c1.y - curve.start.y) * startHandleScale;
+		curve.c2.x = curve.end.x + (curve.c2.x - curve.end.x) * endHandleScale;
+		curve.c2.y = curve.end.y + (curve.c2.y - curve.end.y) * endHandleScale;
+		return curve;
+	},
+
+	applyBezierHandleScaleToCurve(curve, options = {}) {
+		if (!curve) return curve;
+		if (Number.isFinite(options.startHandleScale)) {
+			let startHandleScale = this.normalizeBezierHandleScale(options.startHandleScale);
+			curve.c1.x = curve.start.x + (curve.c1.x - curve.start.x) * startHandleScale;
+			curve.c1.y = curve.start.y + (curve.c1.y - curve.start.y) * startHandleScale;
+		}
+		if (Number.isFinite(options.endHandleScale)) {
+			let endHandleScale = this.normalizeBezierHandleScale(options.endHandleScale);
+			curve.c2.x = curve.end.x + (curve.c2.x - curve.end.x) * endHandleScale;
+			curve.c2.y = curve.end.y + (curve.c2.y - curve.end.y) * endHandleScale;
+		}
+		return curve;
+	},
+
+	applyBezierSlopeToCurve(curve, options = {}) {
+		if (!curve) return curve;
+		if (Number.isFinite(options.startSlope)) {
+			let slope = this.clampBundleSlope(options.startSlope);
+			curve.c1.y = curve.start.y + slope * (curve.c1.x - curve.start.x);
+		}
+		if (Number.isFinite(options.endSlope)) {
+			let slope = this.clampBundleSlope(options.endSlope);
+			curve.c2.y = curve.end.y - slope * (curve.end.x - curve.c2.x);
+		}
+		return curve;
+	},
+
+	isBundleNodeState(node) {
+		return String(node?.nodeType || "").toLowerCase() === "bundle";
+	},
+
+	getEdgeEndpointForNode(node, role) {
+		if (!node || (role !== "from" && role !== "to")) return null;
+		if (this.isBundleNodeState(node)) {
+			return {
+				x: node.x,
+				y: node.y,
+			};
+		}
+		let width = Number.isFinite(node.renderWidth) ? node.renderWidth :
+			(Number.isFinite(node.width) ? node.width : this.nodeDefaultWidth);
+		let height = Number.isFinite(node.renderHeight) ? node.renderHeight :
+			(Number.isFinite(node.height) ? node.height : this.nodeDefaultHeight);
+		return role === "from"
+			? { x: node.x + width, y: node.y + height / 2 }
+			: { x: node.x, y: node.y + height / 2 };
+	},
+
+	getEdgeCurveConstraintsForNodes(fromNode, toNode) {
+		let constraints = {};
+		if (this.isBundleNodeState(fromNode)) {
+			let mode = this.normalizeBundleSlopeMode(fromNode.slopeMode);
+			if (mode === "flat") {
+				constraints.startSlope = 0;
+			}
+			else {
+				constraints.startHandleScale = 0;
+			}
+		}
+		if (this.isBundleNodeState(toNode)) {
+			let mode = this.normalizeBundleSlopeMode(toNode.slopeMode);
+			if (mode === "flat") {
+				constraints.endSlope = 0;
+			}
+			else {
+				constraints.endHandleScale = 0;
+			}
+		}
+		return constraints;
+	},
+
 	buildBezierPathByAnchors(startAnchor, endPoint) {
 		if (!startAnchor || !endPoint) return "";
 		let startX = startAnchor.x;
@@ -208,18 +383,14 @@
 
 	getBezierCurveForEdgeNodes(fromNode, toNode) {
 		if (!fromNode || !toNode) return null;
-		let fromWidth = Number.isFinite(fromNode.renderWidth) ? fromNode.renderWidth :
-			(Number.isFinite(fromNode.width) ? fromNode.width : this.nodeDefaultWidth);
-		let fromHeight = Number.isFinite(fromNode.renderHeight) ? fromNode.renderHeight :
-			(Number.isFinite(fromNode.height) ? fromNode.height : this.nodeDefaultHeight);
-		let toHeight = Number.isFinite(toNode.renderHeight) ? toNode.renderHeight :
-			(Number.isFinite(toNode.height) ? toNode.height : this.nodeDefaultHeight);
-		return this.getBezierCurveByEndpoints(
-			fromNode.x + fromWidth,
-			fromNode.y + fromHeight / 2,
-			toNode.x,
-			toNode.y + toHeight / 2,
-		);
+		let start = this.getEdgeEndpointForNode(fromNode, "from");
+		let end = this.getEdgeEndpointForNode(toNode, "to");
+		if (!start || !end) return null;
+		let curve = this.getBezierCurveByEndpoints(start.x, start.y, end.x, end.y);
+		let constraints = this.getEdgeCurveConstraintsForNodes(fromNode, toNode);
+		this.applyBezierHandleScaleToCurve(curve, constraints);
+		this.applyBezierSlopeToCurve(curve, constraints);
+		return curve;
 	},
 
 	getPointOnCubicBezier(curve, t) {
@@ -264,18 +435,57 @@
 		return false;
 	},
 
-	doCutSegmentIntersectCurve(cutStart, cutEnd, curve, steps = 28) {
-		if (!cutStart || !cutEnd || !curve) return false;
+	getSegmentIntersectionPoint(a1, a2, b1, b2, epsilon = 1e-6) {
+		if (!a1 || !a2 || !b1 || !b2) return null;
+		let dx1 = a2.x - a1.x;
+		let dy1 = a2.y - a1.y;
+		let dx2 = b2.x - b1.x;
+		let dy2 = b2.y - b1.y;
+		let denominator = dx1 * dy2 - dy1 * dx2;
+		if (Math.abs(denominator) <= epsilon) {
+			if (!this.doSegmentsIntersect(a1, a2, b1, b2, epsilon)) return null;
+			if (this.isPointOnSegment(b1, a1, a2, epsilon)) return { x: b1.x, y: b1.y };
+			if (this.isPointOnSegment(b2, a1, a2, epsilon)) return { x: b2.x, y: b2.y };
+			if (this.isPointOnSegment(a1, b1, b2, epsilon)) return { x: a1.x, y: a1.y };
+			if (this.isPointOnSegment(a2, b1, b2, epsilon)) return { x: a2.x, y: a2.y };
+			return null;
+		}
+		let t = ((b1.x - a1.x) * dy2 - (b1.y - a1.y) * dx2) / denominator;
+		let u = ((b1.x - a1.x) * dy1 - (b1.y - a1.y) * dx1) / denominator;
+		if (t < -epsilon || t > 1 + epsilon || u < -epsilon || u > 1 + epsilon) return null;
+		return {
+			x: a1.x + t * dx1,
+			y: a1.y + t * dy1,
+		};
+	},
+
+	getCurveIntersectionPointWithSegment(cutStart, cutEnd, curve, steps = 28) {
+		if (!cutStart || !cutEnd || !curve) return null;
 		let prev = curve.start;
 		for (let i = 1; i <= steps; i++) {
 			let t = i / steps;
 			let curr = this.getPointOnCubicBezier(curve, t);
-			if (this.doSegmentsIntersect(cutStart, cutEnd, prev, curr)) {
-				return true;
+			let intersection = this.getSegmentIntersectionPoint(cutStart, cutEnd, prev, curr);
+			if (intersection) {
+				return intersection;
 			}
 			prev = curr;
 		}
-		return false;
+		return null;
+	},
+
+	getEdgeIntersectionPointForLine(state, edge, cutStart, cutEnd, steps = 28) {
+		if (!state || !edge || !cutStart || !cutEnd) return null;
+		let nodeMap = new Map((state.nodes || []).map((node) => [node.id, node]));
+		let fromNode = nodeMap.get(edge.from);
+		let toNode = nodeMap.get(edge.to);
+		if (!fromNode || !toNode) return null;
+		let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+		return this.getCurveIntersectionPointWithSegment(cutStart, cutEnd, curve, steps);
+	},
+
+	doCutSegmentIntersectCurve(cutStart, cutEnd, curve, steps = 28) {
+		return !!this.getCurveIntersectionPointWithSegment(cutStart, cutEnd, curve, steps);
 	},
 
 	async cutEdgesByLine(window, cutStart, cutEnd) {
@@ -295,6 +505,9 @@
 
 		let removeSet = new Set(toRemoveIDs);
 		state.edges = state.edges.filter((edge) => !removeSet.has(edge.id));
+		if (typeof this.cleanupIsolatedBundleNodesInState === "function") {
+			this.cleanupIsolatedBundleNodesInState(state);
+		}
 
 		if (state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic) {
 			await Promise.all(toRemoveIDs.map((edgeID) =>
@@ -335,8 +548,25 @@
 		}
 	},
 
+	isBundleVisibleInState(state, bundleID) {
+		if (!state || !bundleID) return false;
+		if (state.dragBundleID === bundleID) return true;
+		if (state.hoverBundleID === bundleID) return true;
+		return false;
+	},
+
+	applyBundleVisibilityToDOM(state) {
+		if (!state?.overlayGroup) return;
+		let hubElems = state.overlayGroup.querySelectorAll(".paper-relations-bundle-hub[data-bundle-id]");
+		for (let hubElem of hubElems) {
+			let bundleID = hubElem.getAttribute("data-bundle-id");
+			hubElem.classList.toggle("active", this.isBundleVisibleInState(state, bundleID));
+		}
+	},
+
 	getNodeAnchorPoint(node, side) {
 		if (!node || (side !== "left" && side !== "right")) return null;
+		if (this.isBundleNodeState(node)) return null;
 		let width = Number.isFinite(node.renderWidth) ? node.renderWidth :
 			this.getNodeRenderMetrics(node).width;
 		let height = Number.isFinite(node.renderHeight) ? node.renderHeight :
@@ -400,6 +630,7 @@
 		let nearest = null;
 
 		for (let node of state.nodes) {
+			if (this.isBundleNodeState(node)) continue;
 			let leftAnchor = this.getNodeAnchorPoint(node, "left");
 			let rightAnchor = this.getNodeAnchorPoint(node, "right");
 			for (let anchor of [leftAnchor, rightAnchor]) {

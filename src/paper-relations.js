@@ -22,7 +22,7 @@ PaperRelations = {
 	remarkMigrationBusyByWindow: null,
 
 	storeSettingKey: "paper-relations.graph.v1",
-	storeSchemaVersion: 1,
+	storeSchemaVersion: 2,
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,

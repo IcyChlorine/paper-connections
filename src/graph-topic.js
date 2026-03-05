@@ -53,8 +53,13 @@ var PaperRelationsGraphTopicMixin = {
 				state.edges = [];
 				state.selectedNodeID = null;
 				state.hoverAnchor = null;
+				state.hoverBundleID = null;
 				state.edgeDraft = null;
 				state.edgeCutDraft = null;
+				state.edgeBundleDraft = null;
+				state.dragBundleID = null;
+				state.contextMenuBundleID = null;
+				state.suppressNextContextMenu = false;
 				this.renderGraph(window);
 			}
 			this.refreshGraphChrome(window);
@@ -93,10 +98,30 @@ var PaperRelationsGraphTopicMixin = {
 
 		let selectedItemRef = selectedItem ? this.getItemRef(selectedItem.libraryID, selectedItem.key) : null;
 		let nodes = Object.values(topic.nodes).map((node) => {
+			let nodeType = String(node.nodeType || "paper").toLowerCase() === "bundle" ? "bundle" : "paper";
+			if (nodeType === "bundle") {
+				return {
+					id: node.id,
+					nodeType: "bundle",
+					itemKey: "",
+					libraryID: null,
+					title: "(bundle)",
+					label: "(bundle)",
+					x: Number.isFinite(node.x) ? node.x : 0,
+					y: Number.isFinite(node.y) ? node.y : 0,
+					width: 0,
+					height: 0,
+					kind: "bundle",
+					slopeMode: this.normalizeBundleSlopeMode(node.slopeMode),
+					createdAt: node.createdAt,
+					updatedAt: node.updatedAt,
+				};
+			}
 			let itemRef = this.getItemRef(node.libraryID, node.itemKey);
 			let displayLabel = this.getNodeLabelForDisplay(node);
 			return {
 				id: node.id,
+				nodeType: "paper",
 				itemKey: node.itemKey,
 				libraryID: node.libraryID,
 				title: node.title || node.itemKey,
@@ -106,6 +131,10 @@ var PaperRelationsGraphTopicMixin = {
 				width: this.getNodeWidthForLabel(displayLabel),
 				height: this.nodeDefaultHeight,
 				kind: selectedItemRef && selectedItemRef === itemRef ? "root" : "leaf",
+				shortLabel: node.shortLabel || "",
+				note: node.note || "",
+				createdAt: node.createdAt,
+				updatedAt: node.updatedAt,
 			};
 		});
 
@@ -126,15 +155,29 @@ var PaperRelationsGraphTopicMixin = {
 		state.isTemporaryTopic = false;
 		state.selectedNodeID = null;
 		state.hoverAnchor = null;
+		state.hoverBundleID = null;
 		state.edgeDraft = null;
 		state.edgeCutDraft = null;
+		state.edgeBundleDraft = null;
+		state.dragBundleID = null;
+		state.contextMenuBundleID = null;
+		state.suppressNextContextMenu = false;
 		if (selectedItemRef) {
-			let selectedNode = nodes.find((node) => this.getItemRef(node.libraryID, node.itemKey) === selectedItemRef);
+			let selectedNode = nodes.find((node) =>
+				node.nodeType !== "bundle" &&
+				this.getItemRef(node.libraryID, node.itemKey) === selectedItemRef,
+			);
 			if (selectedNode) {
 				state.selectedNodeID = selectedNode.id;
 			}
 		}
 		this.renderGraph(window);
+		if (typeof this.getBundleTopologyWarningsFromState === "function") {
+			let warnings = this.getBundleTopologyWarningsFromState(state);
+			if (typeof this.showBundleTopologyWarnings === "function") {
+				this.showBundleTopologyWarnings(window, warnings);
+			}
+		}
 	},
 
 	applyTemporaryTopicForItem(window, item) {
@@ -151,6 +194,7 @@ var PaperRelationsGraphTopicMixin = {
 		let nodeID = `temp_${item.libraryID}_${item.key}`;
 		state.nodes = [{
 			id: nodeID,
+			nodeType: "paper",
 			itemKey: item.key,
 			libraryID: item.libraryID,
 			title,
@@ -168,8 +212,13 @@ var PaperRelationsGraphTopicMixin = {
 		state.isTemporaryTopic = true;
 		state.selectedNodeID = nodeID;
 		state.hoverAnchor = null;
+		state.hoverBundleID = null;
 		state.edgeDraft = null;
 		state.edgeCutDraft = null;
+		state.edgeBundleDraft = null;
+		state.dragBundleID = null;
+		state.contextMenuBundleID = null;
+		state.suppressNextContextMenu = false;
 		this.renderGraph(window);
 	},
 

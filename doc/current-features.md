@@ -1,10 +1,11 @@
 # Paper Relations - Current Features
 
 ## Snapshot
-- Date: 2026-03-04
+- Date: 2026-03-05
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-relations@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
+- Storage schema version: `2`
 
 ## Implemented Features
 - Right item-pane custom section: `Topic Context Section`
@@ -57,13 +58,25 @@
     - opens SVG export settings dialog (`SVG 导出设置`: include grid + margin),
     - opens save dialog,
     - exports content-bounds plus margin as SVG.
-  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`schemaVersion` + `topic` payload).
+  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`schemaVersion` + `topic` payload, no legacy `bundles` metadata).
   - Node `Remove` deletes node and incident edges from active saved topic.
   - Node `Rename` (or `F2`) enters inline edit mode; `Enter` confirms, `Esc` cancels.
   - Node left/right anchors appear near cursor and support drag-to-create edge.
   - Edge creation only allows left-right anchor pairing.
   - Backward links use wrap-around bezier routing with rightward endpoint tangents.
   - Hold `Alt` + right-drag to cut intersected edges.
+  - Hold `Shift` + right-drag (saved topics only) to edge-bundle intersected edges:
+    - shows a dotted bundle path while dragging.
+    - groups hits by same source node.
+    - any non-empty group creates a real bundle node (`nodeType=bundle`), including single-edge groups.
+    - bundle action rewrites real edges (`source -> hub`, `hub -> target`) and supports nested chaining.
+  - Bundle hub behavior:
+    - hub appears on hover-near, hides when pointer leaves.
+    - left-drag moves hub and follows current snap mode.
+    - right-click hub menu: `Dissolve`, separator, and `Flat Tangent` toggle (checked when enabled).
+    - `Dissolve` works on `1-in-N-out` topology; non-`1-in` topology is warned and not auto-fixed.
+    - default slope mode is `Flat Tangent`; disabled state removes hub-side handle extension (hub-end handle length = 0).
+  - SVG export renders current bundled edge visuals (bundle hubs are not rendered).
   - Background grid remains visible regardless of snap toggle.
   - Drag node with 24px magnetic snap-to-grid by node center and persist snapped position.
 - Node rendering behavior
