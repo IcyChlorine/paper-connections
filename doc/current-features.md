@@ -46,6 +46,7 @@
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
   - Selecting a graph node reverse-syncs selection to Zotero item list.
+  - Double-clicking a paper node attempts to open its best attachment/PDF using the same Zotero item-open flow as double-clicking the item in the item list.
   - Right-click node menu: `Remove`, `Rename`.
   - Right-click blank-canvas menu is context-aware:
     - temporary topic: `Create topic from this paper`, separator, `Export as SVG`.

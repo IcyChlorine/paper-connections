@@ -222,6 +222,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		return {
 			wheel: (event) => this.onGraphWheel(window, event),
 			mousedown: (event) => this.onGraphMouseDown(window, event),
+			dblclick: (event) => this.onGraphDoubleClick(window, event),
 			contextmenu: (event) => this.onGraphContextMenu(window, event),
 			mousemove: (event) => this.onGraphMouseMove(window, event),
 			mouseup: (event) => this.onGraphMouseUp(window, event),
@@ -261,6 +262,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state?.handlers) return;
 		state.svg.addEventListener("wheel", state.handlers.wheel, { passive: false });
 		state.svg.addEventListener("mousedown", state.handlers.mousedown);
+		state.svg.addEventListener("dblclick", state.handlers.dblclick);
 		state.svg.addEventListener("contextmenu", state.handlers.contextmenu);
 		window.addEventListener("mousemove", state.handlers.mousemove);
 		window.addEventListener("mouseup", state.handlers.mouseup);
@@ -304,6 +306,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		if (!state?.handlers) return;
 		state.svg?.removeEventListener("wheel", state.handlers.wheel);
 		state.svg?.removeEventListener("mousedown", state.handlers.mousedown);
+		state.svg?.removeEventListener("dblclick", state.handlers.dblclick);
 		state.svg?.removeEventListener("contextmenu", state.handlers.contextmenu);
 		window.removeEventListener("mousemove", state.handlers.mousemove);
 		window.removeEventListener("mouseup", state.handlers.mouseup);

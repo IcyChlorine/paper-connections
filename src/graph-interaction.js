@@ -551,6 +551,21 @@ var PaperRelationsGraphInteractionMixin = {
 		}
 	},
 
+	async openGraphNodeItem(window, node, event = null) {
+		if (!node || this.isBundleNodeState(node)) return false;
+		let item = this.getItemForNode(node);
+		if (!item) return false;
+		if (typeof window.ZoteroPane?.viewItems !== "function") return false;
+		try {
+			await window.ZoteroPane.viewItems([item], event || undefined);
+			return true;
+		}
+		catch (error) {
+			Zotero.logError(error);
+			return false;
+		}
+	},
+
 	onWindowMouseDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -1016,6 +1031,28 @@ var PaperRelationsGraphInteractionMixin = {
 			this.selectGraphNode(window, null);
 		}
 		event.preventDefault();
+	},
+
+	onGraphDoubleClick(window, event) {
+		let state = this.graphStates.get(window);
+		if (!state || event?.button !== 0) return;
+		if (state.renamingNodeID || state.renameBusy) return;
+
+		let nodeID = this.getNodeIDFromEventTarget(event.target);
+		if (!nodeID) {
+			let hitNode = this.getNodeAtClient(window, event.clientX, event.clientY);
+			nodeID = hitNode?.id || null;
+		}
+		if (!nodeID) return;
+
+		let node = this.getNodeByID(state, nodeID);
+		if (!node || this.isBundleNodeState(node)) return;
+
+		this.hideGraphContextMenus(window);
+		this.selectGraphNode(window, nodeID);
+		this.openGraphNodeItem(window, node, event).catch((error) => Zotero.logError(error));
+		event.preventDefault();
+		event.stopPropagation();
 	},
 
 	onGraphMouseMove(window, event) {
