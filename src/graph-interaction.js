@@ -1060,24 +1060,21 @@ var PaperRelationsGraphInteractionMixin = {
 	},
 
 	onGraphSVGDoubleClick(window, event) {
-		let target = event?.target || null;
-		let nodeID = this.getNodeIDFromEventTarget(target);
-		let tagName = String(target?.tagName || target?.nodeName || "(unknown)");
-		Services.prompt.alert(
-			window,
-			"Paper Relations",
-			`SVG dblclick detected\nTarget: ${tagName}\nNode ID: ${nodeID || "(none)"}`,
-		);
-		event?.preventDefault?.();
-		event?.stopPropagation?.();
-	},
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		let nodeID = this.getNodeIDFromEventTarget(event?.target);
+		if (!nodeID) {
+			let hitNode = this.getNodeAtClient(window, event?.clientX, event?.clientY);
+			nodeID = hitNode?.id || null;
+		}
+		if (!nodeID) return;
 
-	onGraphHeaderDoubleClick(window, event) {
-		Services.prompt.alert(
-			window,
-			"Paper Relations",
-			"Graph workspace header dblclick detected",
-		);
+		let node = this.getNodeByID(state, nodeID);
+		if (!node || this.isBundleNodeState(node)) return;
+
+		this.hideGraphContextMenus(window);
+		this.selectGraphNode(window, nodeID);
+		this.openGraphNodeItem(window, node, event).catch((error) => Zotero.logError(error));
 		event?.preventDefault?.();
 		event?.stopPropagation?.();
 	},
