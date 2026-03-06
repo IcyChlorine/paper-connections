@@ -1,5 +1,9 @@
 ﻿var PaperRelationsGraphRenderMixin = {
 	renderGraph(window) {
+		this.refreshGraph(window);
+	},
+
+	refreshGraph(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 
@@ -7,51 +11,26 @@
 		let doc = window.document;
 		const SVG_NS = "http://www.w3.org/2000/svg";
 
+		this.resetGraphDOMCaches(state);
 		edgesGroup.replaceChildren();
 		nodesGroup.replaceChildren();
 		overlayGroup.replaceChildren();
 
 		for (let node of nodes) {
-			if (this.isBundleNodeState(node)) {
-				node.renderWidth = 0;
-				node.renderHeight = 0;
-				node.renderLabelLines = [];
-				continue;
-			}
-			let metrics = this.getNodeRenderMetrics(node);
-			let width = metrics.width;
-			let height = metrics.height;
-			let labelLines = metrics.labelLines;
-			node.renderWidth = width;
-			node.renderHeight = height;
-			node.renderLabelLines = labelLines;
+			this.syncNodeRenderMetrics(node);
 		}
 
 		let visibleEdges = this.getVisibleEdgeRenderData(state);
 		for (let edgePath of visibleEdges.paths) {
-			let path = doc.createElementNS(SVG_NS, "path");
-			path.setAttribute("class", "paper-relations-edge");
-			path.setAttribute("d", edgePath.pathD || "");
-			if (edgePath.markerEnd) {
-				path.setAttribute("marker-end", "url(#paper-relations-arrow)");
-			}
-			else {
-				path.setAttribute("marker-end", "none");
-			}
-			if (edgePath.markerStart) {
-				path.setAttribute("marker-start", "url(#paper-relations-arrow)");
-			}
+			let path = this.createEdgePathElement(doc, edgePath);
 			edgesGroup.appendChild(path);
+			state.edgeElemsByID.set(edgePath.edgeID, path);
 		}
 
 		for (let bundle of visibleEdges.bundles) {
-			let hub = doc.createElementNS(SVG_NS, "circle");
-			hub.setAttribute("class", "paper-relations-bundle-hub");
-			hub.setAttribute("data-bundle-id", bundle.id);
-			hub.setAttribute("cx", String(bundle.x));
-			hub.setAttribute("cy", String(bundle.y));
-			hub.setAttribute("r", "4.6");
+			let hub = this.createBundleHubElement(doc, state, bundle);
 			overlayGroup.appendChild(hub);
+			state.bundleHubElemsByID.set(bundle.id, hub);
 		}
 
 		if (state.edgeDraft?.startAnchor && state.edgeDraft?.pointer) {
@@ -124,71 +103,9 @@
 
 		for (let node of nodes) {
 			if (this.isBundleNodeState(node)) continue;
-			let group = doc.createElementNS(SVG_NS, "g");
-			let selectedClass = state.selectedNodeID === node.id ? " selected" : "";
-			let isRenamingNode = state.renamingNodeID === node.id;
-			let renamingClass = isRenamingNode ? " renaming" : "";
-			group.setAttribute("class", `paper-relations-node ${node.kind}${selectedClass}${renamingClass}`);
-			group.setAttribute("data-node-id", node.id);
-			group.setAttribute("transform", `translate(${node.x},${node.y})`);
-			let width = node.renderWidth;
-			let height = node.renderHeight;
-			let labelLines = node.renderLabelLines || this.wrapNodeLabel(node.label, width);
-			let textBlockHeight = labelLines.length * this.nodeLineHeight;
-
-			let rect = doc.createElementNS(SVG_NS, "rect");
-			rect.setAttribute("width", String(width));
-			rect.setAttribute("height", String(height));
-			rect.setAttribute("rx", "10");
-			rect.setAttribute("ry", "10");
-
-			let titleElem = null;
-			let text = null;
-			if (!isRenamingNode) {
-				titleElem = doc.createElementNS(SVG_NS, "title");
-				titleElem.textContent = node.label || "";
-
-				text = doc.createElementNS(SVG_NS, "text");
-				text.setAttribute("x", String(width / 2));
-				let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
-				text.setAttribute("y", String(firstLineY));
-				text.setAttribute("text-anchor", "middle");
-				for (let i = 0; i < labelLines.length; i++) {
-					let tspan = doc.createElementNS(SVG_NS, "tspan");
-					tspan.setAttribute("x", String(width / 2));
-					if (i > 0) {
-						tspan.setAttribute("dy", String(this.nodeLineHeight));
-					}
-					tspan.textContent = labelLines[i];
-					text.appendChild(tspan);
-				}
-			}
-
-			let leftAnchor = doc.createElementNS(SVG_NS, "circle");
-			leftAnchor.setAttribute("class", "paper-relations-node-anchor");
-			leftAnchor.setAttribute("data-anchor-side", "left");
-			leftAnchor.setAttribute("cx", "0");
-			leftAnchor.setAttribute("cy", String(height / 2));
-			leftAnchor.setAttribute("r", "4");
-			if (this.isAnchorVisibleInState(state, node.id, "left")) {
-				leftAnchor.classList.add("active");
-			}
-
-			let rightAnchor = doc.createElementNS(SVG_NS, "circle");
-			rightAnchor.setAttribute("class", "paper-relations-node-anchor");
-			rightAnchor.setAttribute("data-anchor-side", "right");
-			rightAnchor.setAttribute("cx", String(width));
-			rightAnchor.setAttribute("cy", String(height / 2));
-			rightAnchor.setAttribute("r", "4");
-			if (this.isAnchorVisibleInState(state, node.id, "right")) {
-				rightAnchor.classList.add("active");
-			}
-
-			group.append(rect);
-			if (titleElem) group.append(titleElem);
-			if (text) group.append(text);
-			group.append(leftAnchor, rightAnchor);
+			let group = this.createNodeGroupElement(doc, state, node);
 			nodesGroup.appendChild(group);
+			state.nodeElemsByID.set(node.id, group);
 		}
 
 		this.applyAnchorVisibilityToDOM(state);
@@ -196,6 +113,393 @@
 		this.updateGraphTransform(state);
 		this.updateCanvasControlsLayout(window);
 		this.syncNodeRenameInputLayout(window);
+	},
+
+	resetGraphDOMCaches(state) {
+		if (!state) return;
+		state.nodeElemsByID = new Map();
+		state.edgeElemsByID = new Map();
+		state.bundleHubElemsByID = new Map();
+	},
+
+	syncNodeRenderMetrics(node) {
+		if (!node) return null;
+		if (this.isBundleNodeState(node)) {
+			node.renderWidth = 0;
+			node.renderHeight = 0;
+			node.renderLabelLines = [];
+			return {
+				width: 0,
+				height: 0,
+				labelLines: [],
+			};
+		}
+		let metrics = this.getNodeRenderMetrics(node);
+		node.renderWidth = metrics.width;
+		node.renderHeight = metrics.height;
+		node.renderLabelLines = metrics.labelLines;
+		return metrics;
+	},
+
+	getNodeClassName(state, node) {
+		let kind = node?.kind || "leaf";
+		let selectedClass = state?.selectedNodeID === node?.id ? " selected" : "";
+		let renamingClass = state?.renamingNodeID === node?.id ? " renaming" : "";
+		return `paper-relations-node ${kind}${selectedClass}${renamingClass}`;
+	},
+
+	createEdgePathElement(doc, edgePath) {
+		const SVG_NS = "http://www.w3.org/2000/svg";
+		let path = doc.createElementNS(SVG_NS, "path");
+		this.applyEdgePathDataToElement(path, edgePath);
+		return path;
+	},
+
+	applyEdgePathDataToElement(path, edgePath) {
+		if (!path || !edgePath) return;
+		path.setAttribute("class", "paper-relations-edge");
+		path.setAttribute("data-edge-id", edgePath.edgeID || "");
+		path.setAttribute("d", edgePath.pathD || "");
+		path.setAttribute("marker-end", edgePath.markerEnd ? "url(#paper-relations-arrow)" : "none");
+		if (edgePath.markerStart) {
+			path.setAttribute("marker-start", "url(#paper-relations-arrow)");
+		}
+		else {
+			path.removeAttribute("marker-start");
+		}
+	},
+
+	createBundleHubElement(doc, state, bundle) {
+		const SVG_NS = "http://www.w3.org/2000/svg";
+		let hub = doc.createElementNS(SVG_NS, "circle");
+		this.updateBundleHubElementDOM(state, bundle, hub);
+		return hub;
+	},
+
+	updateBundleHubElementDOM(state, bundle, hubElem) {
+		if (!bundle || !hubElem) return;
+		hubElem.setAttribute("class", "paper-relations-bundle-hub");
+		hubElem.setAttribute("data-bundle-id", bundle.id);
+		hubElem.setAttribute("cx", String(bundle.x));
+		hubElem.setAttribute("cy", String(bundle.y));
+		hubElem.setAttribute("r", "4.6");
+		hubElem.classList.toggle("active", this.isBundleVisibleInState(state, bundle.id));
+	},
+
+	createNodeGroupElement(doc, state, node) {
+		const SVG_NS = "http://www.w3.org/2000/svg";
+		let group = doc.createElementNS(SVG_NS, "g");
+		group.setAttribute("data-node-id", node.id);
+		this.updateNodeGroupElementDOM(state, node, group, doc);
+		return group;
+	},
+
+	createNodeTextElement(doc, width, height, labelLines) {
+		const SVG_NS = "http://www.w3.org/2000/svg";
+		let text = doc.createElementNS(SVG_NS, "text");
+		let textBlockHeight = labelLines.length * this.nodeLineHeight;
+		let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
+		text.setAttribute("x", String(width / 2));
+		text.setAttribute("y", String(firstLineY));
+		text.setAttribute("text-anchor", "middle");
+		for (let i = 0; i < labelLines.length; i++) {
+			let tspan = doc.createElementNS(SVG_NS, "tspan");
+			tspan.setAttribute("x", String(width / 2));
+			if (i > 0) {
+				tspan.setAttribute("dy", String(this.nodeLineHeight));
+			}
+			tspan.textContent = labelLines[i];
+			text.appendChild(tspan);
+		}
+		return text;
+	},
+
+	createNodeAnchorElement(doc, side, cx, cy) {
+		const SVG_NS = "http://www.w3.org/2000/svg";
+		let anchor = doc.createElementNS(SVG_NS, "circle");
+		anchor.setAttribute("class", "paper-relations-node-anchor");
+		anchor.setAttribute("data-anchor-side", side);
+		anchor.setAttribute("cx", String(cx));
+		anchor.setAttribute("cy", String(cy));
+		anchor.setAttribute("r", "4");
+		return anchor;
+	},
+
+	updateNodeGroupElementDOM(state, node, group, doc = state?.window?.document) {
+		if (!state || !node || !group || this.isBundleNodeState(node)) return;
+		this.syncNodeRenderMetrics(node);
+		let width = node.renderWidth;
+		let height = node.renderHeight;
+		let labelLines = node.renderLabelLines || this.wrapNodeLabel(node.label, width);
+		let isRenamingNode = state.renamingNodeID === node.id;
+
+		group.setAttribute("class", this.getNodeClassName(state, node));
+		group.setAttribute("data-node-id", node.id);
+		group.setAttribute("transform", `translate(${node.x},${node.y})`);
+
+		let rect = group.querySelector("rect");
+		if (!rect && doc) {
+			rect = doc.createElementNS("http://www.w3.org/2000/svg", "rect");
+			group.appendChild(rect);
+		}
+		if (rect) {
+			rect.setAttribute("width", String(width));
+			rect.setAttribute("height", String(height));
+			rect.setAttribute("rx", "10");
+			rect.setAttribute("ry", "10");
+		}
+
+		let titleElem = group.querySelector("title");
+		let textElem = group.querySelector("text");
+		if (isRenamingNode) {
+			titleElem?.remove();
+			textElem?.remove();
+		}
+		else if (doc) {
+			if (!titleElem) {
+				titleElem = doc.createElementNS("http://www.w3.org/2000/svg", "title");
+				group.appendChild(titleElem);
+			}
+			titleElem.textContent = node.label || "";
+
+			if (!textElem) {
+				textElem = this.createNodeTextElement(doc, width, height, labelLines);
+				group.appendChild(textElem);
+			}
+			else {
+				let textBlockHeight = labelLines.length * this.nodeLineHeight;
+				let firstLineY = (height - textBlockHeight) / 2 + this.nodeLineHeight * 0.78;
+				textElem.setAttribute("x", String(width / 2));
+				textElem.setAttribute("y", String(firstLineY));
+				textElem.setAttribute("text-anchor", "middle");
+				textElem.replaceChildren();
+				for (let i = 0; i < labelLines.length; i++) {
+					let tspan = doc.createElementNS("http://www.w3.org/2000/svg", "tspan");
+					tspan.setAttribute("x", String(width / 2));
+					if (i > 0) {
+						tspan.setAttribute("dy", String(this.nodeLineHeight));
+					}
+					tspan.textContent = labelLines[i];
+					textElem.appendChild(tspan);
+				}
+			}
+		}
+
+		let leftAnchor = group.querySelector(`.paper-relations-node-anchor[data-anchor-side="left"]`);
+		if (!leftAnchor && doc) {
+			leftAnchor = this.createNodeAnchorElement(doc, "left", 0, height / 2);
+			group.appendChild(leftAnchor);
+		}
+		if (leftAnchor) {
+			leftAnchor.setAttribute("cx", "0");
+			leftAnchor.setAttribute("cy", String(height / 2));
+			leftAnchor.setAttribute("r", "4");
+			leftAnchor.classList.toggle("active", this.isAnchorVisibleInState(state, node.id, "left"));
+		}
+
+		let rightAnchor = group.querySelector(`.paper-relations-node-anchor[data-anchor-side="right"]`);
+		if (!rightAnchor && doc) {
+			rightAnchor = this.createNodeAnchorElement(doc, "right", width, height / 2);
+			group.appendChild(rightAnchor);
+		}
+		if (rightAnchor) {
+			rightAnchor.setAttribute("cx", String(width));
+			rightAnchor.setAttribute("cy", String(height / 2));
+			rightAnchor.setAttribute("r", "4");
+			rightAnchor.classList.toggle("active", this.isAnchorVisibleInState(state, node.id, "right"));
+		}
+	},
+
+	getNodeDOMGeometrySignature(state, nodeID) {
+		if (!state || !nodeID) return "";
+		let node = this.getNodeByID?.(state, nodeID) || null;
+		if (this.isBundleNodeState(node)) {
+			let hub = state.bundleHubElemsByID?.get(nodeID)
+				|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${nodeID}"]`);
+			if (!hub) return "";
+			return `${hub.getAttribute("cx") || ""}|${hub.getAttribute("cy") || ""}`;
+		}
+		let group = state.nodeElemsByID?.get(nodeID)
+			|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+		if (!group) return "";
+		let rect = group.querySelector("rect");
+		return `${group.getAttribute("transform") || ""}|${rect?.getAttribute("width") || ""}|${rect?.getAttribute("height") || ""}`;
+	},
+
+	getNodeTargetGeometrySignature(node) {
+		if (!node) return "";
+		if (this.isBundleNodeState(node)) {
+			return `${node.x}|${node.y}`;
+		}
+		this.syncNodeRenderMetrics(node);
+		return `translate(${node.x},${node.y})|${node.renderWidth}|${node.renderHeight}`;
+	},
+
+	getEdgeByID(state, edgeID) {
+		if (!state?.edges?.length || !edgeID) return null;
+		return state.edges.find((edge) => edge.id === edgeID) || null;
+	},
+
+	getIncidentEdgeIDs(state, nodeID) {
+		if (!state?.edges?.length || !nodeID) return [];
+		return state.edges
+			.filter((edge) => edge.from === nodeID || edge.to === nodeID)
+			.map((edge) => edge.id);
+	},
+
+	getBundleSiblingEdgeIDs(state, bundleID) {
+		if (!bundleID) return [];
+		return this.getIncidentEdgeIDs(state, bundleID);
+	},
+
+	getRelatedEdgeIDsForNode(state, nodeID, propagate = false) {
+		let related = new Set(this.getIncidentEdgeIDs(state, nodeID));
+		if (propagate !== "bundle") {
+			return Array.from(related);
+		}
+		let relatedBundleIDs = new Set();
+		let node = this.getNodeByID?.(state, nodeID) || null;
+		if (this.isBundleNodeState(node)) {
+			relatedBundleIDs.add(nodeID);
+		}
+		for (let edgeID of related) {
+			let edge = this.getEdgeByID(state, edgeID);
+			if (!edge) continue;
+			let fromNode = this.getNodeByID?.(state, edge.from) || null;
+			let toNode = this.getNodeByID?.(state, edge.to) || null;
+			if (this.isBundleNodeState(fromNode)) {
+				relatedBundleIDs.add(fromNode.id);
+			}
+			if (this.isBundleNodeState(toNode)) {
+				relatedBundleIDs.add(toNode.id);
+			}
+		}
+		for (let bundleID of relatedBundleIDs) {
+			for (let edgeID of this.getBundleSiblingEdgeIDs(state, bundleID)) {
+				related.add(edgeID);
+			}
+		}
+		return Array.from(related);
+	},
+
+	getRelatedEdgeIDsForEdge(state, edgeID, propagate = false) {
+		let related = new Set([edgeID]);
+		if (propagate !== "bundle") {
+			return Array.from(related);
+		}
+		let edge = this.getEdgeByID(state, edgeID);
+		if (!edge) return Array.from(related);
+		let fromNode = this.getNodeByID?.(state, edge.from) || null;
+		let toNode = this.getNodeByID?.(state, edge.to) || null;
+		if (this.isBundleNodeState(fromNode)) {
+			for (let siblingEdgeID of this.getBundleSiblingEdgeIDs(state, fromNode.id)) {
+				related.add(siblingEdgeID);
+			}
+		}
+		if (this.isBundleNodeState(toNode)) {
+			for (let siblingEdgeID of this.getBundleSiblingEdgeIDs(state, toNode.id)) {
+				related.add(siblingEdgeID);
+			}
+		}
+		return Array.from(related);
+	},
+
+	getEdgeRenderData(state, edge) {
+		if (!state || !edge) return null;
+		let fromNode = this.getNodeByID?.(state, edge.from) || null;
+		let toNode = this.getNodeByID?.(state, edge.to) || null;
+		if (!fromNode || !toNode) return null;
+		let curve = this.getBezierCurveForEdgeNodes(fromNode, toNode);
+		if (!curve) return null;
+		return {
+			kind: "direct",
+			edgeID: edge.id,
+			pathD: this.buildBezierPathFromCurve(curve),
+			curve,
+			markerEnd: !this.isBundleNodeState(toNode),
+			markerStart: false,
+		};
+	},
+
+	updateEdgeDOM(window, edgeID, options = {}) {
+		let state = this.graphStates.get(window);
+		if (!state || !edgeID) return false;
+		let edge = this.getEdgeByID(state, edgeID);
+		if (!edge) return false;
+		let path = state.edgeElemsByID?.get(edgeID)
+			|| state.edgesGroup?.querySelector?.(`.paper-relations-edge[data-edge-id="${edgeID}"]`);
+		if (!path) return false;
+		state.edgeElemsByID?.set(edgeID, path);
+		let oldSignature = `${path.getAttribute("d") || ""}|${path.getAttribute("marker-end") || ""}|${path.getAttribute("marker-start") || ""}`;
+		let edgePath = this.getEdgeRenderData(state, edge);
+		if (!edgePath) return false;
+		this.applyEdgePathDataToElement(path, edgePath);
+		let nextSignature = `${path.getAttribute("d") || ""}|${path.getAttribute("marker-end") || ""}|${path.getAttribute("marker-start") || ""}`;
+		if (options.propagate === "bundle") {
+			for (let relatedEdgeID of this.getRelatedEdgeIDsForEdge(state, edgeID, "bundle")) {
+				if (relatedEdgeID === edgeID) continue;
+				this.updateEdgeDOM(window, relatedEdgeID, { propagate: false });
+			}
+		}
+		return oldSignature !== nextSignature;
+	},
+
+	updateNodeDOM(window, nodeID, options = {}) {
+		let state = this.graphStates.get(window);
+		if (!state || !nodeID) return false;
+		let node = this.getNodeByID?.(state, nodeID) || null;
+		if (!node) return false;
+		let oldSignature = this.getNodeDOMGeometrySignature(state, nodeID);
+		if (this.isBundleNodeState(node)) {
+			let hubElem = state.bundleHubElemsByID?.get(nodeID)
+				|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${nodeID}"]`);
+			if (!hubElem) return false;
+			state.bundleHubElemsByID?.set(nodeID, hubElem);
+			this.updateBundleHubElementDOM(state, node, hubElem);
+		}
+		else {
+			let group = state.nodeElemsByID?.get(nodeID)
+				|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+			if (!group) return false;
+			state.nodeElemsByID?.set(nodeID, group);
+			this.updateNodeGroupElementDOM(state, node, group, window.document);
+		}
+		let geometryChanged = oldSignature !== this.getNodeTargetGeometrySignature(node);
+		if (options.propagate) {
+			for (let edgeID of this.getRelatedEdgeIDsForNode(state, nodeID, options.propagate)) {
+				this.updateEdgeDOM(window, edgeID, { propagate: false });
+			}
+		}
+		if (this.isBundleNodeState(node)) {
+			this.updateBundleVisibilityForHubElement(state, nodeID);
+		}
+		else {
+			this.updateAnchorVisibilityForNodeElement(state, nodeID);
+		}
+		if (state.renamingNodeID === nodeID || state.selectedNodeID === nodeID) {
+			this.syncNodeRenameInputLayout(window);
+		}
+		return geometryChanged;
+	},
+
+	updateAnchorVisibilityForNodeElement(state, nodeID) {
+		if (!state || !nodeID) return;
+		let elem = state.nodeElemsByID?.get(nodeID)
+			|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+		if (!elem) return;
+		for (let side of ["left", "right"]) {
+			let anchor = elem.querySelector(`.paper-relations-node-anchor[data-anchor-side="${side}"]`);
+			if (!anchor) continue;
+			anchor.classList.toggle("active", this.isAnchorVisibleInState(state, nodeID, side));
+		}
+	},
+
+	updateBundleVisibilityForHubElement(state, bundleID) {
+		if (!state || !bundleID) return;
+		let hubElem = state.bundleHubElemsByID?.get(bundleID)
+			|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${bundleID}"]`);
+		if (!hubElem) return;
+		hubElem.classList.toggle("active", this.isBundleVisibleInState(state, bundleID));
 	},
 
 	getVisibleBundleNodes(state) {

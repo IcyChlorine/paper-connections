@@ -261,7 +261,7 @@ var PaperRelationsGraphExportMixin = {
 					bundle.slopeMode = this.normalizeBundleSlopeMode(updated.slopeMode);
 					bundle.updatedAt = updated.updatedAt;
 				}
-				this.renderGraph(window);
+				this.updateNodeDOM(window, bundleID, { propagate: "bundle" });
 				this.notifyGraphContextChanged(window);
 			}
 			catch (error) {

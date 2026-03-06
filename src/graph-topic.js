@@ -60,7 +60,7 @@ var PaperRelationsGraphTopicMixin = {
 				state.dragBundleID = null;
 				state.contextMenuBundleID = null;
 				state.suppressNextContextMenu = false;
-				this.renderGraph(window);
+				this.refreshGraph(window);
 			}
 			this.refreshGraphChrome(window);
 			this.notifyGraphSelectionChanged(window);
@@ -171,7 +171,7 @@ var PaperRelationsGraphTopicMixin = {
 				state.selectedNodeID = selectedNode.id;
 			}
 		}
-		this.renderGraph(window);
+		this.refreshGraph(window);
 		if (typeof this.getBundleTopologyWarningsFromState === "function") {
 			let warnings = this.getBundleTopologyWarningsFromState(state);
 			if (typeof this.showBundleTopologyWarnings === "function") {
@@ -219,7 +219,7 @@ var PaperRelationsGraphTopicMixin = {
 		state.dragBundleID = null;
 		state.contextMenuBundleID = null;
 		state.suppressNextContextMenu = false;
-		this.renderGraph(window);
+		this.refreshGraph(window);
 	},
 
 	promptTopicNameInput(window, dialogTitle, defaultName) {

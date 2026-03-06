@@ -322,7 +322,10 @@ PaperRelations = {
 			}
 
 			if (changed) {
-				this.renderGraph(win);
+				for (let node of state.nodes) {
+					if (node.libraryID !== itemLibraryID || node.itemKey !== itemKey) continue;
+					this.updateNodeDOM(win, node.id, { propagate: "bundle" });
+				}
 				this.notifyGraphSelectionChanged(win);
 			}
 		}

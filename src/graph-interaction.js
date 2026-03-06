@@ -415,9 +415,7 @@ var PaperRelationsGraphInteractionMixin = {
 		let nextID = nextHover?.id || null;
 		if (state.hoverBundleID === nextID) return nextHover;
 		state.hoverBundleID = nextID;
-		if (options.render !== false) {
-			this.renderGraph(window);
-		}
+		this.applyBundleVisibilityToDOM(state);
 		return nextHover;
 	},
 
@@ -686,7 +684,7 @@ var PaperRelationsGraphInteractionMixin = {
 		};
 		state.renameBusy = false;
 		state.renameInput.value = initialValue;
-		this.renderGraph(window);
+		this.updateNodeDOM(window, nodeID, { propagate: false });
 		this.syncNodeRenameInputLayout(window);
 		this.setRenameInputHidden(window, false);
 		this.syncNodeRenameInputLayout(window);
@@ -718,7 +716,7 @@ var PaperRelationsGraphInteractionMixin = {
 		node.width = nextWidth;
 		node.x = centerX - nextMetrics.width / 2;
 		node.y = centerY - nextMetrics.height / 2;
-		this.renderGraph(window);
+		this.updateNodeDOM(window, node.id, { propagate: "bundle" });
 		this.notifyGraphSelectionChanged(window);
 	},
 
@@ -744,8 +742,8 @@ var PaperRelationsGraphInteractionMixin = {
 		state.renameSnapshot = null;
 		state.renameBusy = false;
 		this.setRenameInputHidden(window, true);
-		if (render) {
-			this.renderGraph(window);
+		if (render && nodeID) {
+			this.updateNodeDOM(window, nodeID, { propagate: "bundle" });
 			this.notifyGraphSelectionChanged(window);
 		}
 	},
@@ -897,6 +895,7 @@ var PaperRelationsGraphInteractionMixin = {
 			state.dragNodeID = null;
 			state.dragNodeRawX = null;
 			state.dragNodeRawY = null;
+			state.dragNodeMoved = false;
 			state.dragBundleID = null;
 			state.dragBundleRawX = null;
 			state.dragBundleRawY = null;
@@ -936,6 +935,7 @@ var PaperRelationsGraphInteractionMixin = {
 			state.dragNodeID = null;
 			state.dragNodeRawX = null;
 			state.dragNodeRawY = null;
+			state.dragNodeMoved = false;
 			state.dragBundleID = null;
 			state.dragBundleRawX = null;
 			state.dragBundleRawY = null;
@@ -983,6 +983,7 @@ var PaperRelationsGraphInteractionMixin = {
 			state.dragNodeID = null;
 			state.dragNodeRawX = null;
 			state.dragNodeRawY = null;
+			state.dragNodeMoved = false;
 			state.dragBundleID = null;
 			state.dragBundleRawX = null;
 			state.dragBundleRawY = null;
@@ -1007,6 +1008,7 @@ var PaperRelationsGraphInteractionMixin = {
 		state.dragNodeID = nodeElem ? nodeElem.getAttribute("data-node-id") : null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		state.dragNodeMoved = false;
 		state.dragBundleID = null;
 		state.dragBundleRawX = null;
 		state.dragBundleRawY = null;
@@ -1033,7 +1035,7 @@ var PaperRelationsGraphInteractionMixin = {
 		event.preventDefault();
 	},
 
-	onGraphDoubleClick(window, event) {
+	onGraphClick(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state || event?.button !== 0) return;
 		if (state.renamingNodeID || state.renameBusy) return;
@@ -1043,16 +1045,41 @@ var PaperRelationsGraphInteractionMixin = {
 			let hitNode = this.getNodeAtClient(window, event.clientX, event.clientY);
 			nodeID = hitNode?.id || null;
 		}
-		if (!nodeID) return;
+		if (!nodeID) {
+			if (event?.detail === 1) {
+				this.selectGraphNode(window, null);
+			}
+			return;
+		}
 
 		let node = this.getNodeByID(state, nodeID);
 		if (!node || this.isBundleNodeState(node)) return;
 
 		this.hideGraphContextMenus(window);
 		this.selectGraphNode(window, nodeID);
-		this.openGraphNodeItem(window, node, event).catch((error) => Zotero.logError(error));
-		event.preventDefault();
-		event.stopPropagation();
+	},
+
+	onGraphSVGDoubleClick(window, event) {
+		let target = event?.target || null;
+		let nodeID = this.getNodeIDFromEventTarget(target);
+		let tagName = String(target?.tagName || target?.nodeName || "(unknown)");
+		Services.prompt.alert(
+			window,
+			"Paper Relations",
+			`SVG dblclick detected\nTarget: ${tagName}\nNode ID: ${nodeID || "(none)"}`,
+		);
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
+	},
+
+	onGraphHeaderDoubleClick(window, event) {
+		Services.prompt.alert(
+			window,
+			"Paper Relations",
+			"Graph workspace header dblclick detected",
+		);
+		event?.preventDefault?.();
+		event?.stopPropagation?.();
 	},
 
 	onGraphMouseMove(window, event) {
@@ -1126,7 +1153,8 @@ var PaperRelationsGraphInteractionMixin = {
 					node.x = state.dragNodeRawX;
 					node.y = state.dragNodeRawY;
 				}
-				this.renderGraph(window);
+				state.dragNodeMoved = true;
+				this.updateNodeDOM(window, node.id, { propagate: "bundle" });
 				this.notifyGraphSelectionChanged(window);
 			}
 		}
@@ -1149,13 +1177,12 @@ var PaperRelationsGraphInteractionMixin = {
 				}
 				bundle.updatedAt = this.now();
 				state.hoverBundleID = bundle.id;
-				this.renderGraph(window);
+				this.updateNodeDOM(window, bundle.id, { propagate: "bundle" });
 			}
 		}
 
 		state.lastClientX = event.clientX;
 		state.lastClientY = event.clientY;
-		event.preventDefault();
 	},
 
 	async onGraphMouseUp(window, event) {
@@ -1173,6 +1200,8 @@ var PaperRelationsGraphInteractionMixin = {
 		state.dragNodeID = null;
 		state.dragNodeRawX = null;
 		state.dragNodeRawY = null;
+		let dragNodeMoved = !!state.dragNodeMoved;
+		state.dragNodeMoved = false;
 		state.dragBundleID = null;
 		state.dragBundleRawX = null;
 		state.dragBundleRawY = null;
@@ -1264,13 +1293,14 @@ var PaperRelationsGraphInteractionMixin = {
 				}
 			}
 			state.hoverBundleID = dragBundleID;
-			this.renderGraph(window);
+			this.updateNodeDOM(window, dragBundleID, { propagate: "bundle" });
 			this.notifyGraphContextChanged(window);
 			return;
 		}
 		if (
 			dragMode === "node" &&
 			dragNodeID &&
+			dragNodeMoved &&
 			state.activeTopicID &&
 			state.activeLibraryID &&
 			!state.isTemporaryTopic
@@ -1285,7 +1315,7 @@ var PaperRelationsGraphInteractionMixin = {
 					node.x = snapped.x;
 					node.y = snapped.y;
 				}
-				this.renderGraph(window);
+				this.updateNodeDOM(window, dragNodeID, { propagate: "bundle" });
 				this.updateNode(state.activeLibraryID, state.activeTopicID, dragNodeID, {
 					x: node.x,
 					y: node.y,
@@ -1372,9 +1402,18 @@ var PaperRelationsGraphInteractionMixin = {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		if (state.selectedNodeID === nodeID) return;
+		let previousNodeID = state.selectedNodeID;
 		state.selectedNodeID = nodeID;
-		this.syncSelectedGraphNodeToItemList(window, nodeID);
-		this.renderGraph(window);
+		if (previousNodeID) {
+			this.updateNodeDOM(window, previousNodeID, { propagate: false });
+		}
+		if (nodeID) {
+			this.updateNodeDOM(window, nodeID, { propagate: false });
+			this.syncSelectedGraphNodeToItemList(window, nodeID);
+		}
+		if (!previousNodeID && !nodeID) {
+			this.applySelectedNodeStateToDOM(state);
+		}
 		this.notifyGraphSelectionChanged(window);
 	},
 
@@ -1413,6 +1452,15 @@ var PaperRelationsGraphInteractionMixin = {
 
 	notifyGraphSelectionChanged(window) {
 		window.dispatchEvent(new window.CustomEvent("paper-relations:graph-selection-changed"));
+	},
+
+	applySelectedNodeStateToDOM(state) {
+		if (!state?.nodesGroup) return;
+		let nodeElems = state.nodesGroup.querySelectorAll(".paper-relations-node[data-node-id]");
+		for (let elem of nodeElems) {
+			let nodeID = elem.getAttribute("data-node-id");
+			elem.classList.toggle("selected", state.selectedNodeID === nodeID);
+		}
 	},
 
 	getGraphSelectionInfo(window) {
