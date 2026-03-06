@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="assets/paper-connections-svgrepo-com.svg" alt="Paper Connections icon" width="72" />
+  <img src="assets/paper-connections-svgrepo-com.svg" alt="Paper Connections icon" width="48" />
   Paper Connections
 </h1>
 
