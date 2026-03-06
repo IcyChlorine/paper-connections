@@ -11,5 +11,5 @@ paper-connections-selection-debug-sidenav =
     .tooltiptext = Selection Debug
 
 paper-connections-remark-label =
-    Remark(PR)
+    Remark(PC)
 

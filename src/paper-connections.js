@@ -87,7 +87,7 @@ PaperConnections = {
 	},
 
 	getRemarkDisplayLabel() {
-		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PR)" : "Remark(PR)";
+		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PC)" : "Remark(PC)";
 	},
 
 	normalizeRemarkValue(value) {

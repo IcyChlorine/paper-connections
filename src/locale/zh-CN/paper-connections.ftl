@@ -11,4 +11,4 @@ paper-connections-selection-debug-sidenav =
     .tooltiptext = 选择调试
 
 paper-connections-remark-label =
-    简记(PR)
+    简记(PC)
