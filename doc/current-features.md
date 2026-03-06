@@ -5,7 +5,7 @@
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-connections@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
-- Storage schema version: `2`
+- Storage shape: canonical topic/node/edge store (no top-level version field)
 
 ## Implemented Features
 - Right item-pane custom section: `Topic Context Section`
@@ -59,7 +59,7 @@
     - opens SVG export settings dialog (`SVG 导出设置`: include grid + margin),
     - opens save dialog,
     - exports content-bounds plus margin as SVG.
-  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`schemaVersion` + `topic` payload, no legacy `bundles` metadata).
+  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`topic` payload only, no top-level version field or legacy `bundles` metadata).
   - Node `Remove` deletes node and incident edges from active saved topic.
   - Node `Rename` (or `F2`) enters inline edit mode; `Enter` confirms, `Esc` cancels.
   - Node left/right anchors appear near cursor and support drag-to-create edge.
@@ -93,6 +93,7 @@
 ## Data Layer
 - Implemented topic/node/edge CRUD in `src/storage.js`.
 - Data schema and API details documented in `doc/storage-crud.md`.
+- One-time migration on first load converts legacy `paper-relations.graph.v1` / schema-tagged stores into the canonical `paper-connections.graph.v1` payload, then normal runtime stays on the canonical shape only.
 
 ## Runtime Script Architecture
 - `src/graph-workspace.js`: pane mount/unmount, visibility toggle, event wiring, DOM assembly.
@@ -118,4 +119,3 @@
 - Topic chooser UI when a paper belongs to multiple topics.
 - Edge editing UI (relation type and note).
 - Integration with real relation semantics in right pane (beyond debug scaffolding).
-- Schema migration helpers for future storage versions.

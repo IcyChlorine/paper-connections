@@ -20,10 +20,10 @@ PaperConnections = {
 	selectionItemsByWindow: null,
 	syncedSettingsLoadedLibraries: null,
 	remarkMigrationBusyByWindow: null,
+	storeMigrationCheckedLibraries: null,
 
 	storeSettingKey: "paper-connections.graph.v1",
-	legacyStoreSettingKeys: ["paper-relations.graph.v1"],
-	storeSchemaVersion: 2,
+	legacyStoreSettingKey: "paper-relations.graph.v1",
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,
@@ -46,6 +46,7 @@ PaperConnections = {
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
 		this.remarkMigrationBusyByWindow = new WeakMap();
+		this.storeMigrationCheckedLibraries = new Set();
 		this.initialized = true;
 	},
 

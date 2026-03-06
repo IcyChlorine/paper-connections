@@ -1,14 +1,16 @@
 var PaperConnectionsStorageMixin = {
 	normalizeBundleSlopeMode(mode) {
+		return mode === "flat" ? "flat" : "free";
+	},
+
+	normalizeLegacyBundleSlopeMode(mode) {
 		if (mode === "flat") return "flat";
-		// Backward compatibility: previous "matched" mode now maps to unconstrained mode.
 		if (mode === "matched") return "free";
 		return "free";
 	},
 
 	createEmptyStore() {
 		return {
-			schemaVersion: this.storeSchemaVersion,
 			topics: {},
 			itemTopicIndex: {},
 		};
@@ -32,8 +34,11 @@ var PaperConnectionsStorageMixin = {
 		return null;
 	},
 
-	normalizeTopicRecord(topicInput, topicIDHint, libraryIDHint = null) {
+	normalizeTopicRecord(topicInput, topicIDHint, libraryIDHint = null, options = {}) {
 		if (!topicInput || typeof topicInput !== "object") return null;
+		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
+			? options.normalizeSlopeMode
+			: (mode) => this.normalizeBundleSlopeMode(mode);
 		let now = this.now();
 		let topicID = typeof topicInput.id === "string" && topicInput.id
 			? topicInput.id
@@ -67,7 +72,7 @@ var PaperConnectionsStorageMixin = {
 					nodeType: "bundle",
 					x: Number.isFinite(rawNode.x) ? rawNode.x : 0,
 					y: Number.isFinite(rawNode.y) ? rawNode.y : 0,
-					slopeMode: this.normalizeBundleSlopeMode(rawNode.slopeMode),
+					slopeMode: normalizeSlopeMode(rawNode.slopeMode),
 					createdAt: Number.isFinite(rawNode.createdAt) ? rawNode.createdAt : now,
 					updatedAt: Number.isFinite(rawNode.updatedAt) ? rawNode.updatedAt : now,
 				};
@@ -118,7 +123,10 @@ var PaperConnectionsStorageMixin = {
 		return topic;
 	},
 
-	createBundleNodeRecord(topic, input = {}) {
+	createBundleNodeRecord(topic, input = {}, options = {}) {
+		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
+			? options.normalizeSlopeMode
+			: (mode) => this.normalizeBundleSlopeMode(mode);
 		let now = this.now();
 		let nodeID = typeof input.id === "string" && input.id ? input.id : this.generateID("bundle");
 		while (topic.nodes[nodeID]) {
@@ -129,7 +137,7 @@ var PaperConnectionsStorageMixin = {
 			nodeType: "bundle",
 			x: Number.isFinite(input.x) ? input.x : 0,
 			y: Number.isFinite(input.y) ? input.y : 0,
-			slopeMode: this.normalizeBundleSlopeMode(input.slopeMode),
+			slopeMode: normalizeSlopeMode(input.slopeMode),
 			createdAt: Number.isFinite(input.createdAt) ? input.createdAt : now,
 			updatedAt: Number.isFinite(input.updatedAt) ? input.updatedAt : now,
 		};
@@ -209,8 +217,11 @@ var PaperConnectionsStorageMixin = {
 		return { issues, warnings };
 	},
 
-	migrateLegacyBundlesIntoNodes(topic, rawBundlesInput = null) {
+	migrateLegacyBundlesIntoNodes(topic, rawBundlesInput = null, options = {}) {
 		if (!topic || typeof topic !== "object") return { migrated: 0 };
+		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
+			? options.normalizeSlopeMode
+			: (mode) => this.normalizeLegacyBundleSlopeMode(mode);
 		let rawBundlesSource = rawBundlesInput && typeof rawBundlesInput === "object"
 			? rawBundlesInput
 			: (topic.bundles && typeof topic.bundles === "object" ? topic.bundles : null);
@@ -243,7 +254,7 @@ var PaperConnectionsStorageMixin = {
 				slopeMode: rawBundle.slopeMode,
 				createdAt: rawBundle.createdAt,
 				updatedAt: rawBundle.updatedAt,
-			});
+			}, { normalizeSlopeMode });
 			topic.nodes[bundleNode.id] = bundleNode;
 			let now = this.now();
 			for (let edgeID of validEdgeIDs) {
@@ -282,65 +293,65 @@ var PaperConnectionsStorageMixin = {
 		return index;
 	},
 
-	normalizeStoreWithMeta(rawStore) {
-		let changed = false;
-		let store = rawStore && typeof rawStore === "object"
-			? this.cloneJSON(rawStore)
-			: this.createEmptyStore();
-		if (!store || typeof store !== "object") {
-			return { store: this.createEmptyStore(), changed: true };
-		}
-
-		if (!store.topics || typeof store.topics !== "object") {
-			store.topics = {};
-			changed = true;
-		}
-		if (!store.itemTopicIndex || typeof store.itemTopicIndex !== "object") {
-			store.itemTopicIndex = {};
-			changed = true;
-		}
-
-		let normalizedTopics = {};
-		for (let [topicID, rawTopic] of Object.entries(store.topics || {})) {
-			let topic = this.normalizeTopicRecord(rawTopic, topicID);
-			if (!topic) {
-				changed = true;
-				continue;
+	buildCanonicalStore(rawStore, options = {}) {
+		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
+			? options.normalizeSlopeMode
+			: (mode) => this.normalizeBundleSlopeMode(mode);
+		let migrateLegacyBundles = options.migrateLegacyBundles === true;
+		let source = rawStore && typeof rawStore === "object" ? rawStore : {};
+		let topicsInput = source.topics && typeof source.topics === "object" ? source.topics : {};
+		let topics = {};
+		for (let [topicID, rawTopic] of Object.entries(topicsInput)) {
+			let topic = this.normalizeTopicRecord(rawTopic, topicID, null, { normalizeSlopeMode });
+			if (!topic) continue;
+			if (migrateLegacyBundles && rawTopic?.bundles && typeof rawTopic.bundles === "object" && Object.keys(rawTopic.bundles).length) {
+				this.migrateLegacyBundlesIntoNodes(topic, rawTopic.bundles, { normalizeSlopeMode });
 			}
-			if (Object.prototype.hasOwnProperty.call(rawTopic || {}, "bundles")) {
-				changed = true;
-			}
-			if (rawTopic?.bundles && Object.keys(rawTopic.bundles).length) {
-				let result = this.migrateLegacyBundlesIntoNodes(topic, rawTopic.bundles);
-				if (result.migrated > 0) {
-					changed = true;
-				}
-			}
-			let removedBundleIDs = this.cleanupIsolatedBundleNodes(topic);
-			if (removedBundleIDs.length) changed = true;
+			this.cleanupIsolatedBundleNodes(topic);
 			topic.updatedAt = Number.isFinite(topic.updatedAt) ? topic.updatedAt : this.now();
-			normalizedTopics[topic.id] = topic;
+			topics[topic.id] = topic;
 		}
-		store.topics = normalizedTopics;
+		let store = {
+			topics,
+			itemTopicIndex: {},
+		};
+		store.itemTopicIndex = this.rebuildItemTopicIndex(store);
+		return store;
+	},
 
-		let rebuiltIndex = this.rebuildItemTopicIndex(store);
-		let oldIndexText = JSON.stringify(store.itemTopicIndex || {});
-		let newIndexText = JSON.stringify(rebuiltIndex);
-		if (oldIndexText !== newIndexText) {
-			changed = true;
+	isLegacyStoreData(rawStore) {
+		if (!rawStore || typeof rawStore !== "object") return false;
+		if (Object.prototype.hasOwnProperty.call(rawStore, "schemaVersion")) return true;
+		for (let rawTopic of Object.values(rawStore.topics || {})) {
+			if (!rawTopic || typeof rawTopic !== "object") continue;
+			if (Object.prototype.hasOwnProperty.call(rawTopic, "bundles")) return true;
+			for (let rawNode of Object.values(rawTopic.nodes || {})) {
+				if (!rawNode || typeof rawNode !== "object") continue;
+				if (rawNode.slopeMode === "matched") return true;
+			}
 		}
-		store.itemTopicIndex = rebuiltIndex;
+		return false;
+	},
 
-		if (store.schemaVersion !== this.storeSchemaVersion) {
-			changed = true;
-		}
-		store.schemaVersion = this.storeSchemaVersion;
-
-		return { store, changed };
+	convertLegacyStore(rawStore) {
+		return this.buildCanonicalStore(rawStore, {
+			migrateLegacyBundles: true,
+			normalizeSlopeMode: (mode) => this.normalizeLegacyBundleSlopeMode(mode),
+		});
 	},
 
 	normalizeStore(rawStore) {
-		return this.normalizeStoreWithMeta(rawStore).store;
+		if (!rawStore || typeof rawStore !== "object") {
+			return {
+				store: this.createEmptyStore(),
+				changed: rawStore !== undefined && rawStore !== null,
+			};
+		}
+		let store = this.buildCanonicalStore(rawStore);
+		return {
+			store,
+			changed: JSON.stringify(rawStore) !== JSON.stringify(store),
+		};
 	},
 
 	async ensureSyncedSettingsLoaded(libraryID) {
@@ -352,35 +363,57 @@ var PaperConnectionsStorageMixin = {
 		this.syncedSettingsLoadedLibraries.add(libraryID);
 	},
 
-	getStoreSettingKeysForLoad() {
-		let keys = [this.storeSettingKey];
-		for (let key of this.legacyStoreSettingKeys || []) {
-			if (typeof key !== "string" || !key || keys.includes(key)) continue;
-			keys.push(key);
+	hasStoreTopics(store) {
+		return !!store && typeof store === "object" && Object.keys(store.topics || {}).length > 0;
+	},
+
+	async migrateLegacyStoreOnce(libraryID) {
+		if (this.storeMigrationCheckedLibraries.has(libraryID)) return;
+		await this.ensureSyncedSettingsLoaded(libraryID);
+
+		let currentRaw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
+		let legacyRaw = Zotero.SyncedSettings.get(libraryID, this.legacyStoreSettingKey);
+
+		if (currentRaw !== undefined && currentRaw !== null) {
+			let currentResult = this.isLegacyStoreData(currentRaw)
+				? { store: this.convertLegacyStore(currentRaw), changed: true }
+				: this.normalizeStore(currentRaw);
+			let nextStore = currentResult.store;
+			if (!this.hasStoreTopics(nextStore) && legacyRaw !== undefined && legacyRaw !== null) {
+				let legacyStore = this.convertLegacyStore(legacyRaw);
+				if (this.hasStoreTopics(legacyStore)) {
+					nextStore = legacyStore;
+					currentResult = { store: nextStore, changed: true };
+				}
+			}
+			if (currentResult.changed) {
+				await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, nextStore);
+			}
+			this.storeMigrationCheckedLibraries.add(libraryID);
+			return;
 		}
-		return keys;
+
+		if (legacyRaw !== undefined && legacyRaw !== null) {
+			let migratedStore = this.convertLegacyStore(legacyRaw);
+			await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, migratedStore);
+		}
+
+		this.storeMigrationCheckedLibraries.add(libraryID);
 	},
 
 	async loadStore(libraryID) {
 		await this.ensureSyncedSettingsLoaded(libraryID);
-		let raw = null;
-		let sourceKey = this.storeSettingKey;
-		for (let settingKey of this.getStoreSettingKeysForLoad()) {
-			let candidate = Zotero.SyncedSettings.get(libraryID, settingKey);
-			if (candidate === undefined || candidate === null) continue;
-			raw = candidate;
-			sourceKey = settingKey;
-			break;
-		}
-		let { store, changed } = this.normalizeStoreWithMeta(raw);
-		if (changed || sourceKey !== this.storeSettingKey) {
+		await this.migrateLegacyStoreOnce(libraryID);
+		let raw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
+		let { store, changed } = this.normalizeStore(raw);
+		if (changed) {
 			await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, store);
 		}
 		return store;
 	},
 
 	async saveStore(libraryID, store) {
-		let normalized = this.normalizeStore(store);
+		let { store: normalized } = this.normalizeStore(store);
 		await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, normalized);
 		return normalized;
 	},

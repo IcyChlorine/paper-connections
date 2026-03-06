@@ -661,7 +661,6 @@ var PaperConnectionsGraphExportMixin = {
 			let filePath = await this.promptSelectExportFile(window, "json");
 			if (!filePath) return;
 			let payload = {
-				schemaVersion: this.storeSchemaVersion,
 				topic,
 			};
 			this.writeTextFileUTF8(filePath, `${JSON.stringify(payload, null, 2)}\n`);

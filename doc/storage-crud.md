@@ -7,17 +7,20 @@ Target: Zotero 7 (`src`)
 
 - Backend: `Zotero.SyncedSettings`
 - Setting key: `paper-connections.graph.v1`
-- Legacy compatibility: if the new key is empty, runtime falls back to `paper-relations.graph.v1` and rewrites the normalized store into the new key
 - Scope: per `libraryID` (not global preference)
 - Sync behavior: uses Zotero synced settings channel (library-scoped)
+- One-time migration in this release:
+  - `migrateLegacyStoreOnce(libraryID)` runs before normal store reads.
+  - Converts legacy `paper-relations.graph.v1` payloads and schema-tagged / metadata-era stores into the canonical current payload.
+  - Canonical payload has no top-level `schemaVersion` and no legacy `topic.bundles` metadata.
+  - After migration, normal runtime paths read and write only the canonical shape under `paper-connections.graph.v1`.
 
-## 2. Store schema (v2)
+## 2. Canonical store shape
 
 Top-level JSON shape:
 
 ```json
 {
-  "schemaVersion": 2,
   "topics": {
     "<topicID>": {
       "id": "<topicID>",
@@ -69,7 +72,8 @@ Top-level JSON shape:
 ```
 
 Notes:
-- Legacy `topic.bundles` metadata is removed in v2.
+- Canonical store has no top-level `schemaVersion` field.
+- Canonical store has no legacy `topic.bundles` metadata.
 - `itemTopicIndex` only indexes `nodeType="paper"` nodes.
 - `slopeMode` allowed values: `flat` (default) / `free`.
 
@@ -128,17 +132,24 @@ These remain as wrappers only and should not be used by new logic:
 - `deleteBundle(...)`
 - `replaceBundles(...)`
 
-## 4. Migration and normalization
+## 4. One-time migration and normalization
 
-- `loadStore()` performs normalization and auto-migration.
-- During rename rollout, `loadStore()` first tries `paper-connections.graph.v1` and falls back to legacy `paper-relations.graph.v1`.
-- If legacy data is loaded, the normalized store is persisted back under `paper-connections.graph.v1`.
-- If store is v1 (or topic still has legacy `bundles`):
+- `migrateLegacyStoreOnce(libraryID)` runs before normal `loadStore()` reads the current key.
+- Legacy sources handled by the migration step:
+  - old namespace key `paper-relations.graph.v1`
+  - stores that still contain top-level `schemaVersion`
+  - topics that still contain metadata-era `bundles`
+  - legacy bundle nodes with `slopeMode: "matched"`
+- Migration rewrites legacy bundle metadata into canonical real graph entities:
   - each legacy bundle becomes a real `bundle` node,
-  - member edges are rewritten to originate from the new hub,
+  - member edges are rewritten to originate from that hub,
   - a trunk edge `source -> hub` is created,
-  - legacy `topic.bundles` is removed.
-- Store is rewritten with `schemaVersion = 2` after migration.
+  - legacy `topic.bundles` is dropped,
+  - legacy slope mode `matched` maps to canonical `free`.
+- Migration rebuilds `itemTopicIndex` and writes the canonical payload back under `paper-connections.graph.v1`.
+- If the current key already exists but is empty while the legacy key still has data, migration prefers the legacy data once so old user data is not masked by an empty new-key placeholder.
+- After that migration step, normal runtime code only reads/writes the canonical store shape; it does not keep separate v1/v2 branches in steady-state logic.
+- `normalizeStore()` still performs lightweight canonical cleanup on current data (for example invalid endpoints or stale index cleanup), but not legacy-format branching.
 
 ## 5. Data integrity rules
 
@@ -151,10 +162,10 @@ These remain as wrappers only and should not be used by new logic:
 
 ## 6. Frontend integration notes
 
-- Shift+RMB bundling now persists real graph edits through `applyBundleGroups(...)`.
+- Shift+RMB bundling persists real graph edits through `applyBundleGroups(...)`.
 - Hub drag persists by `updateNode(...)` on `bundle` node.
 - Hub dissolve uses `dissolveBundleNode(...)`.
-- JSON export contains v2 node/edge model directly (no `topic.bundles`).
+- JSON export contains canonical topic data directly (`{ "topic": ... }`, no top-level `schemaVersion`, no `topic.bundles`).
 
 ## 7. Known constraints
 
