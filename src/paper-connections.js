@@ -19,11 +19,8 @@ PaperConnections = {
 	topicContextSectionListeners: null,
 	selectionItemsByWindow: null,
 	syncedSettingsLoadedLibraries: null,
-	remarkMigrationBusyByWindow: null,
-	storeMigrationCheckedLibraries: null,
 
 	storeSettingKey: "paper-connections.graph.v1",
-	legacyStoreSettingKey: "paper-relations.graph.v1",
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,
@@ -45,8 +42,6 @@ PaperConnections = {
 		this.topicContextSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
-		this.remarkMigrationBusyByWindow = new WeakMap();
-		this.storeMigrationCheckedLibraries = new Set();
 		this.initialized = true;
 	},
 
@@ -140,34 +135,6 @@ PaperConnections = {
 		item.setField("extra", newExtra);
 		await item.saveTx();
 		return true;
-	},
-
-	extractLegacyRemarkFromNoteHTML(noteHTML) {
-		let html = String(noteHTML || "");
-		if (!html.trim()) return "";
-		let text = html
-			.replace(/<br\s*\/?>/gi, "\n")
-			.replace(/<\/p>/gi, "\n")
-			.replace(/<[^>]*>/g, " ")
-			.replace(/&nbsp;/g, " ");
-		if (Zotero.Utilities?.unescapeHTML) {
-			text = Zotero.Utilities.unescapeHTML(text);
-		}
-		return this.normalizeRemarkValue(text);
-	},
-
-	async getLegacyRemarkFromItemNotes(item) {
-		if (!item || typeof item.getNotes !== "function") return "";
-		let noteIDs = item.getNotes() || [];
-		for (let noteID of noteIDs) {
-			let noteItem = await Zotero.Items.getAsync(noteID);
-			if (!noteItem || !noteItem.isNote?.()) continue;
-			let hasRemarkTag = (noteItem.getTags?.() || []).some((tag) => String(tag?.tag || "").trim().toLowerCase() === "remark");
-			if (!hasRemarkTag) continue;
-			let candidate = this.extractLegacyRemarkFromNoteHTML(noteItem.getNote?.() || "");
-			if (candidate) return candidate;
-		}
-		return "";
 	},
 
 	registerRemarkIntegration() {
@@ -351,87 +318,6 @@ PaperConnections = {
 			|| this.selectionItemsByWindow.get(window)?.libraryID
 			|| window?.ZoteroPane?.getSelectedLibraryID?.()
 			|| Zotero.Libraries.userLibraryID;
-	},
-
-	isRemarkMigrationBusy(window) {
-		return !!this.remarkMigrationBusyByWindow.get(window);
-	},
-
-	setRemarkMigrationBusy(window, busy) {
-		this.remarkMigrationBusyByWindow.set(window, !!busy);
-		this.notifyGraphContextChanged(window);
-	},
-
-	async migrateLegacyESRemarksForLibrary(libraryID) {
-		let scanned = 0;
-		let alreadyCompatible = 0;
-		let migrated = 0;
-		let errors = 0;
-
-		let search = new Zotero.Search();
-		search.libraryID = libraryID;
-		let itemIDs = await search.search();
-		let items = await Zotero.Items.getAsync(itemIDs);
-
-		for (let item of items) {
-			if (!item || !item.isRegularItem?.()) continue;
-			scanned += 1;
-
-			let existingRemark = this.getItemRemark(item);
-			if (existingRemark) {
-				alreadyCompatible += 1;
-				continue;
-			}
-
-			let legacyRemark = await this.getLegacyRemarkFromItemNotes(item);
-			if (!legacyRemark) continue;
-
-			try {
-				await this.setItemRemark(item, legacyRemark);
-				migrated += 1;
-			}
-			catch (error) {
-				errors += 1;
-				Zotero.logError(error);
-			}
-		}
-
-		this.refreshRemarkPresentation();
-		return { scanned, alreadyCompatible, migrated, errors };
-	},
-
-	async promptMigrateESRemarks(window, explicitItem = null) {
-		let libraryID = this.getTargetLibraryID(window, explicitItem);
-		if (!libraryID) return;
-
-		let proceed = Services.prompt.confirm(
-			window,
-			"Migrate ES Remarks",
-			"Import legacy Ethereal Style remarks into Paper Connections Remark now?\n\n" +
-				"Note: existing remark values in Extra (remark: ...) are already compatible and will be kept as-is."
-		);
-		if (!proceed) return;
-
-		this.setRemarkMigrationBusy(window, true);
-		try {
-			let result = await this.migrateLegacyESRemarksForLibrary(libraryID);
-			Services.prompt.alert(
-				window,
-				"Migrate ES Remarks",
-				`Library: ${libraryID}\n` +
-					`Scanned regular items: ${result.scanned}\n` +
-					`Already compatible: ${result.alreadyCompatible}\n` +
-					`Migrated from legacy notes: ${result.migrated}\n` +
-					`Errors: ${result.errors}`
-			);
-		}
-		catch (error) {
-			Zotero.logError(error);
-			Services.prompt.alert(window, "Migrate ES Remarks Failed", String(error?.message || error));
-		}
-		finally {
-			this.setRemarkMigrationBusy(window, false);
-		}
 	},
 
 	getLabelCharUnits(char) {
@@ -678,12 +564,11 @@ PaperConnections = {
 
 				const buttonWrap = doc.createElementNS(XHTML_NS, "div");
 				buttonWrap.className = "paper-connections-pane-actions";
-				let isMigrationBusy = this.isRemarkMigrationBusy(win);
 				const createTopicBtn = doc.createElementNS(XHTML_NS, "button");
 				createTopicBtn.type = "button";
 				createTopicBtn.className = "paper-connections-create-topic-btn";
 				createTopicBtn.textContent = "Create topic from selected paper";
-				createTopicBtn.disabled = !item || isMigrationBusy;
+				createTopicBtn.disabled = !item;
 				createTopicBtn.addEventListener("click", () => {
 					this.promptCreateTopicFromItem(win, item).catch((error) => Zotero.logError(error));
 				});
@@ -691,21 +576,11 @@ PaperConnections = {
 				removeTopicBtn.type = "button";
 				removeTopicBtn.className = "paper-connections-remove-topic-btn";
 				removeTopicBtn.textContent = "Remove topic";
-				removeTopicBtn.disabled = !this.canRemoveActiveTopic(win) || isMigrationBusy;
+				removeTopicBtn.disabled = !this.canRemoveActiveTopic(win);
 				removeTopicBtn.addEventListener("click", () => {
 					this.promptRemoveActiveTopic(win, item).catch((error) => Zotero.logError(error));
 				});
-				const migrateRemarkBtn = doc.createElementNS(XHTML_NS, "button");
-				migrateRemarkBtn.type = "button";
-				migrateRemarkBtn.className = "paper-connections-remove-topic-btn";
-				migrateRemarkBtn.textContent = isMigrationBusy
-					? "Migrating ES Remarks..."
-					: "Migrate ES Remarks (one-time)";
-				migrateRemarkBtn.disabled = isMigrationBusy;
-				migrateRemarkBtn.addEventListener("click", () => {
-					this.promptMigrateESRemarks(win, item).catch((error) => Zotero.logError(error));
-				});
-				buttonWrap.append(createTopicBtn, removeTopicBtn, migrateRemarkBtn);
+				buttonWrap.append(createTopicBtn, removeTopicBtn);
 
 				body.append(title, desc, list, buttonWrap);
 			},

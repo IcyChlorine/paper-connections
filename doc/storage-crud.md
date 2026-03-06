@@ -9,13 +9,8 @@ Target: Zotero 7 (`src`)
 - Setting key: `paper-connections.graph.v1`
 - Scope: per `libraryID` (not global preference)
 - Sync behavior: uses Zotero synced settings channel (library-scoped)
-- One-time migration in this release:
-  - `migrateLegacyStoreOnce(libraryID)` runs before normal store reads.
-  - Converts legacy `paper-relations.graph.v1` payloads and schema-tagged / metadata-era stores into the canonical current payload.
-  - Canonical payload has no top-level `schemaVersion` and no legacy `topic.bundles` metadata.
-  - After migration, normal runtime paths read and write only the canonical shape under `paper-connections.graph.v1`.
 
-## 2. Canonical store shape
+## 2. Store shape
 
 Top-level JSON shape:
 
@@ -72,8 +67,6 @@ Top-level JSON shape:
 ```
 
 Notes:
-- Canonical store has no top-level `schemaVersion` field.
-- Canonical store has no legacy `topic.bundles` metadata.
 - `itemTopicIndex` only indexes `nodeType="paper"` nodes.
 - `slopeMode` allowed values: `flat` (default) / `free`.
 
@@ -123,35 +116,7 @@ Implemented in `src/storage.js`, consumed by:
 - `analyzeBundleTopology(topic)`
   - reports bundle topology issues/warnings (multi-inbound detection).
 
-### Deprecated compatibility wrappers
-
-These remain as wrappers only and should not be used by new logic:
-- `listBundles(...)`
-- `createBundle(...)`
-- `updateBundle(...)`
-- `deleteBundle(...)`
-- `replaceBundles(...)`
-
-## 4. One-time migration and normalization
-
-- `migrateLegacyStoreOnce(libraryID)` runs before normal `loadStore()` reads the current key.
-- Legacy sources handled by the migration step:
-  - old namespace key `paper-relations.graph.v1`
-  - stores that still contain top-level `schemaVersion`
-  - topics that still contain metadata-era `bundles`
-  - legacy bundle nodes with `slopeMode: "matched"`
-- Migration rewrites legacy bundle metadata into canonical real graph entities:
-  - each legacy bundle becomes a real `bundle` node,
-  - member edges are rewritten to originate from that hub,
-  - a trunk edge `source -> hub` is created,
-  - legacy `topic.bundles` is dropped,
-  - legacy slope mode `matched` maps to canonical `free`.
-- Migration rebuilds `itemTopicIndex` and writes the canonical payload back under `paper-connections.graph.v1`.
-- If the current key already exists but is empty while the legacy key still has data, migration prefers the legacy data once so old user data is not masked by an empty new-key placeholder.
-- After that migration step, normal runtime code only reads/writes the canonical store shape; it does not keep separate v1/v2 branches in steady-state logic.
-- `normalizeStore()` still performs lightweight canonical cleanup on current data (for example invalid endpoints or stale index cleanup), but not legacy-format branching.
-
-## 5. Data integrity rules
+## 4. Data integrity rules
 
 - Stable paper identity uses `libraryID + itemKey`.
 - Duplicate paper nodes in same topic are skipped.
@@ -160,22 +125,21 @@ These remain as wrappers only and should not be used by new logic:
 - After edge/node mutation, only isolated bundle hubs (`in=0 && out=0`) are auto-removed.
 - Multi-inbound bundle hubs are warned, not auto-repaired.
 
-## 6. Frontend integration notes
+## 5. Frontend integration notes
 
 - Shift+RMB bundling persists real graph edits through `applyBundleGroups(...)`.
 - Hub drag persists by `updateNode(...)` on `bundle` node.
 - Hub dissolve uses `dissolveBundleNode(...)`.
-- JSON export contains canonical topic data directly (`{ "topic": ... }`, no top-level `schemaVersion`, no `topic.bundles`).
+- JSON export writes topic data directly as `{ "topic": ... }`.
 
-## 7. Known constraints
+## 6. Known constraints
 
 - No visual topic chooser yet for papers in multiple topics.
 - No dedicated edge-editing UI yet (API exists).
 - Multi-inbound bundle hubs are not auto-corrected by storage.
 
-## 8. Remark storage
+## 7. Remark storage
 
 - Scope: per Zotero item (not in `paper-connections.graph.v1`).
 - Backend: Zotero item field `extra`.
 - Format: `remark: <text>` line.
-- Ethereal Style-compatible and migration-supported.

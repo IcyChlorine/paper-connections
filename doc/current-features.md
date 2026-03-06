@@ -5,7 +5,7 @@
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-connections@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
-- Storage shape: canonical topic/node/edge store (no top-level version field)
+- Storage shape: topic/node/edge store
 
 ## Implemented Features
 - Right item-pane custom section: `Topic Context Section`
@@ -18,9 +18,8 @@
 - Remark system
   - Adds a custom main-list column `Remark` via `Zotero.ItemTreeManager`.
   - Adds a custom editable info-row `Remark` in right item info pane (`afterCreators`).
-  - Stores remark in item `extra` as `remark: ...` (compatible with Ethereal Style data already in this format).
+  - Stores remark in item `extra` as `remark: ...`.
   - Editing `Remark` in right info pane immediately refreshes graph node labels for that paper in open workspaces.
-  - `Topic Context Section` includes a one-time `Migrate ES Remarks` action to import legacy ES note-tag remark data into `extra`.
 - Middle-bottom `Relation Graph Workspace` under item list
   - Resizable with splitter.
   - Grid board and nodes pan together.
@@ -59,7 +58,7 @@
     - opens SVG export settings dialog (`SVG 导出设置`: include grid + margin),
     - opens save dialog,
     - exports content-bounds plus margin as SVG.
-  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`topic` payload only, no top-level version field or legacy `bundles` metadata).
+  - Topic-menu `Export as JSON` opens save dialog and exports topic JSON (`topic` payload).
   - Node `Remove` deletes node and incident edges from active saved topic.
   - Node `Rename` (or `F2`) enters inline edit mode; `Enter` confirms, `Esc` cancels.
   - Node left/right anchors appear near cursor and support drag-to-create edge.
@@ -93,7 +92,6 @@
 ## Data Layer
 - Implemented topic/node/edge CRUD in `src/storage.js`.
 - Data schema and API details documented in `doc/storage-crud.md`.
-- One-time migration on first load converts legacy `paper-relations.graph.v1` / schema-tagged stores into the canonical `paper-connections.graph.v1` payload, then normal runtime stays on the canonical shape only.
 
 ## Runtime Script Architecture
 - `src/graph-workspace.js`: pane mount/unmount, visibility toggle, event wiring, DOM assembly.

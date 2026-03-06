@@ -3,12 +3,6 @@ var PaperConnectionsStorageMixin = {
 		return mode === "flat" ? "flat" : "free";
 	},
 
-	normalizeLegacyBundleSlopeMode(mode) {
-		if (mode === "flat") return "flat";
-		if (mode === "matched") return "free";
-		return "free";
-	},
-
 	createEmptyStore() {
 		return {
 			topics: {},
@@ -34,11 +28,8 @@ var PaperConnectionsStorageMixin = {
 		return null;
 	},
 
-	normalizeTopicRecord(topicInput, topicIDHint, libraryIDHint = null, options = {}) {
+	normalizeTopicRecord(topicInput, topicIDHint, libraryIDHint = null) {
 		if (!topicInput || typeof topicInput !== "object") return null;
-		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
-			? options.normalizeSlopeMode
-			: (mode) => this.normalizeBundleSlopeMode(mode);
 		let now = this.now();
 		let topicID = typeof topicInput.id === "string" && topicInput.id
 			? topicInput.id
@@ -61,26 +52,20 @@ var PaperConnectionsStorageMixin = {
 			let rawType = String(rawNode.nodeType || "").toLowerCase();
 			let inferredType = rawType === "bundle" || rawType === "paper"
 				? rawType
-				: (
-					(rawNode.itemKey && Number.isFinite(rawNode.libraryID))
-						? "paper"
-						: "bundle"
-				);
+				: ((rawNode.itemKey && Number.isFinite(rawNode.libraryID)) ? "paper" : "bundle");
 			if (inferredType === "bundle") {
 				normalizedNodes[nodeID] = {
 					id: nodeID,
 					nodeType: "bundle",
 					x: Number.isFinite(rawNode.x) ? rawNode.x : 0,
 					y: Number.isFinite(rawNode.y) ? rawNode.y : 0,
-					slopeMode: normalizeSlopeMode(rawNode.slopeMode),
+					slopeMode: this.normalizeBundleSlopeMode(rawNode.slopeMode),
 					createdAt: Number.isFinite(rawNode.createdAt) ? rawNode.createdAt : now,
 					updatedAt: Number.isFinite(rawNode.updatedAt) ? rawNode.updatedAt : now,
 				};
 				continue;
 			}
-			let libraryID = Number.isFinite(rawNode.libraryID)
-				? rawNode.libraryID
-				: topic.libraryID;
+			let libraryID = Number.isFinite(rawNode.libraryID) ? rawNode.libraryID : topic.libraryID;
 			let itemKey = typeof rawNode.itemKey === "string" ? rawNode.itemKey : "";
 			if (!Number.isFinite(libraryID) || !itemKey) continue;
 			normalizedNodes[nodeID] = {
@@ -123,10 +108,7 @@ var PaperConnectionsStorageMixin = {
 		return topic;
 	},
 
-	createBundleNodeRecord(topic, input = {}, options = {}) {
-		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
-			? options.normalizeSlopeMode
-			: (mode) => this.normalizeBundleSlopeMode(mode);
+	createBundleNodeRecord(topic, input = {}) {
 		let now = this.now();
 		let nodeID = typeof input.id === "string" && input.id ? input.id : this.generateID("bundle");
 		while (topic.nodes[nodeID]) {
@@ -137,7 +119,7 @@ var PaperConnectionsStorageMixin = {
 			nodeType: "bundle",
 			x: Number.isFinite(input.x) ? input.x : 0,
 			y: Number.isFinite(input.y) ? input.y : 0,
-			slopeMode: normalizeSlopeMode(input.slopeMode),
+			slopeMode: this.normalizeBundleSlopeMode(input.slopeMode),
 			createdAt: Number.isFinite(input.createdAt) ? input.createdAt : now,
 			updatedAt: Number.isFinite(input.updatedAt) ? input.updatedAt : now,
 		};
@@ -217,66 +199,6 @@ var PaperConnectionsStorageMixin = {
 		return { issues, warnings };
 	},
 
-	migrateLegacyBundlesIntoNodes(topic, rawBundlesInput = null, options = {}) {
-		if (!topic || typeof topic !== "object") return { migrated: 0 };
-		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
-			? options.normalizeSlopeMode
-			: (mode) => this.normalizeLegacyBundleSlopeMode(mode);
-		let rawBundlesSource = rawBundlesInput && typeof rawBundlesInput === "object"
-			? rawBundlesInput
-			: (topic.bundles && typeof topic.bundles === "object" ? topic.bundles : null);
-		let rawBundles = rawBundlesSource ? Object.values(rawBundlesSource) : [];
-		if (!rawBundles.length) {
-			return { migrated: 0 };
-		}
-
-		let migratedCount = 0;
-		for (let rawBundle of rawBundles) {
-			if (!rawBundle || typeof rawBundle !== "object") continue;
-			let sourceNodeID = typeof rawBundle.sourceNodeID === "string" ? rawBundle.sourceNodeID : "";
-			if (!sourceNodeID || !topic.nodes[sourceNodeID]) continue;
-			let edgeIDs = Array.isArray(rawBundle.edgeIDs) ? rawBundle.edgeIDs : [];
-			let validEdgeIDs = [];
-			let localSet = new Set();
-			for (let edgeID of edgeIDs) {
-				if (typeof edgeID !== "string" || !edgeID || localSet.has(edgeID)) continue;
-				let edge = topic.edges[edgeID];
-				if (!edge || edge.fromNodeID !== sourceNodeID) continue;
-				localSet.add(edgeID);
-				validEdgeIDs.push(edgeID);
-			}
-			if (!validEdgeIDs.length) continue;
-
-			let bundleNode = this.createBundleNodeRecord(topic, {
-				id: rawBundle.id,
-				x: rawBundle.x,
-				y: rawBundle.y,
-				slopeMode: rawBundle.slopeMode,
-				createdAt: rawBundle.createdAt,
-				updatedAt: rawBundle.updatedAt,
-			}, { normalizeSlopeMode });
-			topic.nodes[bundleNode.id] = bundleNode;
-			let now = this.now();
-			for (let edgeID of validEdgeIDs) {
-				let edge = topic.edges[edgeID];
-				if (!edge) continue;
-				edge.fromNodeID = bundleNode.id;
-				edge.updatedAt = now;
-			}
-			let trunkEdge = this.createEdgeRecord(topic, {
-				fromNodeID: sourceNodeID,
-				toNodeID: bundleNode.id,
-				type: "related",
-				note: "",
-				createdAt: now,
-				updatedAt: now,
-			});
-			topic.edges[trunkEdge.id] = trunkEdge;
-			migratedCount += 1;
-		}
-		return { migrated: migratedCount };
-	},
-
 	rebuildItemTopicIndex(store) {
 		let index = {};
 		for (let topic of Object.values(store.topics || {})) {
@@ -293,20 +215,13 @@ var PaperConnectionsStorageMixin = {
 		return index;
 	},
 
-	buildCanonicalStore(rawStore, options = {}) {
-		let normalizeSlopeMode = typeof options.normalizeSlopeMode === "function"
-			? options.normalizeSlopeMode
-			: (mode) => this.normalizeBundleSlopeMode(mode);
-		let migrateLegacyBundles = options.migrateLegacyBundles === true;
+	buildStore(rawStore) {
 		let source = rawStore && typeof rawStore === "object" ? rawStore : {};
 		let topicsInput = source.topics && typeof source.topics === "object" ? source.topics : {};
 		let topics = {};
 		for (let [topicID, rawTopic] of Object.entries(topicsInput)) {
-			let topic = this.normalizeTopicRecord(rawTopic, topicID, null, { normalizeSlopeMode });
+			let topic = this.normalizeTopicRecord(rawTopic, topicID, null);
 			if (!topic) continue;
-			if (migrateLegacyBundles && rawTopic?.bundles && typeof rawTopic.bundles === "object" && Object.keys(rawTopic.bundles).length) {
-				this.migrateLegacyBundlesIntoNodes(topic, rawTopic.bundles, { normalizeSlopeMode });
-			}
 			this.cleanupIsolatedBundleNodes(topic);
 			topic.updatedAt = Number.isFinite(topic.updatedAt) ? topic.updatedAt : this.now();
 			topics[topic.id] = topic;
@@ -319,27 +234,6 @@ var PaperConnectionsStorageMixin = {
 		return store;
 	},
 
-	isLegacyStoreData(rawStore) {
-		if (!rawStore || typeof rawStore !== "object") return false;
-		if (Object.prototype.hasOwnProperty.call(rawStore, "schemaVersion")) return true;
-		for (let rawTopic of Object.values(rawStore.topics || {})) {
-			if (!rawTopic || typeof rawTopic !== "object") continue;
-			if (Object.prototype.hasOwnProperty.call(rawTopic, "bundles")) return true;
-			for (let rawNode of Object.values(rawTopic.nodes || {})) {
-				if (!rawNode || typeof rawNode !== "object") continue;
-				if (rawNode.slopeMode === "matched") return true;
-			}
-		}
-		return false;
-	},
-
-	convertLegacyStore(rawStore) {
-		return this.buildCanonicalStore(rawStore, {
-			migrateLegacyBundles: true,
-			normalizeSlopeMode: (mode) => this.normalizeLegacyBundleSlopeMode(mode),
-		});
-	},
-
 	normalizeStore(rawStore) {
 		if (!rawStore || typeof rawStore !== "object") {
 			return {
@@ -347,7 +241,7 @@ var PaperConnectionsStorageMixin = {
 				changed: rawStore !== undefined && rawStore !== null,
 			};
 		}
-		let store = this.buildCanonicalStore(rawStore);
+		let store = this.buildStore(rawStore);
 		return {
 			store,
 			changed: JSON.stringify(rawStore) !== JSON.stringify(store),
@@ -363,47 +257,8 @@ var PaperConnectionsStorageMixin = {
 		this.syncedSettingsLoadedLibraries.add(libraryID);
 	},
 
-	hasStoreTopics(store) {
-		return !!store && typeof store === "object" && Object.keys(store.topics || {}).length > 0;
-	},
-
-	async migrateLegacyStoreOnce(libraryID) {
-		if (this.storeMigrationCheckedLibraries.has(libraryID)) return;
-		await this.ensureSyncedSettingsLoaded(libraryID);
-
-		let currentRaw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
-		let legacyRaw = Zotero.SyncedSettings.get(libraryID, this.legacyStoreSettingKey);
-
-		if (currentRaw !== undefined && currentRaw !== null) {
-			let currentResult = this.isLegacyStoreData(currentRaw)
-				? { store: this.convertLegacyStore(currentRaw), changed: true }
-				: this.normalizeStore(currentRaw);
-			let nextStore = currentResult.store;
-			if (!this.hasStoreTopics(nextStore) && legacyRaw !== undefined && legacyRaw !== null) {
-				let legacyStore = this.convertLegacyStore(legacyRaw);
-				if (this.hasStoreTopics(legacyStore)) {
-					nextStore = legacyStore;
-					currentResult = { store: nextStore, changed: true };
-				}
-			}
-			if (currentResult.changed) {
-				await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, nextStore);
-			}
-			this.storeMigrationCheckedLibraries.add(libraryID);
-			return;
-		}
-
-		if (legacyRaw !== undefined && legacyRaw !== null) {
-			let migratedStore = this.convertLegacyStore(legacyRaw);
-			await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, migratedStore);
-		}
-
-		this.storeMigrationCheckedLibraries.add(libraryID);
-	},
-
 	async loadStore(libraryID) {
 		await this.ensureSyncedSettingsLoaded(libraryID);
-		await this.migrateLegacyStoreOnce(libraryID);
 		let raw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
 		let { store, changed } = this.normalizeStore(raw);
 		if (changed) {
@@ -863,68 +718,4 @@ var PaperConnectionsStorageMixin = {
 		};
 	},
 
-	// Deprecated metadata bundle API compatibility wrappers.
-	async listBundles(libraryID, topicID) {
-		let topic = await this.getTopic(libraryID, topicID);
-		if (!topic) return [];
-		return Object.values(topic.nodes || {})
-			.filter((node) => this.isBundleNode(node))
-			.map((node) => ({
-				id: node.id,
-				sourceNodeID: null,
-				edgeIDs: [],
-				x: node.x,
-				y: node.y,
-				slopeMode: this.normalizeBundleSlopeMode(node.slopeMode),
-				createdAt: node.createdAt,
-				updatedAt: node.updatedAt,
-			}));
-	},
-
-	async createBundle(libraryID, topicID, input) {
-		let sourceNodeID = typeof input?.sourceNodeID === "string" ? input.sourceNodeID : "";
-		let edgeIDs = Array.isArray(input?.edgeIDs) ? input.edgeIDs : [];
-		let result = await this.applyBundleGroups(libraryID, topicID, [{
-			sourceNodeID,
-			edgeIDs,
-			x: input?.x,
-			y: input?.y,
-			slopeMode: input?.slopeMode,
-		}]);
-		if (!result.bundleNodeIDs?.length) return null;
-		let topic = await this.getTopic(libraryID, topicID);
-		let node = topic?.nodes?.[result.bundleNodeIDs[0]];
-		if (!node) return null;
-		return {
-			id: node.id,
-			x: node.x,
-			y: node.y,
-			slopeMode: node.slopeMode,
-		};
-	},
-
-	async updateBundle(libraryID, topicID, bundleID, patch) {
-		let updated = await this.updateNode(libraryID, topicID, bundleID, {
-			x: patch?.x,
-			y: patch?.y,
-			slopeMode: patch?.slopeMode,
-		});
-		if (!updated) return null;
-		return {
-			id: updated.id,
-			x: updated.x,
-			y: updated.y,
-			slopeMode: updated.slopeMode,
-			updatedAt: updated.updatedAt,
-		};
-	},
-
-	async deleteBundle(libraryID, topicID, bundleID) {
-		let result = await this.dissolveBundleNode(libraryID, topicID, bundleID);
-		return !!result?.ok;
-	},
-
-	async replaceBundles() {
-		return [];
-	},
 };
