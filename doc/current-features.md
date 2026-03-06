@@ -100,6 +100,8 @@
 - `src/graph-interaction.js`: pointer/keyboard interaction, selection, drag/drop, rename interaction.
 - `src/graph-topic.js`: topic lifecycle and selection-driven topic/temporary-topic transitions.
 - `src/graph-export.js`: node/workspace context menus and SVG/JSON export flows.
+- Frontend render contract reference: `doc/graph-render-refresh.md`
+  - documents `refreshGraph(window)` heavy refresh vs `updateNodeDOM(...)` / `updateEdgeDOM(...)` incremental updates.
 
 ## Build/Package
 - Build command (Git Bash): `./make-zips.sh`
