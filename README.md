@@ -1,8 +1,7 @@
-<p align="center">
-  <img src="assets/paper-connection-svgrepo-com.svg" alt="Paper Connections icon" width="84" />
-</p>
-
-<h1 align="center">Paper Connections</h1>
+<h1 align="center">
+  <img src="assets/paper-connections-svgrepo-com.svg" alt="Paper Connections icon" width="72" />
+  Paper Connections
+</h1>
 
 <p align="center">A Zotero 7 plugin for building and browsing hand-crafted paper relation graphs.</p>
 

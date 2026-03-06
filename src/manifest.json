@@ -5,8 +5,8 @@
 	"description": "Paper connections plugin prototype for Zotero 7",
 	"homepage_url": "https://github.com/zotero/paper-connections",
 	"icons": {
-		"48": "assets/paper-connection-svgrepo-com.svg",
-		"96": "assets/paper-connection-svgrepo-com.svg"
+		"48": "assets/paper-connections-svgrepo-com.svg",
+		"96": "assets/paper-connections-svgrepo-com.svg"
 	},
 	"applications": {
 		"zotero": {

@@ -6,7 +6,7 @@
 - Plugin id: `paper-connections@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
 - Storage shape: topic/node/edge store
-- Add-on package icon: `assets/paper-connection-svgrepo-com.svg`
+- Add-on package icon: `assets/paper-connections-svgrepo-com.svg`
 
 ## Implemented Features
 - Right item-pane custom section: `Topic Context Section`
