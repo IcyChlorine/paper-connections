@@ -1,4 +1,4 @@
-var PaperRelationsGraphWorkspaceMixin = {
+var PaperConnectionsGraphWorkspaceMixin = {
 	getNodeLabelForDisplay(nodeInput = {}) {
 		let item = null;
 		let libraryID = nodeInput.libraryID;
@@ -66,7 +66,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 	},
 
 	getGraphWorkspaceToggleButton(window) {
-		return window?.document?.getElementById("paper-relations-graph-toggle-btn") || null;
+		return window?.document?.getElementById("paper-connections-graph-toggle-btn") || null;
 	},
 
 	ensureGraphWorkspaceToggleButton(window) {
@@ -78,7 +78,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		let button = this.getGraphWorkspaceToggleButton(window);
 		if (!button) {
 			button = doc.createXULElement("toolbarbutton");
-			button.id = "paper-relations-graph-toggle-btn";
+			button.id = "paper-connections-graph-toggle-btn";
 			button.className = "zotero-tb-button";
 			button.setAttribute("type", "button");
 			button.setAttribute("tabindex", "-1");
@@ -376,13 +376,13 @@ var PaperRelationsGraphWorkspaceMixin = {
 	},
 
 	cleanupExistingGraphPane(window, doc) {
-		let existingPane = doc.getElementById("paper-relations-graph-pane");
+		let existingPane = doc.getElementById("paper-connections-graph-pane");
 		if (!existingPane) return;
 		let existingState = this.graphStates?.get(window);
 		this.unbindGraphPaneEvents(window, doc, existingState);
 		this.clearGraphWorkspaceTogglePlacementTimers(existingState);
 		this.graphStates?.delete(window);
-		doc.getElementById("paper-relations-graph-splitter")?.remove();
+		doc.getElementById("paper-connections-graph-splitter")?.remove();
 		existingPane.remove();
 	},
 
@@ -479,7 +479,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		const SVG_NS = "http://www.w3.org/2000/svg";
 
 		let splitter = doc.createXULElement("splitter");
-		splitter.id = "paper-relations-graph-splitter";
+		splitter.id = "paper-connections-graph-splitter";
 		splitter.setAttribute("orient", "vertical");
 		splitter.setAttribute("collapse", "after");
 		splitter.setAttribute("resizebefore", "closest");
@@ -489,42 +489,42 @@ var PaperRelationsGraphWorkspaceMixin = {
 		splitter.appendChild(doc.createXULElement("grippy"));
 
 		let pane = doc.createXULElement("vbox");
-		pane.id = "paper-relations-graph-pane";
+		pane.id = "paper-connections-graph-pane";
 		pane.setAttribute("height", "250");
 
 		let toolbar = doc.createElementNS(XHTML_NS, "div");
-		toolbar.id = "paper-relations-graph-toolbar";
+		toolbar.id = "paper-connections-graph-toolbar";
 
 		let titleWrap = doc.createElementNS(XHTML_NS, "div");
-		titleWrap.id = "paper-relations-graph-title-wrap";
+		titleWrap.id = "paper-connections-graph-title-wrap";
 
 		let header = doc.createElementNS(XHTML_NS, "div");
-		header.id = "paper-relations-graph-header";
+		header.id = "paper-connections-graph-header";
 		let headerMain = doc.createElementNS(XHTML_NS, "span");
-		headerMain.className = "paper-relations-graph-header-main";
+		headerMain.className = "paper-connections-graph-header-main";
 		headerMain.textContent = "Relation Graph Workspace";
 		let headerTemporaryHint = doc.createElementNS(XHTML_NS, "span");
-		headerTemporaryHint.className = "paper-relations-graph-header-temporary-hint";
+		headerTemporaryHint.className = "paper-connections-graph-header-temporary-hint";
 		headerTemporaryHint.textContent = "temporary topic";
 		headerTemporaryHint.hidden = true;
 		header.append(headerMain, headerTemporaryHint);
 
 		let subheader = doc.createElementNS(XHTML_NS, "div");
-		subheader.id = "paper-relations-graph-subheader";
+		subheader.id = "paper-connections-graph-subheader";
 		subheader.textContent = "Select an item to load topic graph";
 
 		titleWrap.append(header, subheader);
 		toolbar.append(titleWrap);
 
 		let canvas = doc.createElementNS(XHTML_NS, "div");
-		canvas.id = "paper-relations-graph-canvas";
+		canvas.id = "paper-connections-graph-canvas";
 		canvas.style.position = "relative";
 
 		let svg = doc.createElementNS(SVG_NS, "svg");
 
 		let defs = doc.createElementNS(SVG_NS, "defs");
 		let marker = doc.createElementNS(SVG_NS, "marker");
-		marker.setAttribute("id", "paper-relations-arrow");
+		marker.setAttribute("id", "paper-connections-arrow");
 		marker.setAttribute("markerWidth", "11");
 		marker.setAttribute("markerHeight", "8");
 		marker.setAttribute("refX", "10");
@@ -537,7 +537,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		defs.appendChild(marker);
 
 		let boardFill = doc.createElementNS(SVG_NS, "linearGradient");
-		boardFill.setAttribute("id", "paper-relations-board-fill");
+		boardFill.setAttribute("id", "paper-connections-board-fill");
 		boardFill.setAttribute("x1", "0");
 		boardFill.setAttribute("y1", "0");
 		boardFill.setAttribute("x2", "0");
@@ -553,7 +553,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		let gridPattern = doc.createElementNS(SVG_NS, "pattern");
 		let gridSize = this.nodeSnapGridSize;
-		gridPattern.setAttribute("id", "paper-relations-grid-pattern");
+		gridPattern.setAttribute("id", "paper-connections-grid-pattern");
 		gridPattern.setAttribute("patternUnits", "userSpaceOnUse");
 		gridPattern.setAttribute("x", "0");
 		gridPattern.setAttribute("y", "0");
@@ -569,33 +569,33 @@ var PaperRelationsGraphWorkspaceMixin = {
 		svg.appendChild(defs);
 
 		let viewport = doc.createElementNS(SVG_NS, "g");
-		viewport.setAttribute("id", "paper-relations-graph-viewport");
+		viewport.setAttribute("id", "paper-connections-graph-viewport");
 		let boardGroup = doc.createElementNS(SVG_NS, "g");
-		boardGroup.setAttribute("class", "paper-relations-board");
+		boardGroup.setAttribute("class", "paper-connections-board");
 		let boardBase = doc.createElementNS(SVG_NS, "rect");
-		boardBase.setAttribute("class", "paper-relations-board-base");
+		boardBase.setAttribute("class", "paper-connections-board-base");
 		boardBase.setAttribute("x", "-5000");
 		boardBase.setAttribute("y", "-5000");
 		boardBase.setAttribute("width", "10000");
 		boardBase.setAttribute("height", "10000");
 		let boardGrid = doc.createElementNS(SVG_NS, "rect");
-		boardGrid.setAttribute("class", "paper-relations-board-grid");
+		boardGrid.setAttribute("class", "paper-connections-board-grid");
 		boardGrid.setAttribute("x", "-5000");
 		boardGrid.setAttribute("y", "-5000");
 		boardGrid.setAttribute("width", "10000");
 		boardGrid.setAttribute("height", "10000");
 		boardGroup.append(boardBase, boardGrid);
 		let edgesGroup = doc.createElementNS(SVG_NS, "g");
-		edgesGroup.setAttribute("class", "paper-relations-edges");
+		edgesGroup.setAttribute("class", "paper-connections-edges");
 		let nodesGroup = doc.createElementNS(SVG_NS, "g");
-		nodesGroup.setAttribute("class", "paper-relations-nodes");
+		nodesGroup.setAttribute("class", "paper-connections-nodes");
 		let overlayGroup = doc.createElementNS(SVG_NS, "g");
-		overlayGroup.setAttribute("class", "paper-relations-overlay");
+		overlayGroup.setAttribute("class", "paper-connections-overlay");
 		viewport.append(boardGroup, edgesGroup, nodesGroup, overlayGroup);
 		svg.appendChild(viewport);
 
 		let canvasControls = doc.createElementNS(SVG_NS, "g");
-		canvasControls.setAttribute("class", "paper-relations-canvas-controls");
+		canvasControls.setAttribute("class", "paper-connections-canvas-controls");
 		canvasControls.setAttribute("aria-label", "graph workspace controls");
 		const controlButtonSize = 28;
 		const controlGap = 8;
@@ -603,7 +603,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		const iconInset = 2;
 		let appendIconImage = (button, fileName) => {
 			let hitbox = doc.createElementNS(SVG_NS, "rect");
-			hitbox.setAttribute("class", "paper-relations-canvas-btn-hitbox");
+			hitbox.setAttribute("class", "paper-connections-canvas-btn-hitbox");
 			hitbox.setAttribute("x", "0");
 			hitbox.setAttribute("y", "0");
 			hitbox.setAttribute("width", String(controlButtonSize));
@@ -612,7 +612,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 			hitbox.setAttribute("ry", "6");
 			let iconImage = doc.createElementNS(SVG_NS, "image");
 			let href = `${this.rootURI}assets/${fileName}`;
-			iconImage.setAttribute("class", "paper-relations-canvas-btn-icon-image");
+			iconImage.setAttribute("class", "paper-connections-canvas-btn-icon-image");
 			iconImage.setAttribute("x", String(iconInset));
 			iconImage.setAttribute("y", String(iconInset));
 			iconImage.setAttribute("width", String(controlButtonSize - iconInset * 2));
@@ -624,7 +624,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		};
 
 		let snapButton = doc.createElementNS(SVG_NS, "g");
-		snapButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-snap-btn");
+		snapButton.setAttribute("class", "paper-connections-canvas-btn paper-connections-snap-btn");
 		snapButton.setAttribute("data-control", "snap");
 		snapButton.setAttribute("role", "button");
 		snapButton.setAttribute("aria-label", "Toggle magnetic grid snapping");
@@ -632,7 +632,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		appendIconImage(snapButton, "magnet-wave-svgrepo-com.svg");
 
 		let pinButton = doc.createElementNS(SVG_NS, "g");
-		pinButton.setAttribute("class", "paper-relations-canvas-btn paper-relations-pin-btn");
+		pinButton.setAttribute("class", "paper-connections-canvas-btn paper-connections-pin-btn");
 		pinButton.setAttribute("data-control", "pin");
 		pinButton.setAttribute("role", "button");
 		pinButton.setAttribute("aria-label", "Toggle pinned graph context");
@@ -644,19 +644,19 @@ var PaperRelationsGraphWorkspaceMixin = {
 		canvas.appendChild(svg);
 
 		let nodeContextMenu = doc.createElementNS(XHTML_NS, "div");
-		nodeContextMenu.className = "paper-relations-node-context-menu";
+		nodeContextMenu.className = "paper-connections-node-context-menu";
 		nodeContextMenu.hidden = true;
 		nodeContextMenu.style.position = "absolute";
 		nodeContextMenu.style.zIndex = "8";
 		nodeContextMenu.style.display = "none";
 		let removeNodeBtn = doc.createElementNS(XHTML_NS, "button");
 		removeNodeBtn.type = "button";
-		removeNodeBtn.className = "paper-relations-node-context-item";
+		removeNodeBtn.className = "paper-connections-node-context-item";
 		removeNodeBtn.setAttribute("data-action", "remove");
 		removeNodeBtn.textContent = this.getGraphWorkspaceText("nodeMenuRemove");
 		let renameNodeBtn = doc.createElementNS(XHTML_NS, "button");
 		renameNodeBtn.type = "button";
-		renameNodeBtn.className = "paper-relations-node-context-item";
+		renameNodeBtn.className = "paper-connections-node-context-item";
 		renameNodeBtn.setAttribute("data-action", "rename");
 		renameNodeBtn.textContent = this.getGraphWorkspaceText("nodeMenuRename");
 		nodeContextMenu.append(removeNodeBtn, renameNodeBtn);
@@ -664,7 +664,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		let renameInput = doc.createElementNS(XHTML_NS, "input");
 		renameInput.type = "text";
-		renameInput.className = "paper-relations-node-rename-input";
+		renameInput.className = "paper-connections-node-rename-input";
 		renameInput.hidden = true;
 		renameInput.setAttribute("spellcheck", "false");
 		renameInput.style.position = "absolute";
@@ -673,7 +673,7 @@ var PaperRelationsGraphWorkspaceMixin = {
 		canvas.appendChild(renameInput);
 
 		let workspaceContextMenu = doc.createElementNS(XHTML_NS, "div");
-		workspaceContextMenu.className = "paper-relations-node-context-menu paper-relations-workspace-context-menu";
+		workspaceContextMenu.className = "paper-connections-node-context-menu paper-connections-workspace-context-menu";
 		workspaceContextMenu.hidden = true;
 		workspaceContextMenu.style.position = "absolute";
 		workspaceContextMenu.style.zIndex = "8";
@@ -681,34 +681,34 @@ var PaperRelationsGraphWorkspaceMixin = {
 
 		let workspaceCreateTopicFromSelectedBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceCreateTopicFromSelectedBtn.type = "button";
-		workspaceCreateTopicFromSelectedBtn.className = "paper-relations-node-context-item";
+		workspaceCreateTopicFromSelectedBtn.className = "paper-connections-node-context-item";
 		workspaceCreateTopicFromSelectedBtn.setAttribute("data-action", "create-topic-from-selected");
 		workspaceCreateTopicFromSelectedBtn.textContent = this.getGraphWorkspaceText("workspaceMenuCreateTopicFromSelected");
 
 		let workspaceExportSVGBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceExportSVGBtn.type = "button";
-		workspaceExportSVGBtn.className = "paper-relations-node-context-item";
+		workspaceExportSVGBtn.className = "paper-connections-node-context-item";
 		workspaceExportSVGBtn.setAttribute("data-action", "export-svg");
 		workspaceExportSVGBtn.textContent = this.getGraphWorkspaceText("workspaceMenuExportSVG");
 
 		let workspaceExportJSONBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceExportJSONBtn.type = "button";
-		workspaceExportJSONBtn.className = "paper-relations-node-context-item";
+		workspaceExportJSONBtn.className = "paper-connections-node-context-item";
 		workspaceExportJSONBtn.setAttribute("data-action", "export-json");
 		workspaceExportJSONBtn.textContent = this.getGraphWorkspaceText("workspaceMenuExportJSON");
 
 		let workspaceSeparator = doc.createElementNS(XHTML_NS, "div");
-		workspaceSeparator.className = "paper-relations-context-menu-separator";
+		workspaceSeparator.className = "paper-connections-context-menu-separator";
 
 		let workspaceRenameTopicBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceRenameTopicBtn.type = "button";
-		workspaceRenameTopicBtn.className = "paper-relations-node-context-item";
+		workspaceRenameTopicBtn.className = "paper-connections-node-context-item";
 		workspaceRenameTopicBtn.setAttribute("data-action", "rename-topic");
 		workspaceRenameTopicBtn.textContent = this.getGraphWorkspaceText("workspaceMenuRename");
 
 		let workspaceDeleteTopicBtn = doc.createElementNS(XHTML_NS, "button");
 		workspaceDeleteTopicBtn.type = "button";
-		workspaceDeleteTopicBtn.className = "paper-relations-node-context-item";
+		workspaceDeleteTopicBtn.className = "paper-connections-node-context-item";
 		workspaceDeleteTopicBtn.setAttribute("data-action", "delete-topic");
 		workspaceDeleteTopicBtn.textContent = this.getGraphWorkspaceText("workspaceMenuDelete");
 
@@ -723,29 +723,29 @@ var PaperRelationsGraphWorkspaceMixin = {
 		canvas.appendChild(workspaceContextMenu);
 
 		let bundleContextMenu = doc.createElementNS(XHTML_NS, "div");
-		bundleContextMenu.className = "paper-relations-node-context-menu paper-relations-bundle-context-menu";
+		bundleContextMenu.className = "paper-connections-node-context-menu paper-connections-bundle-context-menu";
 		bundleContextMenu.hidden = true;
 		bundleContextMenu.style.position = "absolute";
 		bundleContextMenu.style.zIndex = "9";
 		bundleContextMenu.style.display = "none";
 		let dissolveBundleBtn = doc.createElementNS(XHTML_NS, "button");
 		dissolveBundleBtn.type = "button";
-		dissolveBundleBtn.className = "paper-relations-node-context-item";
+		dissolveBundleBtn.className = "paper-connections-node-context-item";
 		dissolveBundleBtn.setAttribute("data-action", "dissolve");
 		dissolveBundleBtn.textContent = this.getGraphWorkspaceText("bundleMenuDissolve");
 		let bundleModeSeparator = doc.createElementNS(XHTML_NS, "div");
-		bundleModeSeparator.className = "paper-relations-context-menu-separator";
+		bundleModeSeparator.className = "paper-connections-context-menu-separator";
 		let makeBundleModeBtn = (action, labelText) => {
 			let btn = doc.createElementNS(XHTML_NS, "button");
 			btn.type = "button";
-			btn.className = "paper-relations-node-context-item";
+			btn.className = "paper-connections-node-context-item";
 			btn.setAttribute("data-action", action);
 			btn.setAttribute("data-checked", "false");
 			let label = doc.createElementNS(XHTML_NS, "span");
-			label.className = "paper-relations-node-context-label";
+			label.className = "paper-connections-node-context-label";
 			label.textContent = labelText;
 			let check = doc.createElementNS(XHTML_NS, "span");
-			check.className = "paper-relations-node-context-check";
+			check.className = "paper-connections-node-context-check";
 			check.textContent = "\u2713";
 			btn.append(label, check);
 			return btn;

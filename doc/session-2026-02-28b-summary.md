@@ -1,4 +1,4 @@
-﻿# Session Summary (2026-02-28b)
+# Session Summary (2026-02-28b)
 
 This file summarizes the development completed after `session-2026-02-28a`.
 
@@ -13,7 +13,7 @@ This file summarizes the development completed after `session-2026-02-28a`.
   - mirrored window-targeted capture behavior for MCP tools.
   - added `list_windows` endpoint.
 
-## 2. Remark system (Paper Relations native)
+## 2. Remark system (Paper Connections native)
 
 - Implemented plugin-owned remark data path using item `extra` with `remark: ...` format.
 - Added editable remark integration in two places:

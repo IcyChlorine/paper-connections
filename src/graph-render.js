@@ -1,4 +1,4 @@
-﻿var PaperRelationsGraphRenderMixin = {
+var PaperConnectionsGraphRenderMixin = {
 	renderGraph(window) {
 		this.refreshGraph(window);
 	},
@@ -41,13 +41,13 @@
 			);
 			if (draftPath) {
 				let path = doc.createElementNS(SVG_NS, "path");
-				path.setAttribute("class", "paper-relations-edge paper-relations-edge-draft");
+				path.setAttribute("class", "paper-connections-edge paper-connections-edge-draft");
 				path.setAttribute("d", draftPath);
 				if (state.edgeDraft.startAnchor.side === "right") {
-					path.setAttribute("marker-end", "url(#paper-relations-arrow)");
+					path.setAttribute("marker-end", "url(#paper-connections-arrow)");
 				}
 				else if (state.edgeDraft.startAnchor.side === "left") {
-					path.setAttribute("marker-start", "url(#paper-relations-arrow)");
+					path.setAttribute("marker-start", "url(#paper-connections-arrow)");
 				}
 				overlayGroup.appendChild(path);
 			}
@@ -55,7 +55,7 @@
 
 		if (state.edgeCutDraft?.start && state.edgeCutDraft?.end) {
 			let cutLine = doc.createElementNS(SVG_NS, "line");
-			cutLine.setAttribute("class", "paper-relations-edge-cut-preview");
+			cutLine.setAttribute("class", "paper-connections-edge-cut-preview");
 			cutLine.setAttribute("x1", String(state.edgeCutDraft.start.x));
 			cutLine.setAttribute("y1", String(state.edgeCutDraft.start.y));
 			cutLine.setAttribute("x2", String(state.edgeCutDraft.end.x));
@@ -73,7 +73,7 @@
 			let scissorsOffsetX = 8;
 			let scissorsOffsetY = -18;
 			let scissorsGroup = doc.createElementNS(SVG_NS, "g");
-			scissorsGroup.setAttribute("class", "paper-relations-edge-cut-scissors");
+			scissorsGroup.setAttribute("class", "paper-connections-edge-cut-scissors");
 			scissorsGroup.setAttribute(
 				"transform",
 				`translate(${state.edgeCutDraft.start.x + scissorsOffsetX} ${state.edgeCutDraft.start.y + scissorsOffsetY}) scale(${scissorsSize / 56})`,
@@ -87,7 +87,7 @@
 
 		if (state.edgeBundleDraft?.start && state.edgeBundleDraft?.end) {
 			let bundleLine = doc.createElementNS(SVG_NS, "line");
-			bundleLine.setAttribute("class", "paper-relations-edge-bundle-preview");
+			bundleLine.setAttribute("class", "paper-connections-edge-bundle-preview");
 			bundleLine.setAttribute("x1", String(state.edgeBundleDraft.start.x));
 			bundleLine.setAttribute("y1", String(state.edgeBundleDraft.start.y));
 			bundleLine.setAttribute("x2", String(state.edgeBundleDraft.end.x));
@@ -145,7 +145,7 @@
 		let kind = node?.kind || "leaf";
 		let selectedClass = state?.selectedNodeID === node?.id ? " selected" : "";
 		let renamingClass = state?.renamingNodeID === node?.id ? " renaming" : "";
-		return `paper-relations-node ${kind}${selectedClass}${renamingClass}`;
+		return `paper-connections-node ${kind}${selectedClass}${renamingClass}`;
 	},
 
 	createEdgePathElement(doc, edgePath) {
@@ -157,12 +157,12 @@
 
 	applyEdgePathDataToElement(path, edgePath) {
 		if (!path || !edgePath) return;
-		path.setAttribute("class", "paper-relations-edge");
+		path.setAttribute("class", "paper-connections-edge");
 		path.setAttribute("data-edge-id", edgePath.edgeID || "");
 		path.setAttribute("d", edgePath.pathD || "");
-		path.setAttribute("marker-end", edgePath.markerEnd ? "url(#paper-relations-arrow)" : "none");
+		path.setAttribute("marker-end", edgePath.markerEnd ? "url(#paper-connections-arrow)" : "none");
 		if (edgePath.markerStart) {
-			path.setAttribute("marker-start", "url(#paper-relations-arrow)");
+			path.setAttribute("marker-start", "url(#paper-connections-arrow)");
 		}
 		else {
 			path.removeAttribute("marker-start");
@@ -178,7 +178,7 @@
 
 	updateBundleHubElementDOM(state, bundle, hubElem) {
 		if (!bundle || !hubElem) return;
-		hubElem.setAttribute("class", "paper-relations-bundle-hub");
+		hubElem.setAttribute("class", "paper-connections-bundle-hub");
 		hubElem.setAttribute("data-bundle-id", bundle.id);
 		hubElem.setAttribute("cx", String(bundle.x));
 		hubElem.setAttribute("cy", String(bundle.y));
@@ -217,7 +217,7 @@
 	createNodeAnchorElement(doc, side, cx, cy) {
 		const SVG_NS = "http://www.w3.org/2000/svg";
 		let anchor = doc.createElementNS(SVG_NS, "circle");
-		anchor.setAttribute("class", "paper-relations-node-anchor");
+		anchor.setAttribute("class", "paper-connections-node-anchor");
 		anchor.setAttribute("data-anchor-side", side);
 		anchor.setAttribute("cx", String(cx));
 		anchor.setAttribute("cy", String(cy));
@@ -285,7 +285,7 @@
 			}
 		}
 
-		let leftAnchor = group.querySelector(`.paper-relations-node-anchor[data-anchor-side="left"]`);
+		let leftAnchor = group.querySelector(`.paper-connections-node-anchor[data-anchor-side="left"]`);
 		if (!leftAnchor && doc) {
 			leftAnchor = this.createNodeAnchorElement(doc, "left", 0, height / 2);
 			group.appendChild(leftAnchor);
@@ -297,7 +297,7 @@
 			leftAnchor.classList.toggle("active", this.isAnchorVisibleInState(state, node.id, "left"));
 		}
 
-		let rightAnchor = group.querySelector(`.paper-relations-node-anchor[data-anchor-side="right"]`);
+		let rightAnchor = group.querySelector(`.paper-connections-node-anchor[data-anchor-side="right"]`);
 		if (!rightAnchor && doc) {
 			rightAnchor = this.createNodeAnchorElement(doc, "right", width, height / 2);
 			group.appendChild(rightAnchor);
@@ -315,12 +315,12 @@
 		let node = this.getNodeByID?.(state, nodeID) || null;
 		if (this.isBundleNodeState(node)) {
 			let hub = state.bundleHubElemsByID?.get(nodeID)
-				|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${nodeID}"]`);
+				|| state.overlayGroup?.querySelector?.(`.paper-connections-bundle-hub[data-bundle-id="${nodeID}"]`);
 			if (!hub) return "";
 			return `${hub.getAttribute("cx") || ""}|${hub.getAttribute("cy") || ""}`;
 		}
 		let group = state.nodeElemsByID?.get(nodeID)
-			|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+			|| state.nodesGroup?.querySelector?.(`.paper-connections-node[data-node-id="${nodeID}"]`);
 		if (!group) return "";
 		let rect = group.querySelector("rect");
 		return `${group.getAttribute("transform") || ""}|${rect?.getAttribute("width") || ""}|${rect?.getAttribute("height") || ""}`;
@@ -427,7 +427,7 @@
 		let edge = this.getEdgeByID(state, edgeID);
 		if (!edge) return false;
 		let path = state.edgeElemsByID?.get(edgeID)
-			|| state.edgesGroup?.querySelector?.(`.paper-relations-edge[data-edge-id="${edgeID}"]`);
+			|| state.edgesGroup?.querySelector?.(`.paper-connections-edge[data-edge-id="${edgeID}"]`);
 		if (!path) return false;
 		state.edgeElemsByID?.set(edgeID, path);
 		let oldSignature = `${path.getAttribute("d") || ""}|${path.getAttribute("marker-end") || ""}|${path.getAttribute("marker-start") || ""}`;
@@ -452,14 +452,14 @@
 		let oldSignature = this.getNodeDOMGeometrySignature(state, nodeID);
 		if (this.isBundleNodeState(node)) {
 			let hubElem = state.bundleHubElemsByID?.get(nodeID)
-				|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${nodeID}"]`);
+				|| state.overlayGroup?.querySelector?.(`.paper-connections-bundle-hub[data-bundle-id="${nodeID}"]`);
 			if (!hubElem) return false;
 			state.bundleHubElemsByID?.set(nodeID, hubElem);
 			this.updateBundleHubElementDOM(state, node, hubElem);
 		}
 		else {
 			let group = state.nodeElemsByID?.get(nodeID)
-				|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+				|| state.nodesGroup?.querySelector?.(`.paper-connections-node[data-node-id="${nodeID}"]`);
 			if (!group) return false;
 			state.nodeElemsByID?.set(nodeID, group);
 			this.updateNodeGroupElementDOM(state, node, group, window.document);
@@ -485,10 +485,10 @@
 	updateAnchorVisibilityForNodeElement(state, nodeID) {
 		if (!state || !nodeID) return;
 		let elem = state.nodeElemsByID?.get(nodeID)
-			|| state.nodesGroup?.querySelector?.(`.paper-relations-node[data-node-id="${nodeID}"]`);
+			|| state.nodesGroup?.querySelector?.(`.paper-connections-node[data-node-id="${nodeID}"]`);
 		if (!elem) return;
 		for (let side of ["left", "right"]) {
-			let anchor = elem.querySelector(`.paper-relations-node-anchor[data-anchor-side="${side}"]`);
+			let anchor = elem.querySelector(`.paper-connections-node-anchor[data-anchor-side="${side}"]`);
 			if (!anchor) continue;
 			anchor.classList.toggle("active", this.isAnchorVisibleInState(state, nodeID, side));
 		}
@@ -497,7 +497,7 @@
 	updateBundleVisibilityForHubElement(state, bundleID) {
 		if (!state || !bundleID) return;
 		let hubElem = state.bundleHubElemsByID?.get(bundleID)
-			|| state.overlayGroup?.querySelector?.(`.paper-relations-bundle-hub[data-bundle-id="${bundleID}"]`);
+			|| state.overlayGroup?.querySelector?.(`.paper-connections-bundle-hub[data-bundle-id="${bundleID}"]`);
 		if (!hubElem) return;
 		hubElem.classList.toggle("active", this.isBundleVisibleInState(state, bundleID));
 	},
@@ -841,11 +841,11 @@
 
 	applyAnchorVisibilityToDOM(state) {
 		if (!state?.nodesGroup) return;
-		let nodeElems = state.nodesGroup.querySelectorAll(".paper-relations-node[data-node-id]");
+		let nodeElems = state.nodesGroup.querySelectorAll(".paper-connections-node[data-node-id]");
 		for (let elem of nodeElems) {
 			let nodeID = elem.getAttribute("data-node-id");
 			for (let side of ["left", "right"]) {
-				let anchor = elem.querySelector(`.paper-relations-node-anchor[data-anchor-side="${side}"]`);
+				let anchor = elem.querySelector(`.paper-connections-node-anchor[data-anchor-side="${side}"]`);
 				if (!anchor) continue;
 				anchor.classList.toggle("active", this.isAnchorVisibleInState(state, nodeID, side));
 			}
@@ -861,7 +861,7 @@
 
 	applyBundleVisibilityToDOM(state) {
 		if (!state?.overlayGroup) return;
-		let hubElems = state.overlayGroup.querySelectorAll(".paper-relations-bundle-hub[data-bundle-id]");
+		let hubElems = state.overlayGroup.querySelectorAll(".paper-connections-bundle-hub[data-bundle-id]");
 		for (let hubElem of hubElems) {
 			let bundleID = hubElem.getAttribute("data-bundle-id");
 			hubElem.classList.toggle("active", this.isBundleVisibleInState(state, bundleID));

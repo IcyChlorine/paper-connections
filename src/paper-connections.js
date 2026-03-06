@@ -1,15 +1,15 @@
-PaperRelations = {
+PaperConnections = {
 	id: null,
 	version: null,
 	rootURI: null,
 	initialized: false,
 	addedElementIDs: [],
 
-	topicContextSectionID: "paper-relations-topic-context-section",
-	selectionDebugSectionID: "paper-relations-selection-debug-section",
+	topicContextSectionID: "paper-connections-topic-context-section",
+	selectionDebugSectionID: "paper-connections-selection-debug-section",
 	sectionRegistered: false,
 	remarkColumnDataKey: "remark",
-	remarkInfoRowID: "paper-relations-remark-row",
+	remarkInfoRowID: "paper-connections-remark-row",
 	remarkColumnRegisteredKey: null,
 	remarkInfoRowRegisteredID: null,
 	remarkIntegrationRegistered: false,
@@ -21,7 +21,8 @@ PaperRelations = {
 	syncedSettingsLoadedLibraries: null,
 	remarkMigrationBusyByWindow: null,
 
-	storeSettingKey: "paper-relations.graph.v1",
+	storeSettingKey: "paper-connections.graph.v1",
+	legacyStoreSettingKeys: ["paper-relations.graph.v1"],
 	storeSchemaVersion: 2,
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
@@ -49,7 +50,7 @@ PaperRelations = {
 	},
 
 	log(msg) {
-		Zotero.debug("Paper Relations: " + msg);
+		Zotero.debug("Paper Connections: " + msg);
 	},
 
 	cloneJSON(value) {
@@ -191,7 +192,7 @@ PaperRelations = {
 				rowID: this.remarkInfoRowID,
 				pluginID: this.id,
 				label: {
-					l10nID: "paper-relations-remark-label",
+					l10nID: "paper-connections-remark-label",
 				},
 				position: "afterCreators",
 				multiline: false,
@@ -405,7 +406,7 @@ PaperRelations = {
 		let proceed = Services.prompt.confirm(
 			window,
 			"Migrate ES Remarks",
-			"Import legacy Ethereal Style remarks into Paper Relations Remark now?\n\n" +
+			"Import legacy Ethereal Style remarks into Paper Connections Remark now?\n\n" +
 				"Note: existing remark values in Extra (remark: ...) are already compatible and will be kept as-is."
 		);
 		if (!proceed) return;
@@ -619,23 +620,23 @@ PaperRelations = {
 			paneID: this.topicContextSectionID,
 			pluginID: this.id,
 			header: {
-				l10nID: "paper-relations-topic-context-header",
+				l10nID: "paper-connections-topic-context-header",
 				icon: "chrome://zotero/skin/itempane/16/related.svg",
 			},
 			sidenav: {
-				l10nID: "paper-relations-topic-context-sidenav",
+				l10nID: "paper-connections-topic-context-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/related.svg",
 			},
 			onInit: ({ doc, body, refresh }) => {
 				let win = doc.defaultView;
 				let listener = () => refresh();
-				win.addEventListener("paper-relations:graph-context-changed", listener);
+				win.addEventListener("paper-connections:graph-context-changed", listener);
 				this.topicContextSectionListeners.set(body, { win, listener });
 			},
 			onDestroy: ({ body }) => {
 				let data = this.topicContextSectionListeners.get(body);
 				if (!data) return;
-				data.win.removeEventListener("paper-relations:graph-context-changed", data.listener);
+				data.win.removeEventListener("paper-connections:graph-context-changed", data.listener);
 				this.topicContextSectionListeners.delete(body);
 			},
 			onItemChange: ({ doc, item, setEnabled, setSectionSummary }) => {
@@ -675,11 +676,11 @@ PaperRelations = {
 				list.append(row1, row2, row3);
 
 				const buttonWrap = doc.createElementNS(XHTML_NS, "div");
-				buttonWrap.className = "paper-relations-pane-actions";
+				buttonWrap.className = "paper-connections-pane-actions";
 				let isMigrationBusy = this.isRemarkMigrationBusy(win);
 				const createTopicBtn = doc.createElementNS(XHTML_NS, "button");
 				createTopicBtn.type = "button";
-				createTopicBtn.className = "paper-relations-create-topic-btn";
+				createTopicBtn.className = "paper-connections-create-topic-btn";
 				createTopicBtn.textContent = "Create topic from selected paper";
 				createTopicBtn.disabled = !item || isMigrationBusy;
 				createTopicBtn.addEventListener("click", () => {
@@ -687,7 +688,7 @@ PaperRelations = {
 				});
 				const removeTopicBtn = doc.createElementNS(XHTML_NS, "button");
 				removeTopicBtn.type = "button";
-				removeTopicBtn.className = "paper-relations-remove-topic-btn";
+				removeTopicBtn.className = "paper-connections-remove-topic-btn";
 				removeTopicBtn.textContent = "Remove topic";
 				removeTopicBtn.disabled = !this.canRemoveActiveTopic(win) || isMigrationBusy;
 				removeTopicBtn.addEventListener("click", () => {
@@ -695,7 +696,7 @@ PaperRelations = {
 				});
 				const migrateRemarkBtn = doc.createElementNS(XHTML_NS, "button");
 				migrateRemarkBtn.type = "button";
-				migrateRemarkBtn.className = "paper-relations-remove-topic-btn";
+				migrateRemarkBtn.className = "paper-connections-remove-topic-btn";
 				migrateRemarkBtn.textContent = isMigrationBusy
 					? "Migrating ES Remarks..."
 					: "Migrate ES Remarks (one-time)";
@@ -713,23 +714,23 @@ PaperRelations = {
 			paneID: this.selectionDebugSectionID,
 			pluginID: this.id,
 			header: {
-				l10nID: "paper-relations-selection-debug-header",
+				l10nID: "paper-connections-selection-debug-header",
 				icon: "chrome://zotero/skin/itempane/16/info.svg",
 			},
 			sidenav: {
-				l10nID: "paper-relations-selection-debug-sidenav",
+				l10nID: "paper-connections-selection-debug-sidenav",
 				icon: "chrome://zotero/skin/itempane/20/info.svg",
 			},
 			onInit: ({ doc, body, refresh }) => {
 				let win = doc.defaultView;
 				let listener = () => refresh();
-				win.addEventListener("paper-relations:graph-selection-changed", listener);
+				win.addEventListener("paper-connections:graph-selection-changed", listener);
 				this.selectionDebugSectionListeners.set(body, { win, listener });
 			},
 			onDestroy: ({ body }) => {
 				let data = this.selectionDebugSectionListeners.get(body);
 				if (!data) return;
-				data.win.removeEventListener("paper-relations:graph-selection-changed", data.listener);
+				data.win.removeEventListener("paper-connections:graph-selection-changed", data.listener);
 				this.selectionDebugSectionListeners.delete(body);
 			},
 			onItemChange: ({ item, setEnabled, setSectionSummary }) => {
@@ -806,9 +807,9 @@ PaperRelations = {
 	addToWindow(window) {
 		let doc = window.document;
 
-		if (!doc.getElementById("paper-relations-stylesheet")) {
+		if (!doc.getElementById("paper-connections-stylesheet")) {
 			let link = doc.createElement("link");
-			link.id = "paper-relations-stylesheet";
+			link.id = "paper-connections-stylesheet";
 			link.type = "text/css";
 			link.rel = "stylesheet";
 			link.href = this.rootURI + "style.css";
@@ -816,7 +817,7 @@ PaperRelations = {
 			this.storeAddedElement(link);
 		}
 
-		window.MozXULElement.insertFTLIfNeeded("paper-relations.ftl");
+		window.MozXULElement.insertFTLIfNeeded("paper-connections.ftl");
 		this.addGraphPane(window);
 	},
 
@@ -851,7 +852,7 @@ PaperRelations = {
 		for (let id of this.addedElementIDs) {
 			doc.getElementById(id)?.remove();
 		}
-		doc.querySelector('[href="paper-relations.ftl"]')?.remove();
+		doc.querySelector('[href="paper-connections.ftl"]')?.remove();
 	},
 
 	removeFromAllWindows() {
@@ -875,12 +876,12 @@ PaperRelations = {
 
 
 Object.assign(
-	PaperRelations,
-	PaperRelationsStorageMixin,
-	PaperRelationsGraphWorkspaceMixin,
-	PaperRelationsGraphRenderMixin,
-	PaperRelationsGraphInteractionMixin,
-	PaperRelationsGraphTopicMixin,
-	PaperRelationsGraphExportMixin,
+	PaperConnections,
+	PaperConnectionsStorageMixin,
+	PaperConnectionsGraphWorkspaceMixin,
+	PaperConnectionsGraphRenderMixin,
+	PaperConnectionsGraphInteractionMixin,
+	PaperConnectionsGraphTopicMixin,
+	PaperConnectionsGraphExportMixin,
 );
 

@@ -1,2 +1,2 @@
-pref("extensions.paper-relations.intensity", 30);
+pref("extensions.paper-connections.intensity", 30);
 

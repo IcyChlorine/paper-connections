@@ -1,7 +1,7 @@
-var PaperRelations;
+var PaperConnections;
 
 function log(msg) {
-	Zotero.debug("Paper Relations: " + msg);
+	Zotero.debug("Paper Connections: " + msg);
 }
 
 function install() {
@@ -12,7 +12,7 @@ async function startup({ id, version, rootURI }) {
 	log(`Starting ${version}`);
 	
 	Zotero.PreferencePanes.register({
-		pluginID: 'paper-relations@example.com',
+		pluginID: 'paper-connections@example.com',
 		src: rootURI + 'preferences.xhtml',
 		scripts: [rootURI + 'preferences.js']
 	});
@@ -23,24 +23,24 @@ async function startup({ id, version, rootURI }) {
 	Services.scriptloader.loadSubScript(rootURI + 'graph-interaction.js');
 	Services.scriptloader.loadSubScript(rootURI + 'graph-topic.js');
 	Services.scriptloader.loadSubScript(rootURI + 'graph-export.js');
-	Services.scriptloader.loadSubScript(rootURI + 'paper-relations.js');
-	PaperRelations.init({ id, version, rootURI });
-	PaperRelations.addToAllWindows();
-	await PaperRelations.main();
+	Services.scriptloader.loadSubScript(rootURI + 'paper-connections.js');
+	PaperConnections.init({ id, version, rootURI });
+	PaperConnections.addToAllWindows();
+	await PaperConnections.main();
 }
 
 function onMainWindowLoad({ window }) {
-	PaperRelations.addToWindow(window);
+	PaperConnections.addToWindow(window);
 }
 
 function onMainWindowUnload({ window }) {
-	PaperRelations.removeFromWindow(window);
+	PaperConnections.removeFromWindow(window);
 }
 
 function shutdown() {
 	log("Shutting down");
-	PaperRelations.removeFromAllWindows();
-	PaperRelations = undefined;
+	PaperConnections.removeFromAllWindows();
+	PaperConnections = undefined;
 }
 
 function uninstall() {

@@ -6,8 +6,8 @@
 
 ## Scope
 - Target: Zotero 7 plugin in `src`.
-- Current direction: paper relations plugin (not color demo behavior).
-- Naming baseline: use `paper-relations` consistently (id, file names, build artifact names, update config keys).
+- Current direction: paper connections plugin (not color demo behavior).
+- Naming baseline: use `paper-connections` consistently (id, file names, build artifact names, update config keys).
 
 ## UI Terminology
 - `Topic Context Section`: right item-pane custom section with context summary and create/remove topic actions.
@@ -54,7 +54,7 @@
 - When introducing new runtime SVG assets, add them under `src/assets` and verify `make-zips.sh` / `make-zips.ps1` whitelist includes them; otherwise controls may render as fallback blobs in packaged builds.
 - For remark-driven node relayout, preserve node center and persist updated `x/y` for saved topics; otherwise topic reload on selection changes can cause subtle drift.
 - When persisting node positions, make snap calculations use the currently displayed label metrics (for example via `snapLabel`) to avoid title/remark width mismatch offsets.
-- If splitting mixins into new script files, update all three integration points together: `bootstrap.js` sub-script load order, `paper-relations.js` `Object.assign(...)`, and packaging whitelists in both `make-zips.sh` and `make-zips.ps1`.
+- If splitting mixins into new script files, update all three integration points together: `bootstrap.js` sub-script load order, `paper-connections.js` `Object.assign(...)`, and packaging whitelists in both `make-zips.sh` and `make-zips.ps1`.
 - For graph context menus layered over SVG, close-on-outside-click should use both DOM containment checks and client-rect hit tests to avoid stale menus during overlay/input edge cases.
 
 ## Build and Packaging

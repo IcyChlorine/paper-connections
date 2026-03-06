@@ -1,4 +1,4 @@
-# Paper Relations
+# Paper Connections
 
 A sample plugin for Zotero 7
 

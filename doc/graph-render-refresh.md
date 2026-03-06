@@ -21,11 +21,11 @@
 
 ## State Caches
 - `state.nodeElemsByID`
-  - `nodeID -> <g class="paper-relations-node">`
+  - `nodeID -> <g class="paper-connections-node">`
 - `state.edgeElemsByID`
-  - `edgeID -> <path class="paper-relations-edge">`
+  - `edgeID -> <path class="paper-connections-edge">`
 - `state.bundleHubElemsByID`
-  - `bundleID -> <circle class="paper-relations-bundle-hub">`
+  - `bundleID -> <circle class="paper-connections-bundle-hub">`
 
 These caches are recreated by `refreshGraph(window)` and reused by incremental DOM updates.
 

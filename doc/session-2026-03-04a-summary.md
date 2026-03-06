@@ -75,7 +75,7 @@ This file summarizes the development completed after `session-2026-02-28b`.
   - topic lifecycle methods moved to dedicated topic module.
 - Ensured refactor integration points stay consistent:
   - `bootstrap.js` script load list.
-  - `paper-relations.js` `Object.assign(...)`.
+  - `paper-connections.js` `Object.assign(...)`.
   - `make-zips.sh` and `make-zips.ps1` whitelists.
 
 ## 6. Key commits in this phase

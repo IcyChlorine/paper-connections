@@ -21,7 +21,7 @@ from windows_capture import pick_best_window, capture_window_image, find_windows
 def _resolve_default_output_path():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     local_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
-    fallback_dir = os.path.join(tempfile.gettempdir(), "paper-relations-screenshots")
+    fallback_dir = os.path.join(tempfile.gettempdir(), "paper-connections-screenshots")
     for directory in (local_dir, fallback_dir):
         try:
             os.makedirs(directory, exist_ok=True)

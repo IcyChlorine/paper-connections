@@ -1,10 +1,10 @@
-# Paper Relations - Current Features
+# Paper Connections - Current Features
 
 ## Snapshot
-- Date: 2026-03-05
+- Date: 2026-03-06
 - Target: Zotero 7 (`src`)
-- Plugin id: `paper-relations@example.com`
-- Storage backend: `Zotero.SyncedSettings` (`paper-relations.graph.v1`)
+- Plugin id: `paper-connections@example.com`
+- Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
 - Storage schema version: `2`
 
 ## Implemented Features
@@ -106,7 +106,7 @@
 ## Build/Package
 - Build command (Git Bash): `./make-zips.sh`
 - Build command (PowerShell): `.\make-zips.ps1`
-- Output xpi: `build/paper-relations.xpi`
+- Output xpi: `build/paper-connections.xpi`
 - Update template: `updates.json.tmpl`
 
 ## Developer Tooling

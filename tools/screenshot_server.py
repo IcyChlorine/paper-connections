@@ -20,7 +20,7 @@ mcp = FastMCP("screenshot")
 
 def _resolve_default_output_path() -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    fallback_dir = os.path.join(tempfile.gettempdir(), "paper-relations-screenshots")
+    fallback_dir = os.path.join(tempfile.gettempdir(), "paper-connections-screenshots")
     for directory in (SCREENSHOTS_DIR, fallback_dir):
         try:
             os.makedirs(directory, exist_ok=True)

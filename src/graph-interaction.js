@@ -1,4 +1,4 @@
-var PaperRelationsGraphInteractionMixin = {
+var PaperConnectionsGraphInteractionMixin = {
 	clampScale(scale) {
 		return Math.min(2.8, Math.max(0.45, scale));
 	},
@@ -60,10 +60,10 @@ var PaperRelationsGraphInteractionMixin = {
 			!state.altModifierPressed &&
 			(state.shiftModifierPressed || hoverBundleActive || state.dragMode === "edge-bundle" || state.dragMode === "bundle-node")
 		);
-		state.canvas.classList.toggle("paper-relations-pan-ready", panReady);
-		state.canvas.classList.toggle("paper-relations-panning", state.dragMode === "pan");
-		state.canvas.classList.toggle("paper-relations-cut-ready", cutReady);
-		state.canvas.classList.toggle("paper-relations-bundle-ready", bundleReady);
+		state.canvas.classList.toggle("paper-connections-pan-ready", panReady);
+		state.canvas.classList.toggle("paper-connections-panning", state.dragMode === "pan");
+		state.canvas.classList.toggle("paper-connections-cut-ready", cutReady);
+		state.canvas.classList.toggle("paper-connections-bundle-ready", bundleReady);
 	},
 
 	updatePointerContextFromEvent(window, event) {
@@ -72,7 +72,7 @@ var PaperRelationsGraphInteractionMixin = {
 		state.pointerInCanvas = this.isClientInsideSVG(state, event.clientX, event.clientY);
 		let target = event.target;
 		state.pointerOverNode = !!target?.closest?.("[data-node-id]");
-		state.pointerOverControl = !!target?.closest?.(".paper-relations-canvas-btn");
+		state.pointerOverControl = !!target?.closest?.(".paper-connections-canvas-btn");
 		this.updateCanvasCursorState(window);
 	},
 
@@ -194,7 +194,7 @@ var PaperRelationsGraphInteractionMixin = {
 	},
 
 	notifyGraphContextChanged(window) {
-		window.dispatchEvent(new window.CustomEvent("paper-relations:graph-context-changed"));
+		window.dispatchEvent(new window.CustomEvent("paper-connections:graph-context-changed"));
 	},
 
 	canRemoveActiveTopic(window) {
@@ -222,15 +222,15 @@ var PaperRelationsGraphInteractionMixin = {
 		state.subheader.textContent = summary.topicStatus;
 		this.setCanvasButtonVisual(state.pinButton, !!state.pinSelection);
 		this.setCanvasButtonVisual(state.snapButton, !!state.snapToGrid);
-		state.boardGrid.classList.remove("paper-relations-board-grid-disabled");
+		state.boardGrid.classList.remove("paper-connections-board-grid-disabled");
 		this.updateCanvasControlsLayout(window);
 		this.updateGraphWorkspaceToggleButton(window);
 		this.placeGraphWorkspaceToggleButton(window, state.toolbarToggleButton);
 		if (state.isTemporaryTopic) {
-			state.canvas.classList.add("paper-relations-temporary-topic");
+			state.canvas.classList.add("paper-connections-temporary-topic");
 		}
 		else {
-			state.canvas.classList.remove("paper-relations-temporary-topic");
+			state.canvas.classList.remove("paper-connections-temporary-topic");
 		}
 	},
 
@@ -239,19 +239,19 @@ var PaperRelationsGraphInteractionMixin = {
 		let isActive = !!active;
 		button.classList.toggle("active", isActive);
 		button.style.opacity = isActive ? "1" : "0.3";
-		let iconImage = button.querySelector(".paper-relations-canvas-btn-icon-image");
+		let iconImage = button.querySelector(".paper-connections-canvas-btn-icon-image");
 		if (iconImage) {
 			iconImage.style.filter = isActive
 				? "grayscale(1) brightness(0.48) contrast(0.95)"
 				: "grayscale(1) brightness(1.04)";
 		}
 		let fillColor = isActive ? "#313a43" : "#9aa6b2";
-		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-fill")) {
+		for (let elem of button.querySelectorAll(".paper-connections-canvas-btn-icon-fill")) {
 			elem.style.fill = fillColor;
 		}
 
 		let strokeColor = isActive ? "#313a43" : "#9aa6b2";
-		for (let elem of button.querySelectorAll(".paper-relations-canvas-btn-icon-stroke")) {
+		for (let elem of button.querySelectorAll(".paper-connections-canvas-btn-icon-stroke")) {
 			elem.style.fill = "none";
 			elem.style.stroke = strokeColor;
 			elem.style.strokeWidth = "1.8";
@@ -1349,21 +1349,21 @@ var PaperRelationsGraphInteractionMixin = {
 		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
 		event.preventDefault();
 		event.dataTransfer.dropEffect = "copy";
-		state.canvas.classList.add("paper-relations-drop-active");
+		state.canvas.classList.add("paper-connections-drop-active");
 	},
 
 	onGraphDragLeave(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		if (!event.currentTarget?.contains(event.relatedTarget)) {
-			state.canvas.classList.remove("paper-relations-drop-active");
+			state.canvas.classList.remove("paper-connections-drop-active");
 		}
 	},
 
 	async onGraphDrop(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
-		state.canvas.classList.remove("paper-relations-drop-active");
+		state.canvas.classList.remove("paper-connections-drop-active");
 		if (!this.canDataTransferContainZoteroItems(event.dataTransfer)) return;
 		if (!state.activeTopicID || state.isTemporaryTopic || !state.activeLibraryID) return;
 
@@ -1448,12 +1448,12 @@ var PaperRelationsGraphInteractionMixin = {
 	},
 
 	notifyGraphSelectionChanged(window) {
-		window.dispatchEvent(new window.CustomEvent("paper-relations:graph-selection-changed"));
+		window.dispatchEvent(new window.CustomEvent("paper-connections:graph-selection-changed"));
 	},
 
 	applySelectedNodeStateToDOM(state) {
 		if (!state?.nodesGroup) return;
-		let nodeElems = state.nodesGroup.querySelectorAll(".paper-relations-node[data-node-id]");
+		let nodeElems = state.nodesGroup.querySelectorAll(".paper-connections-node[data-node-id]");
 		for (let elem of nodeElems) {
 			let nodeID = elem.getAttribute("data-node-id");
 			elem.classList.toggle("selected", state.selectedNodeID === nodeID);

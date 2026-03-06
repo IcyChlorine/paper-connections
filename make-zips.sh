@@ -12,7 +12,7 @@ rm -rf build
 mkdir build
 
 cd src
-zip -r ../build/paper-relations.xpi \
+zip -r ../build/paper-connections.xpi \
 	bootstrap.js \
 	locale \
 	assets \
@@ -22,10 +22,10 @@ zip -r ../build/paper-relations.xpi \
 	graph-interaction.js \
 	graph-topic.js \
 	graph-export.js \
-	paper-relations.js \
+	paper-connections.js \
 	manifest.json \
 	prefs.js \
 	style.css
 cd ../build
 
-jq ".addons[\"paper-relations@example.com\"].updates[0].update_hash = \"sha256:`shasum -a 256 paper-relations.xpi | cut -d' ' -f1`\"" ../updates.json.tmpl > updates.json
+jq ".addons[\"paper-connections@example.com\"].updates[0].update_hash = \"sha256:`shasum -a 256 paper-connections.xpi | cut -d' ' -f1`\"" ../updates.json.tmpl > updates.json

@@ -1,4 +1,4 @@
-var PaperRelationsGraphExportMixin = {
+var PaperConnectionsGraphExportMixin = {
 	positionContextMenuInCanvas(state, menuElem, clientX, clientY) {
 		if (!state?.canvas || !menuElem) return;
 		let canvasRect = state.canvas.getBoundingClientRect();
@@ -447,59 +447,59 @@ var PaperRelationsGraphExportMixin = {
 		const XHTML_NS = "http://www.w3.org/1999/xhtml";
 
 		let backdrop = doc.createElementNS(XHTML_NS, "div");
-		backdrop.className = "paper-relations-export-settings-backdrop";
+		backdrop.className = "paper-connections-export-settings-backdrop";
 		let dialog = doc.createElementNS(XHTML_NS, "div");
-		dialog.className = "paper-relations-export-settings-dialog";
+		dialog.className = "paper-connections-export-settings-dialog";
 		dialog.setAttribute("role", "dialog");
 		dialog.setAttribute("aria-modal", "true");
 
 		let intro = doc.createElementNS(XHTML_NS, "div");
-		intro.className = "paper-relations-export-settings-intro";
+		intro.className = "paper-connections-export-settings-intro";
 		intro.textContent = this.getGraphWorkspaceText("svgExportSettingsIntro");
 
 		let includeGridRow = doc.createElementNS(XHTML_NS, "div");
-		includeGridRow.className = "paper-relations-export-settings-row";
+		includeGridRow.className = "paper-connections-export-settings-row";
 		let includeGridLabel = doc.createElementNS(XHTML_NS, "label");
-		includeGridLabel.className = "paper-relations-export-settings-label";
+		includeGridLabel.className = "paper-connections-export-settings-label";
 		includeGridLabel.textContent = this.getGraphWorkspaceText("svgExportIncludeGrid");
 		let includeGridControl = doc.createElementNS(XHTML_NS, "span");
-		includeGridControl.className = "paper-relations-export-settings-control";
+		includeGridControl.className = "paper-connections-export-settings-control";
 		let includeGridInput = doc.createElementNS(XHTML_NS, "input");
 		includeGridInput.type = "checkbox";
 		includeGridInput.checked = false;
-		includeGridInput.className = "paper-relations-export-settings-checkbox";
-		includeGridInput.id = "paper-relations-export-include-grid-input";
-		includeGridLabel.htmlFor = "paper-relations-export-include-grid-input";
+		includeGridInput.className = "paper-connections-export-settings-checkbox";
+		includeGridInput.id = "paper-connections-export-include-grid-input";
+		includeGridLabel.htmlFor = "paper-connections-export-include-grid-input";
 		includeGridControl.append(includeGridInput);
 		includeGridRow.append(includeGridLabel, includeGridControl);
 
 		let marginRow = doc.createElementNS(XHTML_NS, "div");
-		marginRow.className = "paper-relations-export-settings-row";
+		marginRow.className = "paper-connections-export-settings-row";
 		let marginLabel = doc.createElementNS(XHTML_NS, "label");
-		marginLabel.className = "paper-relations-export-settings-label";
+		marginLabel.className = "paper-connections-export-settings-label";
 		marginLabel.textContent = this.getGraphWorkspaceText("svgExportMargin");
 		let marginControl = doc.createElementNS(XHTML_NS, "span");
-		marginControl.className = "paper-relations-export-settings-control";
+		marginControl.className = "paper-connections-export-settings-control";
 		let marginInput = doc.createElementNS(XHTML_NS, "input");
 		marginInput.type = "text";
 		marginInput.inputMode = "decimal";
 		marginInput.setAttribute("spellcheck", "false");
 		marginInput.value = "24";
-		marginInput.className = "paper-relations-export-settings-input";
-		marginLabel.htmlFor = "paper-relations-export-margin-input";
-		marginInput.id = "paper-relations-export-margin-input";
+		marginInput.className = "paper-connections-export-settings-input";
+		marginLabel.htmlFor = "paper-connections-export-margin-input";
+		marginInput.id = "paper-connections-export-margin-input";
 		marginControl.append(marginInput);
 		marginRow.append(marginLabel, marginControl);
 
 		let actions = doc.createElementNS(XHTML_NS, "div");
-		actions.className = "paper-relations-export-settings-actions";
+		actions.className = "paper-connections-export-settings-actions";
 		let cancelBtn = doc.createElementNS(XHTML_NS, "button");
 		cancelBtn.type = "button";
-		cancelBtn.className = "paper-relations-export-settings-btn";
+		cancelBtn.className = "paper-connections-export-settings-btn";
 		cancelBtn.textContent = this.getGraphWorkspaceText("dialogCancel");
 		let confirmBtn = doc.createElementNS(XHTML_NS, "button");
 		confirmBtn.type = "button";
-		confirmBtn.className = "paper-relations-export-settings-btn paper-relations-export-settings-btn-primary";
+		confirmBtn.className = "paper-connections-export-settings-btn paper-connections-export-settings-btn-primary";
 		confirmBtn.textContent = this.getGraphWorkspaceText("dialogConfirm");
 		actions.append(confirmBtn, cancelBtn);
 
@@ -598,25 +598,25 @@ var PaperRelationsGraphExportMixin = {
 		parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
 		parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${this.formatSVGNumber(minX)} ${this.formatSVGNumber(minY)} ${this.formatSVGNumber(width)} ${this.formatSVGNumber(height)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}">`);
 		parts.push(`<defs>`);
-		parts.push(`<marker id="paper-relations-export-arrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto">`);
+		parts.push(`<marker id="paper-connections-export-arrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto">`);
 		parts.push(`<path d="M0,0 L11,4 L0,8 Z" fill="#4b6073" stroke="none"/>`);
 		parts.push(`</marker>`);
 		if (includeGrid) {
-			parts.push(`<pattern id="paper-relations-export-grid" patternUnits="userSpaceOnUse" width="${this.formatSVGNumber(gridSize)}" height="${this.formatSVGNumber(gridSize)}">`);
+			parts.push(`<pattern id="paper-connections-export-grid" patternUnits="userSpaceOnUse" width="${this.formatSVGNumber(gridSize)}" height="${this.formatSVGNumber(gridSize)}">`);
 			parts.push(`<path d="M${this.formatSVGNumber(gridSize)} 0 H0 V${this.formatSVGNumber(gridSize)}" fill="none" stroke="rgba(120,140,160,0.18)" stroke-width="1"/>`);
 			parts.push(`</pattern>`);
 		}
 		parts.push(`</defs>`);
 		parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="#ffffff"/>`);
 		if (includeGrid) {
-			parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="url(#paper-relations-export-grid)"/>`);
+			parts.push(`<rect x="${this.formatSVGNumber(minX)}" y="${this.formatSVGNumber(minY)}" width="${this.formatSVGNumber(width)}" height="${this.formatSVGNumber(height)}" fill="url(#paper-connections-export-grid)"/>`);
 		}
 
 		let visibleEdges = this.getVisibleEdgeRenderData(state);
 		for (let edgePath of visibleEdges.paths || []) {
 			let pathData = edgePath.pathD || "";
 			if (!pathData) continue;
-			let markerEnd = edgePath.markerEnd ? ` marker-end="url(#paper-relations-export-arrow)"` : "";
+			let markerEnd = edgePath.markerEnd ? ` marker-end="url(#paper-connections-export-arrow)"` : "";
 			parts.push(`<path d="${this.escapeXML(pathData)}" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${markerEnd} opacity="0.9"/>`);
 		}
 		for (let node of state.nodes || []) {

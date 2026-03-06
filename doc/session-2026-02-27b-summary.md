@@ -28,19 +28,19 @@ This file summarizes the follow-up development and refactor work completed after
 - Removed legacy `-2.0` template suffixes across project structure and packaging:
   - `src-2.0` -> `src`
   - `updates-2.0.json.tmpl` -> `updates.json.tmpl`
-  - build output `paper-relations-2.0.xpi` -> `paper-relations.xpi`
+  - build output `paper-connections-2.0.xpi` -> `paper-connections.xpi`
   - update feed output `updates-2.0.json` -> `updates.json`
 - Updated update URLs and template links accordingly.
 - Removed remaining `2.0` hardcoded log text in bootstrap messages; startup log now uses runtime version.
 
 ## 4. Major refactor: split monolithic main file
 
-- Split `src/paper-relations.js` into three responsibility-oriented parts:
-  - `src/paper-relations-storage.js`: SyncedSettings store schema + topic/node/edge CRUD.
-  - `src/paper-relations-graph-workspace.js`: graph pane rendering, interaction, and workspace state handling.
-  - `src/paper-relations.js`: core object, shared utilities, section registration, window lifecycle, and module composition.
+- Split `src/paper-connections.js` into three responsibility-oriented parts:
+  - `src/paper-connections-storage.js`: SyncedSettings store schema + topic/node/edge CRUD.
+  - `src/paper-connections-graph-workspace.js`: graph pane rendering, interaction, and workspace state handling.
+  - `src/paper-connections.js`: core object, shared utilities, section registration, window lifecycle, and module composition.
 - Composition uses:
-  - `Object.assign(PaperRelations, PaperRelationsStorageMixin, PaperRelationsGraphWorkspaceMixin)`
+  - `Object.assign(PaperConnections, PaperConnectionsStorageMixin, PaperConnectionsGraphWorkspaceMixin)`
 - Updated script load order in `src/bootstrap.js`:
   - load storage mixin, then graph workspace mixin, then main module.
 - Updated `make-zips` whitelist to include newly split JS files.
@@ -61,4 +61,4 @@ This file summarizes the follow-up development and refactor work completed after
 - `a7d6a68` feat: snap nodes to grid by center point
 - `c0bf18a` chore: remove 2.0 template suffixes from structure and packaging
 - `1aea66a` chore: unify UI naming for sections and graph workspace
-- `d5dda52` refactor: split paper-relations into storage and graph modules
+- `d5dda52` refactor: split paper-connections into storage and graph modules

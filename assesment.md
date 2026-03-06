@@ -1,4 +1,4 @@
-# Paper Relations 数据存储评估（Zotero 7）
+# Paper Connections 数据存储评估（Zotero 7）
 
 日期：2026-02-27  
 环境：Zotero 7.0.32（BuildID 20260114201345，本机 `C:\Program Files\Zotero\app\application.ini`）
@@ -39,7 +39,7 @@
 
 ## 4. 推荐数据模型（存入 SyncedSettings）
 
-建议 setting key：`paper-relations.graph.v1`
+建议 setting key：`paper-connections.graph.v1`
 
 ```json
 {

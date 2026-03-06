@@ -1,12 +1,13 @@
-# Paper Relations Storage and CRUD
+# Paper Connections Storage and CRUD
 
-Date: 2026-03-05  
+Date: 2026-03-06  
 Target: Zotero 7 (`src`)
 
 ## 1. Storage backend
 
 - Backend: `Zotero.SyncedSettings`
-- Setting key: `paper-relations.graph.v1`
+- Setting key: `paper-connections.graph.v1`
+- Legacy compatibility: if the new key is empty, runtime falls back to `paper-relations.graph.v1` and rewrites the normalized store into the new key
 - Scope: per `libraryID` (not global preference)
 - Sync behavior: uses Zotero synced settings channel (library-scoped)
 
@@ -130,6 +131,8 @@ These remain as wrappers only and should not be used by new logic:
 ## 4. Migration and normalization
 
 - `loadStore()` performs normalization and auto-migration.
+- During rename rollout, `loadStore()` first tries `paper-connections.graph.v1` and falls back to legacy `paper-relations.graph.v1`.
+- If legacy data is loaded, the normalized store is persisted back under `paper-connections.graph.v1`.
 - If store is v1 (or topic still has legacy `bundles`):
   - each legacy bundle becomes a real `bundle` node,
   - member edges are rewritten to originate from the new hub,
@@ -161,7 +164,7 @@ These remain as wrappers only and should not be used by new logic:
 
 ## 8. Remark storage
 
-- Scope: per Zotero item (not in `paper-relations.graph.v1`).
+- Scope: per Zotero item (not in `paper-connections.graph.v1`).
 - Backend: Zotero item field `extra`.
 - Format: `remark: <text>` line.
 - Ethereal Style-compatible and migration-supported.

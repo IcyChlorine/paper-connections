@@ -4,8 +4,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = [System.IO.Path]::GetFullPath((Split-Path -Parent $MyInvocation.MyCommand.Path))
 $buildDir = Join-Path $repoRoot "build"
 $srcDir = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "src"))
-$xpiPath = Join-Path $buildDir "paper-relations.xpi"
-$zipPath = Join-Path $buildDir "paper-relations.zip"
+$xpiPath = Join-Path $buildDir "paper-connections.xpi"
+$zipPath = Join-Path $buildDir "paper-connections.zip"
 $templatePath = Join-Path $repoRoot "updates.json.tmpl"
 $updatesPath = Join-Path $buildDir "updates.json"
 
@@ -19,7 +19,7 @@ $packList = @(
 	"graph-interaction.js",
 	"graph-topic.js",
 	"graph-export.js",
-	"paper-relations.js",
+	"paper-connections.js",
 	"manifest.json",
 	"prefs.js",
 	"style.css"

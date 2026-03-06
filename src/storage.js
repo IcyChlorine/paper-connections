@@ -1,4 +1,4 @@
-var PaperRelationsStorageMixin = {
+var PaperConnectionsStorageMixin = {
 	normalizeBundleSlopeMode(mode) {
 		if (mode === "flat") return "flat";
 		// Backward compatibility: previous "matched" mode now maps to unconstrained mode.
@@ -352,11 +352,28 @@ var PaperRelationsStorageMixin = {
 		this.syncedSettingsLoadedLibraries.add(libraryID);
 	},
 
+	getStoreSettingKeysForLoad() {
+		let keys = [this.storeSettingKey];
+		for (let key of this.legacyStoreSettingKeys || []) {
+			if (typeof key !== "string" || !key || keys.includes(key)) continue;
+			keys.push(key);
+		}
+		return keys;
+	},
+
 	async loadStore(libraryID) {
 		await this.ensureSyncedSettingsLoaded(libraryID);
-		let raw = Zotero.SyncedSettings.get(libraryID, this.storeSettingKey);
+		let raw = null;
+		let sourceKey = this.storeSettingKey;
+		for (let settingKey of this.getStoreSettingKeysForLoad()) {
+			let candidate = Zotero.SyncedSettings.get(libraryID, settingKey);
+			if (candidate === undefined || candidate === null) continue;
+			raw = candidate;
+			sourceKey = settingKey;
+			break;
+		}
 		let { store, changed } = this.normalizeStoreWithMeta(raw);
-		if (changed) {
+		if (changed || sourceKey !== this.storeSettingKey) {
 			await Zotero.SyncedSettings.set(libraryID, this.storeSettingKey, store);
 		}
 		return store;

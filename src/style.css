@@ -1,9 +1,9 @@
-item-pane-custom-section[data-pane="paper-relations-topic-context-section"] [data-type="body"],
-item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [data-type="body"] {
+item-pane-custom-section[data-pane="paper-connections-topic-context-section"] [data-type="body"],
+item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] [data-type="body"] {
 	line-height: 1.45;
 }
 
-#paper-relations-graph-toggle-btn {
+#paper-connections-graph-toggle-btn {
 	list-style-image: url("assets/code-merge-svgrepo-com.svg");
 	-moz-box-pack: center;
 	padding-inline: 0;
@@ -11,22 +11,22 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	justify-content: center;
 }
 
-#paper-relations-graph-toggle-btn .toolbarbutton-icon {
+#paper-connections-graph-toggle-btn .toolbarbutton-icon {
 	width: 17px;
 	height: 17px;
 	margin-inline: auto;
 	display: block;
 }
 
-#paper-relations-graph-toggle-btn .toolbarbutton-text {
+#paper-connections-graph-toggle-btn .toolbarbutton-text {
 	display: none;
 }
 
-#paper-relations-graph-toggle-btn[data-graph-visible="false"] {
+#paper-connections-graph-toggle-btn[data-graph-visible="false"] {
 	opacity: 0.6;
 }
 
-#paper-relations-graph-pane {
+#paper-connections-graph-pane {
 	display: flex;
 	flex-direction: column;
 	min-height: 150px;
@@ -35,41 +35,41 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	background: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%);
 }
 
-#paper-relations-graph-toolbar {
+#paper-connections-graph-toolbar {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: 8px;
 }
 
-#paper-relations-graph-title-wrap {
+#paper-connections-graph-title-wrap {
 	min-width: 0;
 }
 
-#paper-relations-graph-header {
+#paper-connections-graph-header {
 	font-size: 13px;
 	font-weight: 600;
 	color: #203040;
 }
 
-.paper-relations-graph-header-main {
+.paper-connections-graph-header-main {
 	font-weight: inherit;
 }
 
-.paper-relations-graph-header-temporary-hint {
+.paper-connections-graph-header-temporary-hint {
 	margin-left: 8px;
 	font-size: 11px;
 	font-weight: 400;
 	color: #9aa8b6;
 }
 
-#paper-relations-graph-subheader {
+#paper-connections-graph-subheader {
 	margin-top: 2px;
 	font-size: 11px;
 	color: #617282;
 }
 
-#paper-relations-graph-canvas {
+#paper-connections-graph-canvas {
 	position: relative;
 	margin-top: 8px;
 	flex: 1;
@@ -81,78 +81,78 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	cursor: default;
 }
 
-#paper-relations-graph-canvas.paper-relations-drop-active {
+#paper-connections-graph-canvas.paper-connections-drop-active {
 	box-shadow: inset 0 0 0 2px #2f6ea9;
 }
 
-#paper-relations-graph-canvas.paper-relations-temporary-topic {
+#paper-connections-graph-canvas.paper-connections-temporary-topic {
 	border-style: solid;
 }
 
-#paper-relations-graph-canvas.paper-relations-pan-ready {
+#paper-connections-graph-canvas.paper-connections-pan-ready {
 	cursor: grab;
 }
 
-#paper-relations-graph-canvas.paper-relations-panning {
+#paper-connections-graph-canvas.paper-connections-panning {
 	cursor: grabbing;
 }
 
-#paper-relations-graph-canvas.paper-relations-cut-ready {
+#paper-connections-graph-canvas.paper-connections-cut-ready {
 	cursor: default;
 }
 
-#paper-relations-graph-canvas.paper-relations-bundle-ready {
+#paper-connections-graph-canvas.paper-connections-bundle-ready {
 	cursor: default;
 }
 
-#paper-relations-graph-canvas svg {
+#paper-connections-graph-canvas svg {
 	display: block;
 	width: 100%;
 	height: 100%;
 }
 
-.paper-relations-board-base {
-	fill: url(#paper-relations-board-fill);
+.paper-connections-board-base {
+	fill: url(#paper-connections-board-fill);
 }
 
-.paper-relations-board-grid {
-	fill: url(#paper-relations-grid-pattern);
+.paper-connections-board-grid {
+	fill: url(#paper-connections-grid-pattern);
 }
 
-.paper-relations-canvas-controls {
+.paper-connections-canvas-controls {
 	pointer-events: none;
 }
 
-.paper-relations-canvas-btn {
+.paper-connections-canvas-btn {
 	pointer-events: all;
 	cursor: pointer;
 	opacity: 0.3;
 	transition: opacity 140ms ease;
 }
 
-.paper-relations-canvas-btn:hover {
+.paper-connections-canvas-btn:hover {
 	opacity: 0.48;
 }
 
-.paper-relations-canvas-btn.active {
+.paper-connections-canvas-btn.active {
 	opacity: 1;
 }
 
-.paper-relations-canvas-btn-hitbox {
+.paper-connections-canvas-btn-hitbox {
 	fill: rgba(0, 0, 0, 0.001);
 	stroke: none;
 }
 
-.paper-relations-canvas-btn-icon-image {
+.paper-connections-canvas-btn-icon-image {
 	pointer-events: none;
 	transition: filter 140ms ease;
 }
 
-.paper-relations-canvas-btn-icon-fill {
+.paper-connections-canvas-btn-icon-fill {
 	transition: fill 140ms ease;
 }
 
-.paper-relations-edge {
+.paper-connections-edge {
 	fill: none;
 	stroke: #5a6b7a;
 	stroke-width: 2;
@@ -161,20 +161,20 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	opacity: 0.9;
 }
 
-.paper-relations-edge-draft {
+.paper-connections-edge-draft {
 	stroke: #2f3f4f;
 	opacity: 0.75;
 }
 
-.paper-relations-edge-bundle-trunk {
+.paper-connections-edge-bundle-trunk {
 	stroke: #4d5f70;
 }
 
-.paper-relations-edge-bundle-branch {
+.paper-connections-edge-bundle-branch {
 	stroke: #5a6b7a;
 }
 
-.paper-relations-edge-cut-preview {
+.paper-connections-edge-cut-preview {
 	stroke: #1a1a1a;
 	stroke-width: 2;
 	stroke-linecap: round;
@@ -182,7 +182,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	opacity: 0.82;
 }
 
-.paper-relations-edge-bundle-preview {
+.paper-connections-edge-bundle-preview {
 	stroke: #101214;
 	stroke-width: 2;
 	stroke-linecap: round;
@@ -191,69 +191,69 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	fill: none;
 }
 
-.paper-relations-edge-cut-scissors {
+.paper-connections-edge-cut-scissors {
 	pointer-events: none;
 	opacity: 0.96;
 }
 
-.paper-relations-bundle-hub {
+.paper-connections-bundle-hub {
 	fill: #101214;
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 120ms ease-out;
 }
 
-.paper-relations-bundle-hub.active {
+.paper-connections-bundle-hub.active {
 	opacity: 0.96;
 }
 
-.paper-relations-node-anchor {
+.paper-connections-node-anchor {
 	fill: #151515;
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 120ms ease-out;
 }
 
-.paper-relations-node-anchor.active {
+.paper-connections-node-anchor.active {
 	opacity: 0.96;
 }
 
-.paper-relations-node rect {
+.paper-connections-node rect {
 	stroke: #657a8f;
 	stroke-width: 1.4;
 	filter: drop-shadow(0 1px 1px rgba(60, 80, 100, 0.12));
 }
 
-.paper-relations-node {
+.paper-connections-node {
 	cursor: default;
 }
 
-.paper-relations-node.root rect {
+.paper-connections-node.root rect {
 	fill: #ffe7b8;
 }
 
-.paper-relations-node.leaf rect {
+.paper-connections-node.leaf rect {
 	fill: #e8f2ff;
 }
 
-.paper-relations-node text {
+.paper-connections-node text {
 	font-size: 15px;
 	font-weight: 500;
 	fill: #243444;
 	pointer-events: none;
 }
 
-.paper-relations-node.selected rect {
+.paper-connections-node.selected rect {
 	stroke: #1c4f88;
 	stroke-width: 3;
 }
 
-.paper-relations-node.renaming rect {
+.paper-connections-node.renaming rect {
 	stroke: #1c4f88;
 	stroke-width: 2.2;
 }
 
-.paper-relations-node-context-menu {
+.paper-connections-node-context-menu {
 	position: absolute;
 	z-index: 8;
 	display: flex;
@@ -266,7 +266,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	box-shadow: 0 6px 18px rgba(34, 48, 64, 0.2);
 }
 
-.paper-relations-node-context-item {
+.paper-connections-node-context-item {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -280,30 +280,30 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	text-align: left;
 }
 
-.paper-relations-node-context-label {
+.paper-connections-node-context-label {
 	flex: 1;
 	text-align: left;
 }
 
-.paper-relations-node-context-check {
+.paper-connections-node-context-check {
 	min-width: 10px;
 	text-align: right;
 	visibility: hidden;
 }
 
-.paper-relations-node-context-item[data-checked="true"] .paper-relations-node-context-check {
+.paper-connections-node-context-item[data-checked="true"] .paper-connections-node-context-check {
 	visibility: visible;
 }
 
-.paper-relations-node-context-item:hover:not(:disabled) {
+.paper-connections-node-context-item:hover:not(:disabled) {
 	background: #eef4fa;
 }
 
-.paper-relations-node-context-item:disabled {
+.paper-connections-node-context-item:disabled {
 	opacity: 0.45;
 }
 
-.paper-relations-context-menu-separator {
+.paper-connections-context-menu-separator {
 	align-self: stretch;
 	height: 0;
 	margin: 4px 6px;
@@ -311,7 +311,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	pointer-events: none;
 }
 
-.paper-relations-node-rename-input {
+.paper-connections-node-rename-input {
 	position: absolute;
 	z-index: 7;
 	box-sizing: border-box;
@@ -326,7 +326,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	outline: none;
 }
 
-.paper-relations-export-settings-backdrop {
+.paper-connections-export-settings-backdrop {
 	position: absolute;
 	inset: 0;
 	z-index: 12;
@@ -336,7 +336,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	background: rgba(30, 42, 56, 0.12);
 }
 
-.paper-relations-export-settings-dialog {
+.paper-connections-export-settings-dialog {
 	display: inline-block;
 	width: auto;
 	min-width: 0;
@@ -350,7 +350,7 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 12px;
 }
 
-.paper-relations-export-settings-row {
+.paper-connections-export-settings-row {
 	display: grid;
 	grid-template-columns: max-content 92px;
 	align-items: center;
@@ -358,28 +358,28 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	column-gap: 8px;
 }
 
-.paper-relations-export-settings-row + .paper-relations-export-settings-row {
+.paper-connections-export-settings-row + .paper-connections-export-settings-row {
 	margin-top: 8px;
 }
 
-.paper-relations-export-settings-label {
+.paper-connections-export-settings-label {
 	white-space: nowrap;
 	text-align: right;
 }
 
-.paper-relations-export-settings-intro {
+.paper-connections-export-settings-intro {
 	margin: 0 0 8px;
 	font-weight: 600;
 }
 
-.paper-relations-export-settings-control {
+.paper-connections-export-settings-control {
 	display: inline-flex;
 	align-items: center;
 	justify-content: flex-start;
 	width: 92px;
 }
 
-.paper-relations-export-settings-input {
+.paper-connections-export-settings-input {
 	width: 92px;
 	padding: 3px 6px;
 	border: 1px solid #b5c2ce;
@@ -388,18 +388,18 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	text-align: left;
 }
 
-.paper-relations-export-settings-checkbox {
+.paper-connections-export-settings-checkbox {
 	margin: 0;
 }
 
-.paper-relations-export-settings-actions {
+.paper-connections-export-settings-actions {
 	margin-top: 10px;
 	display: flex;
 	justify-content: flex-end;
 	gap: 6px;
 }
 
-.paper-relations-export-settings-btn {
+.paper-connections-export-settings-btn {
 	padding: 4px 9px;
 	border: 1px solid #acb9c5;
 	border-radius: 6px;
@@ -408,21 +408,21 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 12px;
 }
 
-.paper-relations-export-settings-btn-primary {
+.paper-connections-export-settings-btn-primary {
 	border-color: #2b6fae;
 	background: #2f79bc;
 	color: #ffffff;
 }
 
-.paper-relations-pane-actions {
+.paper-connections-pane-actions {
 	margin-top: 10px;
 	display: flex;
 	gap: 6px;
 	flex-wrap: wrap;
 }
 
-.paper-relations-create-topic-btn,
-.paper-relations-remove-topic-btn {
+.paper-connections-create-topic-btn,
+.paper-connections-remove-topic-btn {
 	padding: 3px 8px;
 	border: 1px solid #a4b1bf;
 	border-radius: 6px;
@@ -431,13 +431,13 @@ item-pane-custom-section[data-pane="paper-relations-selection-debug-section"] [d
 	font-size: 11px;
 }
 
-.paper-relations-create-topic-btn:hover:not(:disabled),
-.paper-relations-remove-topic-btn:hover:not(:disabled) {
+.paper-connections-create-topic-btn:hover:not(:disabled),
+.paper-connections-remove-topic-btn:hover:not(:disabled) {
 	background: #e7f0f8;
 }
 
-.paper-relations-create-topic-btn:disabled,
-.paper-relations-remove-topic-btn:disabled {
+.paper-connections-create-topic-btn:disabled,
+.paper-connections-remove-topic-btn:disabled {
 	opacity: 0.6;
 }
 

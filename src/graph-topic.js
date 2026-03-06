@@ -1,4 +1,4 @@
-var PaperRelationsGraphTopicMixin = {
+var PaperConnectionsGraphTopicMixin = {
 	async removeNodeFromActiveTopic(window, nodeID) {
 		let state = this.graphStates.get(window);
 		if (!state || !nodeID || !this.isSavedTopicMutableState(state)) return;
