@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Connections Build Check"
+  short_description: "Validate plugin builds and close-out checks"
+  default_prompt: "Use $paper-connections-build-check to verify this Paper Connections change before finishing."

@@ -9,26 +9,40 @@
 - Current direction: paper connections plugin (not color demo behavior).
 - Naming baseline: use `paper-connections` consistently (id, file names, build artifact names, update config keys).
 
+## Worktree Development
+- This repo may be developed through multiple `git worktree` workspaces in parallel; keep worktree-based collaboration in mind and prefer merge-friendly changes when that does not compromise the best implementation.
+- Determine the current worktree identity from the branch name. No `wtN` suffix means the main worktree; `wt2`, `wt3`, etc. mean secondary worktrees.
+- When recent progress may have been merged in from another worktree, inspect git merge history before starting or resuming work so you understand what already landed.
+
 ## UI Terminology
 - `Topic Context Section`: right item-pane custom section with context summary and create/remove topic actions.
 - `Selection Debug Section`: right item-pane custom section showing selected node details for debug.
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
 
 ## Development Docs Index (Read in Order)
-- Session summary (latest): `doc/session-2026-03-06a-summary.md`.
+- Session summary (latest relevant summary for current worktree): `doc/session-*.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
 - Storage evaluation note (legacy filename): `assesment.md`.
 - Early feasibility/background: `zotero-plugin-assessment.md`.
 - Product/user docs: `README.md`.
 
+## Project Skills
+- Project-local skills live under `./.codex/skills/`.
+- `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
+- Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
+
 ## Doc Rules
 - Before implementing any feature, read:
   1) `doc/current-features.md`
   2) `doc/storage-crud.md` (if data related)
-  3) latest `doc/session-*.md`
+  3) latest relevant `doc/session-*.md` for the current worktree; if recent merges brought in other worktree progress relevant to the task, also review those merged summaries
 - If behavior changes, update `doc/current-features.md` in the same task.
 - If data model/API changes, update `doc/storage-crud.md` in the same task.
+- Session summary naming under worktree development is `session-yyyy-mm-dd-[session order:a-z][worktree suffix]-summary.md`.
+- Main worktree omits the worktree suffix. Example: `session-2026-03-06a-summary.md`.
+- Secondary worktrees include the suffix from the branch/worktree identity. Example: `session-2026-03-05bwt2-summary.md`.
+- If progress is synchronized between worktrees by merge, use git merge history to understand which updates came from other worktrees and avoid duplicating or overwriting summary content.
 
 ## Commit Rule
 - Auto-commit stable milestone results.
@@ -60,8 +74,8 @@
 
 ## Build and Packaging
 - Build with `make-zips.sh` (Git Bash) or `make-zips.ps1` (PowerShell) from repo root.
-- Both scripts use whitelist packaging for `src`; temp files inside `src` are not packaged.
-- If shell permission issues occur in one shell, switch to the other script (`.\make-zips.ps1` or `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips.sh`).
+- After any task that changes source files under `src`, rebuild before close-out so the latest `xpi` is ready for Zotero testing.
+- Use `paper-connections-build-check` for the repo-specific close-out/build verification flow instead of restating the detailed checklist here.
 
 ## Token/Time Saving
 - Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
