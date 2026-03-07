@@ -181,6 +181,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		if (!doc) return null;
 		let graphState = state || this.graphStates.get(window) || null;
 		return {
+			titleBar: doc.getElementById("zotero-title-bar"),
 			itemsContainer: graphState?.itemsContainer || doc.getElementById("zotero-items-pane-container"),
 			graphPane: graphState?.pane || doc.getElementById("paper-connections-graph-pane"),
 			graphCanvas: graphState?.canvas || doc.getElementById("paper-connections-graph-canvas"),
@@ -191,6 +192,8 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			itemSplitter: doc.getElementById("zotero-items-splitter"),
 			tagSelectorContainer: doc.getElementById("zotero-tag-selector-container"),
 			contextPane: doc.getElementById("zotero-context-pane"),
+			librarySidenav: doc.getElementById("zotero-view-item-sidenav"),
+			contextPaneSidenav: doc.getElementById("zotero-context-pane-sidenav"),
 			itemToolbar: doc.getElementById("zotero-toolbar-item-tree"),
 			itemsPane: doc.getElementById("zotero-items-pane"),
 		};
@@ -224,6 +227,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			itemSplitterState: refs?.itemSplitter?.getAttribute("state") || "",
 			tagSelectorCollapsed: refs?.tagSelectorContainer?.getAttribute("collapsed") === "true",
 			contextPaneCollapsed: refs?.contextPane?.getAttribute("collapsed") === "true",
+			titleBarHidden: !!refs?.titleBar?.hidden,
+			librarySidenavHidden: !!refs?.librarySidenav?.hidden,
+			contextPaneSidenavHidden: !!refs?.contextPaneSidenav?.hidden,
 			itemToolbarHidden: !!refs?.itemToolbar?.hidden,
 			itemsPaneHidden: !!refs?.itemsPane?.hidden,
 			graphPaneHeightAttr: state.pane?.getAttribute("height"),
@@ -258,6 +264,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		else {
 			refs.contextPane?.setAttribute("collapsed", true);
 		}
+		this.setWorkspaceElementHidden(refs.titleBar, true);
+		this.setWorkspaceElementHidden(refs.librarySidenav, true);
+		this.setWorkspaceElementHidden(refs.contextPaneSidenav, true);
 		this.setWorkspaceElementHidden(refs.itemToolbar, true);
 		this.setWorkspaceElementHidden(refs.itemsPane, true);
 		refs.itemsContainer?.classList.add("paper-connections-graph-host-fullscreen");
@@ -313,6 +322,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		else {
 			refs.contextPane?.setAttribute("collapsed", !!snapshot.contextPaneCollapsed);
 		}
+		this.setWorkspaceElementHidden(refs.titleBar, !!snapshot.titleBarHidden);
+		this.setWorkspaceElementHidden(refs.librarySidenav, !!snapshot.librarySidenavHidden);
+		this.setWorkspaceElementHidden(refs.contextPaneSidenav, !!snapshot.contextPaneSidenavHidden);
 		this.setWorkspaceElementHidden(refs.itemToolbar, !!snapshot.itemToolbarHidden);
 		this.setWorkspaceElementHidden(refs.itemsPane, !!snapshot.itemsPaneHidden);
 		refs.itemsContainer?.classList.remove("paper-connections-graph-host-fullscreen");
