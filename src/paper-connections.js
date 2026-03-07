@@ -13,6 +13,7 @@ PaperConnections = {
 	remarkColumnRegisteredKey: null,
 	remarkInfoRowRegisteredID: null,
 	remarkIntegrationRegistered: false,
+	notifierObserverID: null,
 
 	graphStates: null,
 	selectionDebugSectionListeners: null,
@@ -42,6 +43,7 @@ PaperConnections = {
 		this.topicContextSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
+		this.notifierObserverID = null;
 		this.initialized = true;
 	},
 
@@ -70,6 +72,54 @@ PaperConnections = {
 		if (!item) return "";
 		let displayTitle = typeof item.getDisplayTitle === "function" ? item.getDisplayTitle() : "";
 		return item.getField("title") || displayTitle || item.key || "(untitled)";
+	},
+
+	getRawItemForNode(node) {
+		if (!node?.libraryID || !node?.itemKey) return null;
+		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
+		try {
+			return Zotero.Items.getByLibraryAndKey(node.libraryID, node.itemKey) || null;
+		}
+		catch (error) {
+			Zotero.logError(error);
+			return null;
+		}
+	},
+
+	resolveNodeItemStatus(node) {
+		if (!node || this.isBundleNodeState?.(node)) {
+			return {
+				item: null,
+				isMissing: false,
+				reason: "",
+			};
+		}
+
+		let item = this.getRawItemForNode(node);
+		if (!item) {
+			return {
+				item: null,
+				isMissing: true,
+				reason: "not-found",
+			};
+		}
+		if (item.deleted) {
+			return {
+				item,
+				isMissing: true,
+				reason: "trashed",
+			};
+		}
+		return {
+			item,
+			isMissing: false,
+			reason: "",
+		};
+	},
+
+	getUsableItemForNode(node) {
+		let status = this.resolveNodeItemStatus(node);
+		return status.isMissing ? null : status.item;
 	},
 
 	getCurrentLocaleTag() {
@@ -209,6 +259,80 @@ PaperConnections = {
 		this.remarkIntegrationRegistered = false;
 	},
 
+	syncPaperNodeRuntimeState(node) {
+		if (!node || this.isBundleNodeState?.(node)) {
+			return {
+				changed: false,
+				geometryChanged: false,
+				statusChanged: false,
+				labelChanged: false,
+			};
+		}
+
+		let status = this.resolveNodeItemStatus(node);
+		let nextMissing = !!status.isMissing;
+		let nextReason = status.reason || "";
+		let nextTitle = status.item ? this.getItemTitle(status.item) : (node.title || node.itemKey || "(untitled)");
+		let nextLabel = this.getNodeLabelForDisplay(node, status);
+		let oldMetrics = this.getNodeRenderMetrics(node);
+		let oldCenterX = node.x + oldMetrics.width / 2;
+		let oldCenterY = node.y + oldMetrics.height / 2;
+		let nextWidth = this.getNodeWidthForLabel(nextLabel);
+		let nextMetrics = this.getNodeRenderMetrics({
+			...node,
+			label: nextLabel,
+			width: nextWidth,
+		});
+		let nextX = oldCenterX - nextMetrics.width / 2;
+		let nextY = oldCenterY - nextMetrics.height / 2;
+		let changed = false;
+		let geometryChanged = false;
+		let statusChanged = false;
+		let labelChanged = false;
+
+		if (!!node.itemMissing !== nextMissing) {
+			node.itemMissing = nextMissing;
+			changed = true;
+			statusChanged = true;
+		}
+		if ((node.itemMissingReason || "") !== nextReason) {
+			node.itemMissingReason = nextReason;
+			changed = true;
+			statusChanged = true;
+		}
+		if (node.label !== nextLabel) {
+			node.label = nextLabel;
+			changed = true;
+			labelChanged = true;
+		}
+		if (node.width !== nextWidth) {
+			node.width = nextWidth;
+			changed = true;
+			geometryChanged = true;
+		}
+		if (node.x !== nextX) {
+			node.x = nextX;
+			changed = true;
+			geometryChanged = true;
+		}
+		if (node.y !== nextY) {
+			node.y = nextY;
+			changed = true;
+			geometryChanged = true;
+		}
+		if (!nextMissing && node.title !== nextTitle) {
+			node.title = nextTitle;
+			changed = true;
+		}
+
+		return {
+			changed,
+			geometryChanged,
+			statusChanged,
+			labelChanged,
+		};
+	},
+
 	refreshRemarkPresentation() {
 		if (this.remarkInfoRowRegisteredID && Zotero.ItemPaneManager?.refreshInfoRow) {
 			Zotero.ItemPaneManager.refreshInfoRow(this.remarkInfoRowRegisteredID);
@@ -237,9 +361,10 @@ PaperConnections = {
 				let oldCenterX = node.x + oldMetrics.width / 2;
 				let oldCenterY = node.y + oldMetrics.height / 2;
 
-				let nextLabel = this.getNodeLabelForDisplay(node);
+				let status = this.resolveNodeItemStatus(node);
+				let nextLabel = this.getNodeLabelForDisplay(node, status);
 				let nextWidth = this.getNodeWidthForLabel(nextLabel);
-				let nextTitle = this.getItemTitle(item);
+				let nextTitle = status.item ? this.getItemTitle(status.item) : node.title || node.itemKey || "(untitled)";
 				let nextMetrics = this.getNodeRenderMetrics({
 					...node,
 					label: nextLabel,
@@ -266,6 +391,14 @@ PaperConnections = {
 					node.y = nextY;
 					changed = true;
 					nodePositionChanged = true;
+				}
+				if (node.itemMissing) {
+					node.itemMissing = false;
+					changed = true;
+				}
+				if (node.itemMissingReason) {
+					node.itemMissingReason = "";
+					changed = true;
 				}
 				if (node.title !== nextTitle) {
 					node.title = nextTitle;
@@ -310,6 +443,138 @@ PaperConnections = {
 					snapLabel: persist.snapLabel,
 				},
 			).catch((error) => Zotero.logError(error));
+		}
+	},
+
+	isNodeConnectedToSelected(state, nodeID) {
+		if (!state?.selectedNodeID || !nodeID) return false;
+		if (state.selectedNodeID === nodeID) return true;
+		return (state.edges || []).some((edge) =>
+			(edge.from === state.selectedNodeID && edge.to === nodeID)
+			|| (edge.to === state.selectedNodeID && edge.from === nodeID),
+		);
+	},
+
+	refreshGraphNodeAvailability(window, itemRefs = null) {
+		let state = this.graphStates.get(window);
+		if (!state?.nodes?.length) {
+			this.refreshSelectedMissingNodeHint?.(window);
+			return 0;
+		}
+
+		let itemRefSet = itemRefs?.length
+			? new Set(itemRefs.map((ref) => this.getItemRef(ref.libraryID, ref.itemKey)))
+			: null;
+		let changedNodeIDs = [];
+		let selectionAffected = false;
+
+		for (let node of state.nodes) {
+			if (this.isBundleNodeState?.(node)) continue;
+			if (itemRefSet && !itemRefSet.has(this.getItemRef(node.libraryID, node.itemKey))) {
+				continue;
+			}
+			let result = this.syncPaperNodeRuntimeState(node);
+			if (!result.changed) continue;
+			changedNodeIDs.push(node.id);
+			if (this.isNodeConnectedToSelected(state, node.id)) {
+				selectionAffected = true;
+			}
+		}
+
+		if (changedNodeIDs.length) {
+			for (let nodeID of changedNodeIDs) {
+				this.updateNodeDOM(window, nodeID, { propagate: "bundle" });
+			}
+			if (selectionAffected) {
+				this.notifyGraphSelectionChanged(window);
+			}
+		}
+		this.refreshSelectedMissingNodeHint?.(window);
+		return changedNodeIDs.length;
+	},
+
+	refreshAllGraphNodeAvailability(itemRefs = null) {
+		for (let win of Zotero.getMainWindows()) {
+			if (!win?.ZoteroPane) continue;
+			this.refreshGraphNodeAvailability(win, itemRefs);
+		}
+	},
+
+	async getItemRefsFromNotifierData(ids = [], extraData = null) {
+		let refs = new Map();
+		let addRef = (libraryID, itemKey) => {
+			let numericLibraryID = Number(libraryID);
+			let normalizedItemKey = String(itemKey || "");
+			if (!Number.isFinite(numericLibraryID) || !normalizedItemKey) return;
+			refs.set(
+				this.getItemRef(numericLibraryID, normalizedItemKey),
+				{ libraryID: numericLibraryID, itemKey: normalizedItemKey },
+			);
+		};
+		let addRefFromObject = (value) => {
+			if (!value || typeof value !== "object") return;
+			addRef(value.libraryID, value.itemKey || value.key);
+		};
+
+		for (let id of ids || []) {
+			let item = null;
+			try {
+				item = await Zotero.Items.getAsync(id);
+			}
+			catch (error) {
+				Zotero.logError(error);
+			}
+			if (item) {
+				addRef(item.libraryID, item.key);
+			}
+			if (extraData && typeof extraData === "object") {
+				addRefFromObject(extraData[id]);
+			}
+		}
+
+		addRefFromObject(extraData);
+		return Array.from(refs.values());
+	},
+
+	registerNotifierObserver() {
+		if (this.notifierObserverID || !Zotero.Notifier?.registerObserver) return;
+		let observer = {
+			notify: (event, type, ids, extraData) => {
+				this.handleNotifierEvent(event, type, ids, extraData).catch((error) => Zotero.logError(error));
+			},
+		};
+		this.notifierObserverID = Zotero.Notifier.registerObserver(
+			observer,
+			["item", "trash"],
+			"paperConnectionsItemStatus",
+		);
+	},
+
+	unregisterNotifierObserver() {
+		if (!this.notifierObserverID || !Zotero.Notifier?.unregisterObserver) return;
+		try {
+			Zotero.Notifier.unregisterObserver(this.notifierObserverID);
+		}
+		catch (error) {
+			Zotero.logError(error);
+		}
+		this.notifierObserverID = null;
+	},
+
+	async handleNotifierEvent(event, type, ids, extraData) {
+		if (type === "item") {
+			if (!["modify", "trash", "delete"].includes(event)) return;
+			let itemRefs = await this.getItemRefsFromNotifierData(ids, extraData);
+			if (itemRefs.length) {
+				this.refreshAllGraphNodeAvailability(itemRefs);
+			}
+			else {
+				this.refreshAllGraphNodeAvailability();
+			}
+			return;
+		}
+		if (type === "trash") {
+			this.refreshAllGraphNodeAvailability();
 		}
 	},
 
@@ -737,6 +1002,7 @@ PaperConnections = {
 			if (!win.ZoteroPane) continue;
 			this.removeFromWindow(win);
 		}
+		this.unregisterNotifierObserver();
 		this.unregisterItemPaneSections();
 		this.unregisterRemarkIntegration();
 	},
@@ -744,6 +1010,7 @@ PaperConnections = {
 	async main() {
 		this.registerRemarkIntegration();
 		this.registerItemPaneSections();
+		this.registerNotifierObserver();
 
 		let host = new URL("https://foo.com/path").host;
 		this.log(`Host is ${host}`);

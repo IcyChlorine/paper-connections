@@ -47,6 +47,7 @@
   - Click node to select; click blank area to clear selection.
   - Selecting a graph node reverse-syncs selection to Zotero item list.
   - Double-clicking a paper node attempts to open its best attachment/PDF using the same Zotero item-open flow as double-clicking the item in the item list.
+  - If a paper node no longer resolves to a live Zotero item, selection shows a small lower-left canvas warning; reverse-sync to the item list, node open, and rename are disabled for that node.
   - Right-click node menu: `Remove`, `Rename`.
   - Right-click blank-canvas menu is context-aware:
     - temporary topic: `Create topic from this paper`, separator, `Export as SVG`.
@@ -82,6 +83,8 @@
   - Drag node with 24px magnetic snap-to-grid by node center and persist snapped position.
 - Node rendering behavior
   - Node text prefers item `Remark`; falls back to paper title.
+  - Missing/trashed paper nodes keep their normal base fill, add a narrow amber warning ribbon, and switch to a red border when selected.
+  - Paper-node availability is refreshed live from Zotero notifier events (`item`/`trash`), so delete/trash/restore operations update open graphs without reloading the topic.
   - Confirming node rename writes back to item `Remark` (`extra` field) and refreshes all open graph labels.
   - During rename typing, node size reflows live while preserving node center.
   - Label-change relayout preserves center and grid stability.

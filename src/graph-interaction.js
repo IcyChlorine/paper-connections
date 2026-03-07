@@ -203,6 +203,20 @@ var PaperConnectionsGraphInteractionMixin = {
 		return !!(state.activeTopicID && state.activeLibraryID && !state.isTemporaryTopic);
 	},
 
+	refreshSelectedMissingNodeHint(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.missingNodeHint) return;
+		let hintText = "";
+		if (state.selectedNodeID) {
+			let node = this.getNodeByID(state, state.selectedNodeID);
+			if (node && !this.isBundleNodeState(node) && node.itemMissing) {
+				hintText = this.getGraphWorkspaceText("missingNodeHint");
+			}
+		}
+		state.missingNodeHint.textContent = hintText;
+		state.missingNodeHint.hidden = !hintText;
+	},
+
 	refreshGraphChrome(window) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
@@ -232,6 +246,7 @@ var PaperConnectionsGraphInteractionMixin = {
 		else {
 			state.canvas.classList.remove("paper-connections-temporary-topic");
 		}
+		this.refreshSelectedMissingNodeHint(window);
 	},
 
 	setCanvasButtonVisual(button, active) {
@@ -538,15 +553,7 @@ var PaperConnectionsGraphInteractionMixin = {
 	},
 
 	getItemForNode(node) {
-		if (!node?.libraryID || !node?.itemKey) return null;
-		if (typeof Zotero.Items?.getByLibraryAndKey !== "function") return null;
-		try {
-			return Zotero.Items.getByLibraryAndKey(node.libraryID, node.itemKey);
-		}
-		catch (error) {
-			Zotero.logError(error);
-			return null;
-		}
+		return this.getUsableItemForNode(node);
 	},
 
 	async openGraphNodeItem(window, node, event = null) {
@@ -1411,6 +1418,7 @@ var PaperConnectionsGraphInteractionMixin = {
 		if (!previousNodeID && !nodeID) {
 			this.applySelectedNodeStateToDOM(state);
 		}
+		this.refreshSelectedMissingNodeHint(window);
 		this.notifyGraphSelectionChanged(window);
 	},
 
@@ -1421,15 +1429,7 @@ var PaperConnectionsGraphInteractionMixin = {
 		let node = state.nodes.find((n) => n.id === nodeID);
 		if (!node?.libraryID || !node?.itemKey) return;
 
-		let item = null;
-		if (typeof Zotero.Items?.getByLibraryAndKey === "function") {
-			try {
-				item = Zotero.Items.getByLibraryAndKey(node.libraryID, node.itemKey);
-			}
-			catch (error) {
-				Zotero.logError(error);
-			}
-		}
+		let item = this.getUsableItemForNode(node);
 		if (!item?.id) return;
 
 		let currentSelected = window.ZoteroPane?.getSelectedItems?.() || [];

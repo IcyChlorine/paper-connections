@@ -113,12 +113,15 @@ var PaperConnectionsGraphTopicMixin = {
 					height: 0,
 					kind: "bundle",
 					slopeMode: this.normalizeBundleSlopeMode(node.slopeMode),
+					itemMissing: false,
+					itemMissingReason: "",
 					createdAt: node.createdAt,
 					updatedAt: node.updatedAt,
 				};
 			}
 			let itemRef = this.getItemRef(node.libraryID, node.itemKey);
-			let displayLabel = this.getNodeLabelForDisplay(node);
+			let itemStatus = this.resolveNodeItemStatus(node);
+			let displayLabel = this.getNodeLabelForDisplay(node, itemStatus);
 			return {
 				id: node.id,
 				nodeType: "paper",
@@ -133,6 +136,8 @@ var PaperConnectionsGraphTopicMixin = {
 				kind: selectedItemRef && selectedItemRef === itemRef ? "root" : "leaf",
 				shortLabel: node.shortLabel || "",
 				note: node.note || "",
+				itemMissing: itemStatus.isMissing,
+				itemMissingReason: itemStatus.reason || "",
 				createdAt: node.createdAt,
 				updatedAt: node.updatedAt,
 			};
@@ -186,11 +191,13 @@ var PaperConnectionsGraphTopicMixin = {
 		this.hideGraphContextMenus(window);
 		this.finishNodeRename(window, { restoreNode: false, render: false });
 		let title = this.getItemTitle(item);
-		let label = this.getNodeLabelForDisplay({
+		let nodeInput = {
 			libraryID: item.libraryID,
 			itemKey: item.key,
 			title,
-		});
+		};
+		let itemStatus = this.resolveNodeItemStatus(nodeInput);
+		let label = this.getNodeLabelForDisplay(nodeInput, itemStatus);
 		let nodeID = `temp_${item.libraryID}_${item.key}`;
 		state.nodes = [{
 			id: nodeID,
@@ -204,6 +211,8 @@ var PaperConnectionsGraphTopicMixin = {
 			width: this.getNodeWidthForLabel(label),
 			height: this.nodeDefaultHeight,
 			kind: "root",
+			itemMissing: itemStatus.isMissing,
+			itemMissingReason: itemStatus.reason || "",
 		}];
 		state.edges = [];
 		state.activeTopicID = null;
