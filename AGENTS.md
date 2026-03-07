@@ -76,7 +76,6 @@
 - If splitting mixins into new script files, update all three integration points together: `bootstrap.js` sub-script load order, `paper-connections.js` `Object.assign(...)`, and packaging whitelists in both `make-zips.sh` and `make-zips.ps1`.
 - For graph context menus layered over SVG, close-on-outside-click should use both DOM containment checks and client-rect hit tests to avoid stale menus during overlay/input edge cases.
 - For graph workspace fullscreen, snapshot and restore the surrounding Zotero pane layout instead of forcing a fixed default, and preserve the same graph-space center point across the layout transition.
-- For graph workspace fullscreen, snapshot and restore the surrounding Zotero pane layout instead of forcing a fixed default, and preserve the same graph-space center point across the layout transition.
 
 ## Build and Packaging
 - Build with `make-zips.sh` (Git Bash) or `make-zips.ps1` (PowerShell) from repo root.

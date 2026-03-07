@@ -89,7 +89,7 @@
   - Drag node with 24px magnetic snap-to-grid by node center and persist snapped position.
 - Node rendering behavior
   - Node text prefers item `Remark`; falls back to paper title.
-  - Missing/trashed paper nodes keep their normal base fill, add a narrow amber warning ribbon, and switch to a red border when selected.
+- Missing/trashed paper nodes keep their normal base fill, add a pale red semi-transparent diagonal stripe overlay across the node body, and switch to a red border when selected.
   - Paper-node availability is refreshed live from Zotero notifier events (`item`/`trash`), so delete/trash/restore operations update open graphs without reloading the topic.
   - Confirming node rename writes back to item `Remark` (`extra` field) and refreshes all open graph labels.
   - During rename typing, node size reflows live while preserving node center.
