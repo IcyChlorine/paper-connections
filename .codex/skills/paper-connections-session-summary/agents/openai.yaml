@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Connections Session Summary"
+  short_description: "Update docs and write a new worktree session summary"
+  default_prompt: "Use $paper-connections-session-summary, or say 总结沉淀, to update durable docs and create a new Paper Connections session summary."
