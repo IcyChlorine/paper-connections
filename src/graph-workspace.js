@@ -259,8 +259,8 @@ var PaperConnectionsGraphWorkspaceMixin = {
 
 		refs.collectionsSplitter?.setAttribute("state", "collapsed");
 		refs.collectionsPane?.setAttribute("collapsed", true);
-		refs.itemSplitter?.setAttribute("state", "collapsed");
-		refs.itemPane?.setAttribute("collapsed", true);
+		refs.itemSplitter?.setAttribute("state", "open");
+		refs.itemPane?.setAttribute("collapsed", false);
 		refs.tagSelectorContainer?.setAttribute("collapsed", true);
 		if (window.ZoteroContextPane) {
 			window.ZoteroContextPane.collapsed = true;

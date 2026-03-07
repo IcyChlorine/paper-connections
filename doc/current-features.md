@@ -28,7 +28,8 @@
   - Item-list toolbar includes a graph workspace toggle button to show/hide workspace.
   - Keyboard shortcut `Ctrl+\`` also toggles graph workspace visibility.
   - When the pointer is over the graph workspace, pressing `` ` `` toggles a workspace fullscreen mode:
-    - hides collections pane, item pane, tag selector, title/tabs toolbar, item-pane sidenav icons, item toolbar, and item list,
+    - hides collections pane, tag selector, title/tabs toolbar, item-pane sidenav icons, item toolbar, and item list,
+    - keeps the right item info pane visible and resizable while the graph fills the remaining main area,
     - keeps Zotero title/menu chrome visible,
     - restores the exact previous pane visibility/layout when exited.
   - SVG canvas top-right includes two icon toggle buttons:
