@@ -31,6 +31,7 @@
     - hides collections pane, tag selector, title/tabs toolbar, item-pane sidenav icons, item toolbar, and item list,
     - keeps the right item info pane visible and resizable while the graph fills the remaining main area,
     - keeps Zotero title/menu chrome visible,
+    - preserves the graph point at the viewport center when entering or leaving fullscreen,
     - restores the exact previous pane visibility/layout when exited.
   - SVG canvas top-right includes two icon toggle buttons:
     - magnet button toggles magnetic snap-to-grid.

@@ -204,11 +204,23 @@ var PaperConnectionsGraphWorkspaceMixin = {
 	},
 
 	scheduleGraphWorkspaceLayoutSync(window) {
+		let initialState = this.graphStates.get(window);
+		let pendingCenterGraphPoint = initialState?.pendingViewportCenterGraphPoint || null;
 		let run = () => {
 			let state = this.graphStates.get(window);
 			if (!state) return;
+			if (pendingCenterGraphPoint && state.pendingViewportCenterGraphPoint === pendingCenterGraphPoint) {
+				this.restoreGraphViewportCenterPoint(window, pendingCenterGraphPoint);
+			}
 			this.updateCanvasControlsLayout(window);
 			this.syncNodeRenameInputLayout(window);
+		};
+		let clearPendingCenter = () => {
+			let state = this.graphStates.get(window);
+			if (!state) return;
+			if (state.pendingViewportCenterGraphPoint === pendingCenterGraphPoint) {
+				state.pendingViewportCenterGraphPoint = null;
+			}
 		};
 		run();
 		window.requestAnimationFrame(() => {
@@ -218,6 +230,32 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		for (let delay of [80, 220]) {
 			window.setTimeout(run, delay);
 		}
+		window.setTimeout(clearPendingCenter, 260);
+	},
+
+	captureGraphViewportCenterPoint(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.svg) return null;
+		let rect = state.svg.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return null;
+		let clientX = rect.left + rect.width / 2;
+		let clientY = rect.top + rect.height / 2;
+		return this.clientToGraphPoint(state, clientX, clientY);
+	},
+
+	restoreGraphViewportCenterPoint(window, graphPoint) {
+		let state = this.graphStates.get(window);
+		if (!state?.svg || !graphPoint) return false;
+		let rect = state.svg.getBoundingClientRect();
+		if (!(rect.width > 0 && rect.height > 0)) return false;
+		let clientX = rect.left + rect.width / 2;
+		let clientY = rect.top + rect.height / 2;
+		let svgPoint = this.clientToSVGPoint(state, clientX, clientY);
+		if (!Number.isFinite(svgPoint?.x) || !Number.isFinite(svgPoint?.y)) return false;
+		state.panX = svgPoint.x - graphPoint.x * state.scale;
+		state.panY = svgPoint.y - graphPoint.y * state.scale;
+		this.updateGraphTransform(state);
+		return true;
 	},
 
 	captureWorkspaceFullscreenSnapshot(window) {
@@ -357,6 +395,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 	},
 
 	setWorkspaceFullscreen(window, fullscreen) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		state.pendingViewportCenterGraphPoint = this.captureGraphViewportCenterPoint(window);
 		if (fullscreen) {
 			this.applyWorkspaceFullscreen(window);
 		}
@@ -680,6 +721,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			suppressRenameInputBlur: false,
 			workspaceFullscreen: false,
 			fullscreenSnapshot: null,
+			pendingViewportCenterGraphPoint: null,
 			togglePlacementTimerIDs: [],
 			handlers: null,
 		};
