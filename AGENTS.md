@@ -31,6 +31,8 @@
 - Project-local skills live under `./.codex/skills/`.
 - `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
 - Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
+- `paper-connections-wt-sync`: use after syncing another worktree into the current one so the session can rescan merge history, reread workflow/docs, and rerun the repo build-check flow.
+- Explicit trigger examples: `$paper-connections-wt-sync`, `use paper-connections-wt-sync`, `wtsync`.
 
 ## Doc Rules
 - Before implementing any feature, read:
