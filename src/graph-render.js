@@ -145,7 +145,8 @@ var PaperConnectionsGraphRenderMixin = {
 		let kind = node?.kind || "leaf";
 		let selectedClass = state?.selectedNodeID === node?.id ? " selected" : "";
 		let renamingClass = state?.renamingNodeID === node?.id ? " renaming" : "";
-		return `paper-connections-node ${kind}${selectedClass}${renamingClass}`;
+		let missingClass = node?.itemMissing ? " missing" : "";
+		return `paper-connections-node ${kind}${selectedClass}${renamingClass}${missingClass}`;
 	},
 
 	createEdgePathElement(doc, edgePath) {
@@ -237,16 +238,40 @@ var PaperConnectionsGraphRenderMixin = {
 		group.setAttribute("data-node-id", node.id);
 		group.setAttribute("transform", `translate(${node.x},${node.y})`);
 
-		let rect = group.querySelector("rect");
+		let rect = group.querySelector(".paper-connections-node-body");
 		if (!rect && doc) {
 			rect = doc.createElementNS("http://www.w3.org/2000/svg", "rect");
 			group.appendChild(rect);
 		}
 		if (rect) {
+			rect.setAttribute("class", "paper-connections-node-body");
 			rect.setAttribute("width", String(width));
 			rect.setAttribute("height", String(height));
 			rect.setAttribute("rx", "10");
 			rect.setAttribute("ry", "10");
+		}
+
+		let overlay = group.querySelector(".paper-connections-node-missing-ribbon");
+		let overlayInsertBefore = group.querySelector("title, text, .paper-connections-node-anchor");
+		if (!overlay && doc) {
+			overlay = doc.createElementNS("http://www.w3.org/2000/svg", "rect");
+			overlay.setAttribute("class", "paper-connections-node-missing-ribbon");
+			if (overlayInsertBefore) {
+				group.insertBefore(overlay, overlayInsertBefore);
+			}
+			else {
+				group.appendChild(overlay);
+			}
+		}
+		if (overlay) {
+			overlay.setAttribute("x", "0");
+			overlay.setAttribute("y", "0");
+			overlay.setAttribute("width", String(width));
+			overlay.setAttribute("height", String(height));
+			overlay.setAttribute("rx", "10");
+			overlay.setAttribute("ry", "10");
+			overlay.setAttribute("fill", "url(#paper-connections-warning-stripe-pattern)");
+			overlay.style.display = node.itemMissing ? "" : "none";
 		}
 
 		let titleElem = group.querySelector("title");

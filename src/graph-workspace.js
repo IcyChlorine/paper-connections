@@ -1,17 +1,7 @@
 var PaperConnectionsGraphWorkspaceMixin = {
-	getNodeLabelForDisplay(nodeInput = {}) {
-		let item = null;
-		let libraryID = nodeInput.libraryID;
-		let itemKey = nodeInput.itemKey;
-		if (libraryID && itemKey && typeof Zotero.Items?.getByLibraryAndKey === "function") {
-			try {
-				item = Zotero.Items.getByLibraryAndKey(libraryID, itemKey);
-			}
-			catch (error) {
-				Zotero.logError(error);
-			}
-		}
-
+	getNodeLabelForDisplay(nodeInput = {}, resolvedStatus = null) {
+		let status = resolvedStatus || this.resolveNodeItemStatus(nodeInput);
+		let item = status?.isMissing ? null : status?.item || null;
 		let remark = this.getItemRemark(item);
 		if (remark) return remark;
 
@@ -50,6 +40,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		table.bundleMenuDissolve = isZh ? "\u6eb6\u89e3" : "Dissolve";
 		table.bundleDissolveFailedTitle = isZh ? "\u6eb6\u89e3\u5931\u8d25" : "Dissolve Bundle Failed";
 		table.bundleModeFlat = isZh ? "\u659c\u7387\u62c9\u5e73" : "Flat Tangent";
+		table.missingNodeHint = isZh
+			? "\u65e0\u6cd5\u627e\u5230\u5bf9\u5e94\u7684\u8bba\u6587\uff0c\u8bba\u6587\u53ef\u80fd\u672a\u5bfc\u5165\u6216\u5df2\u88ab\u5220\u9664"
+			: "Paper item not found. It may not have been imported or may have been deleted.";
 		return table[key] || "";
 	},
 
@@ -669,6 +662,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			bundleContextMenu: refs.bundleContextMenu,
 			dissolveBundleBtn: refs.dissolveBundleBtn,
 			bundleModeFlatBtn: refs.bundleModeFlatBtn,
+			missingNodeHint: refs.missingNodeHint,
 			toolbarToggleButton,
 			controlPanelWidth,
 			graphVisible: true,
@@ -819,6 +813,21 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		gridPath.setAttribute("stroke-width", "1");
 		gridPattern.appendChild(gridPath);
 		defs.appendChild(gridPattern);
+
+		let warningPattern = doc.createElementNS(SVG_NS, "pattern");
+		warningPattern.setAttribute("id", "paper-connections-warning-stripe-pattern");
+		warningPattern.setAttribute("patternUnits", "userSpaceOnUse");
+		warningPattern.setAttribute("width", "16");
+		warningPattern.setAttribute("height", "16");
+		warningPattern.setAttribute("patternTransform", "rotate(28)");
+		let warningStripe = doc.createElementNS(SVG_NS, "rect");
+		warningStripe.setAttribute("x", "0");
+		warningStripe.setAttribute("y", "0");
+		warningStripe.setAttribute("width", "4");
+		warningStripe.setAttribute("height", "16");
+		warningStripe.setAttribute("fill", "rgba(214, 90, 90, 0.38)");
+		defs.appendChild(warningPattern);
+		warningPattern.appendChild(warningStripe);
 		svg.appendChild(defs);
 
 		let viewport = doc.createElementNS(SVG_NS, "g");
@@ -895,6 +904,11 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		canvasControls.append(snapButton, pinButton);
 		svg.appendChild(canvasControls);
 		canvas.appendChild(svg);
+
+		let missingNodeHint = doc.createElementNS(XHTML_NS, "div");
+		missingNodeHint.className = "paper-connections-missing-node-hint";
+		missingNodeHint.hidden = true;
+		canvas.appendChild(missingNodeHint);
 
 		let nodeContextMenu = doc.createElementNS(XHTML_NS, "div");
 		nodeContextMenu.className = "paper-connections-node-context-menu";
@@ -1046,6 +1060,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			bundleContextMenu,
 			dissolveBundleBtn,
 			bundleModeFlatBtn,
+			missingNodeHint,
 			controlPanelWidth,
 		};
 	},
