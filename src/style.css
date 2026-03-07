@@ -35,6 +35,16 @@ item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] 
 	background: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 100%);
 }
 
+#zotero-items-pane-container.paper-connections-graph-host-fullscreen {
+	min-height: 0;
+}
+
+#paper-connections-graph-pane.paper-connections-fullscreen {
+	min-height: 0;
+	padding: 6px 8px 8px;
+	border-top: none;
+}
+
 #paper-connections-graph-toolbar {
 	display: flex;
 	align-items: flex-start;
@@ -79,6 +89,11 @@ item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] 
 	background: #f7fafd;
 	overflow: hidden;
 	cursor: default;
+}
+
+#paper-connections-graph-canvas.paper-connections-fullscreen {
+	margin-top: 6px;
+	min-height: 0;
 }
 
 #paper-connections-graph-canvas.paper-connections-drop-active {

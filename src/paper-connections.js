@@ -717,6 +717,10 @@ PaperConnections = {
 
 	removeFromWindow(window) {
 		let state = this.graphStates.get(window);
+		if (state?.workspaceFullscreen) {
+			this.restoreWorkspaceFullscreen(window);
+			state = this.graphStates.get(window);
+		}
 		if (state?.handlers) {
 			this.unbindGraphPaneEvents(window, window.document, state);
 			this.clearGraphWorkspaceTogglePlacementTimers(state);

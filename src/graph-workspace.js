@@ -158,36 +158,228 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		button.classList.toggle("active", graphVisible);
 	},
 
+	setWorkspaceElementHidden(elem, hidden, displayWhenVisible = "") {
+		if (!elem) return;
+		let nextHidden = !!hidden;
+		elem.hidden = nextHidden;
+		if (nextHidden) {
+			elem.setAttribute("hidden", "true");
+			elem.style.display = "none";
+			return;
+		}
+		elem.removeAttribute("hidden");
+		if (displayWhenVisible) {
+			elem.style.display = displayWhenVisible;
+		}
+		else {
+			elem.style.removeProperty("display");
+		}
+	},
+
+	getGraphWorkspaceHostRefs(window, state = null) {
+		let doc = window?.document;
+		if (!doc) return null;
+		let graphState = state || this.graphStates.get(window) || null;
+		return {
+			itemsContainer: graphState?.itemsContainer || doc.getElementById("zotero-items-pane-container"),
+			graphPane: graphState?.pane || doc.getElementById("paper-connections-graph-pane"),
+			graphCanvas: graphState?.canvas || doc.getElementById("paper-connections-graph-canvas"),
+			graphSplitter: graphState?.splitter || doc.getElementById("paper-connections-graph-splitter"),
+			collectionsPane: doc.getElementById("zotero-collections-pane"),
+			collectionsSplitter: doc.getElementById("zotero-collections-splitter"),
+			itemPane: doc.getElementById("zotero-item-pane"),
+			itemSplitter: doc.getElementById("zotero-items-splitter"),
+			tagSelectorContainer: doc.getElementById("zotero-tag-selector-container"),
+			contextPane: doc.getElementById("zotero-context-pane"),
+			itemToolbar: doc.getElementById("zotero-toolbar-item-tree"),
+			itemsPane: doc.getElementById("zotero-items-pane"),
+		};
+	},
+
+	scheduleGraphWorkspaceLayoutSync(window) {
+		let run = () => {
+			let state = this.graphStates.get(window);
+			if (!state) return;
+			this.updateCanvasControlsLayout(window);
+			this.syncNodeRenameInputLayout(window);
+		};
+		run();
+		window.requestAnimationFrame(() => {
+			run();
+			window.requestAnimationFrame(run);
+		});
+		for (let delay of [80, 220]) {
+			window.setTimeout(run, delay);
+		}
+	},
+
+	captureWorkspaceFullscreenSnapshot(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return null;
+		let refs = this.getGraphWorkspaceHostRefs(window, state);
+		let snapshot = {
+			collectionsPaneCollapsed: refs?.collectionsPane?.getAttribute("collapsed") === "true",
+			collectionsSplitterState: refs?.collectionsSplitter?.getAttribute("state") || "",
+			itemPaneCollapsed: refs?.itemPane?.getAttribute("collapsed") === "true",
+			itemSplitterState: refs?.itemSplitter?.getAttribute("state") || "",
+			tagSelectorCollapsed: refs?.tagSelectorContainer?.getAttribute("collapsed") === "true",
+			contextPaneCollapsed: refs?.contextPane?.getAttribute("collapsed") === "true",
+			itemToolbarHidden: !!refs?.itemToolbar?.hidden,
+			itemsPaneHidden: !!refs?.itemsPane?.hidden,
+			graphPaneHeightAttr: state.pane?.getAttribute("height"),
+			graphPaneFlex: state.pane?.getAttribute("flex"),
+			graphVisibleBeforeExit: state.graphVisible !== false,
+		};
+		state.fullscreenSnapshot = snapshot;
+		return snapshot;
+	},
+
+	applyWorkspaceFullscreen(window) {
+		let state = this.graphStates.get(window);
+		if (!state || state.workspaceFullscreen) return;
+		if (state.graphVisible === false) {
+			this.setGraphWorkspaceVisibility(window, true);
+		}
+		let refs = this.getGraphWorkspaceHostRefs(window, state);
+		let snapshot = state.fullscreenSnapshot || this.captureWorkspaceFullscreenSnapshot(window);
+		if (!refs || !snapshot) return;
+
+		this.hideGraphContextMenus(window);
+		this.cancelNodeRename(window);
+
+		refs.collectionsSplitter?.setAttribute("state", "collapsed");
+		refs.collectionsPane?.setAttribute("collapsed", true);
+		refs.itemSplitter?.setAttribute("state", "collapsed");
+		refs.itemPane?.setAttribute("collapsed", true);
+		refs.tagSelectorContainer?.setAttribute("collapsed", true);
+		if (window.ZoteroContextPane) {
+			window.ZoteroContextPane.collapsed = true;
+		}
+		else {
+			refs.contextPane?.setAttribute("collapsed", true);
+		}
+		this.setWorkspaceElementHidden(refs.itemToolbar, true);
+		this.setWorkspaceElementHidden(refs.itemsPane, true);
+		refs.itemsContainer?.classList.add("paper-connections-graph-host-fullscreen");
+		state.pane?.classList.add("paper-connections-fullscreen");
+		state.canvas?.classList.add("paper-connections-fullscreen");
+		state.pane?.removeAttribute("height");
+		state.pane?.setAttribute("flex", "1");
+		state.workspaceFullscreen = true;
+		this.applyGraphWorkspaceVisibilityToDOM(state);
+		this.refreshGraphChrome(window);
+		if (typeof window.ZoteroPane?.updateLayoutConstraints === "function") {
+			window.ZoteroPane.updateLayoutConstraints();
+		}
+		this.scheduleGraphWorkspaceLayoutSync(window);
+	},
+
+	restoreWorkspaceFullscreen(window) {
+		let state = this.graphStates.get(window);
+		if (!state?.workspaceFullscreen) return;
+		let refs = this.getGraphWorkspaceHostRefs(window, state);
+		let snapshot = state.fullscreenSnapshot;
+		if (!refs || !snapshot) {
+			state.workspaceFullscreen = false;
+			state.fullscreenSnapshot = null;
+			return;
+		}
+
+		this.hideGraphContextMenus(window);
+		this.cancelNodeRename(window);
+
+		refs.collectionsPane?.setAttribute("collapsed", !!snapshot.collectionsPaneCollapsed);
+		if (refs.collectionsSplitter) {
+			if (snapshot.collectionsSplitterState) {
+				refs.collectionsSplitter.setAttribute("state", snapshot.collectionsSplitterState);
+			}
+			else {
+				refs.collectionsSplitter.removeAttribute("state");
+			}
+		}
+		refs.itemPane?.setAttribute("collapsed", !!snapshot.itemPaneCollapsed);
+		if (refs.itemSplitter) {
+			if (snapshot.itemSplitterState) {
+				refs.itemSplitter.setAttribute("state", snapshot.itemSplitterState);
+			}
+			else {
+				refs.itemSplitter.removeAttribute("state");
+			}
+		}
+		refs.tagSelectorContainer?.setAttribute("collapsed", !!snapshot.tagSelectorCollapsed);
+		if (window.ZoteroContextPane) {
+			window.ZoteroContextPane.collapsed = !!snapshot.contextPaneCollapsed;
+		}
+		else {
+			refs.contextPane?.setAttribute("collapsed", !!snapshot.contextPaneCollapsed);
+		}
+		this.setWorkspaceElementHidden(refs.itemToolbar, !!snapshot.itemToolbarHidden);
+		this.setWorkspaceElementHidden(refs.itemsPane, !!snapshot.itemsPaneHidden);
+		refs.itemsContainer?.classList.remove("paper-connections-graph-host-fullscreen");
+		state.pane?.classList.remove("paper-connections-fullscreen");
+		state.canvas?.classList.remove("paper-connections-fullscreen");
+		state.pane?.removeAttribute("flex");
+		if (snapshot.graphPaneFlex != null) {
+			state.pane?.setAttribute("flex", snapshot.graphPaneFlex);
+		}
+		if (snapshot.graphPaneHeightAttr != null) {
+			state.pane?.setAttribute("height", snapshot.graphPaneHeightAttr);
+		}
+		else {
+			state.pane?.removeAttribute("height");
+		}
+		state.workspaceFullscreen = false;
+		state.fullscreenSnapshot = null;
+		this.applyGraphWorkspaceVisibilityToDOM(state);
+		this.refreshGraphChrome(window);
+		if (typeof window.ZoteroPane?.updateLayoutConstraints === "function") {
+			window.ZoteroPane.updateLayoutConstraints();
+		}
+		this.scheduleGraphWorkspaceLayoutSync(window);
+	},
+
+	setWorkspaceFullscreen(window, fullscreen) {
+		if (fullscreen) {
+			this.applyWorkspaceFullscreen(window);
+		}
+		else {
+			this.restoreWorkspaceFullscreen(window);
+		}
+	},
+
+	toggleWorkspaceFullscreen(window) {
+		let state = this.graphStates.get(window);
+		if (!state) return;
+		this.setWorkspaceFullscreen(window, !state.workspaceFullscreen);
+	},
+
 	applyGraphWorkspaceVisibilityToDOM(state) {
 		if (!state) return;
 		let graphVisible = state.graphVisible !== false;
-		let applyElemVisibility = (elem, displayWhenVisible = "") => {
-			if (!elem) return;
-			elem.hidden = !graphVisible;
-			if (graphVisible) {
-				elem.removeAttribute("hidden");
-				elem.removeAttribute("collapsed");
-				if (displayWhenVisible) {
-					elem.style.display = displayWhenVisible;
-				}
-				else {
-					elem.style.removeProperty("display");
-				}
-			}
-			else {
-				elem.setAttribute("hidden", "true");
-				elem.setAttribute("collapsed", "true");
-				elem.style.display = "none";
-			}
-		};
-		applyElemVisibility(state.pane, "flex");
-		applyElemVisibility(state.splitter);
+		this.setWorkspaceElementHidden(state.pane, !graphVisible, "flex");
+		if (graphVisible) {
+			state.pane?.removeAttribute("collapsed");
+		}
+		else {
+			state.pane?.setAttribute("collapsed", "true");
+		}
+		let splitterVisible = graphVisible && !state.workspaceFullscreen;
+		this.setWorkspaceElementHidden(state.splitter, !splitterVisible);
+		if (splitterVisible) {
+			state.splitter?.removeAttribute("collapsed");
+		}
+		else {
+			state.splitter?.setAttribute("collapsed", "true");
+		}
 	},
 
 	setGraphWorkspaceVisibility(window, visible) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		let nextVisible = !!visible;
+		if (!nextVisible && state.workspaceFullscreen) {
+			this.setWorkspaceFullscreen(window, false);
+		}
 		state.graphVisible = nextVisible;
 		this.applyGraphWorkspaceVisibilityToDOM(state);
 		if (!nextVisible) {
@@ -195,7 +387,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			this.cancelNodeRename(window);
 		}
 		else {
-			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
+			this.scheduleGraphWorkspaceLayoutSync(window);
 		}
 		this.updateGraphWorkspaceToggleButton(window);
 		this.notifyGraphContextChanged(window);
@@ -361,12 +553,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		this.refreshGraph(window);
 		this.refreshGraphChrome(window);
 		this.notifyGraphSelectionChanged(window);
-		window.requestAnimationFrame(() => {
-			this.updateCanvasControlsLayout(window);
-			window.requestAnimationFrame(() => this.updateCanvasControlsLayout(window));
-		});
-		window.setTimeout(() => this.updateCanvasControlsLayout(window), 80);
-		window.setTimeout(() => this.updateCanvasControlsLayout(window), 220);
+		this.scheduleGraphWorkspaceLayoutSync(window);
 
 		let selectedItem = this.getCurrentSelectedItem(window);
 		if (selectedItem) {
@@ -379,6 +566,9 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		let existingPane = doc.getElementById("paper-connections-graph-pane");
 		if (!existingPane) return;
 		let existingState = this.graphStates?.get(window);
+		if (existingState?.workspaceFullscreen) {
+			this.restoreWorkspaceFullscreen(window);
+		}
 		this.unbindGraphPaneEvents(window, doc, existingState);
 		this.clearGraphWorkspaceTogglePlacementTimers(existingState);
 		this.graphStates?.delete(window);
@@ -389,6 +579,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 	createGraphPaneState(window, refs, toolbarToggleButton, controlPanelWidth) {
 		return {
 			window,
+			itemsContainer: refs.itemsContainer,
 			pane: refs.pane,
 			splitter: refs.splitter,
 			canvas: refs.canvas,
@@ -469,6 +660,8 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			renameSnapshot: null,
 			renameBusy: false,
 			suppressRenameInputBlur: false,
+			workspaceFullscreen: false,
+			fullscreenSnapshot: null,
 			togglePlacementTimerIDs: [],
 			handlers: null,
 		};
@@ -762,6 +955,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		itemsContainer.append(splitter, pane);
 
 		return {
+			itemsContainer,
 			pane,
 			splitter,
 			canvas,

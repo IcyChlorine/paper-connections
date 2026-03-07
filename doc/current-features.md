@@ -1,7 +1,7 @@
 # Paper Connections - Current Features
 
 ## Snapshot
-- Date: 2026-03-06
+- Date: 2026-03-07
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-connections@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
@@ -27,6 +27,10 @@
   - Pane resize does not auto-scale graph objects.
   - Item-list toolbar includes a graph workspace toggle button to show/hide workspace.
   - Keyboard shortcut `Ctrl+\`` also toggles graph workspace visibility.
+  - When the pointer is over the graph workspace, pressing `` ` `` toggles a workspace fullscreen mode:
+    - hides collections pane, item pane, tag selector, item toolbar, and item list,
+    - keeps Zotero title/menu chrome visible,
+    - restores the exact previous pane visibility/layout when exited.
   - SVG canvas top-right includes two icon toggle buttons:
     - magnet button toggles magnetic snap-to-grid.
     - pin button toggles pinned graph context while selecting other items.

@@ -91,10 +91,23 @@ var PaperConnectionsGraphInteractionMixin = {
 		this.syncModifierStateByEvent(window, event);
 	},
 
+	isEditableEventTarget(target) {
+		if (!target) return false;
+		if (target.isContentEditable) return true;
+		let localName = String(target.localName || "").toLowerCase();
+		if (["input", "textarea", "select", "textbox", "search-textbox"].includes(localName)) {
+			return true;
+		}
+		return !!target.closest?.(
+			"input, textarea, select, textbox, search-textbox, [contenteditable=''], [contenteditable='true']",
+		);
+	},
+
 	onWindowKeyDown(window, event) {
 		let state = this.graphStates.get(window);
 		if (!state) return;
 		this.syncModifierStateByEvent(window, event);
+		if (event?.type === "keypress") return;
 		let isBackquoteLike = !!(
 			event?.code === "Backquote" ||
 			event?.key === "`" ||
@@ -112,6 +125,24 @@ var PaperConnectionsGraphInteractionMixin = {
 			event.preventDefault();
 			event.stopPropagation();
 			this.toggleGraphWorkspaceVisibility(window);
+			return;
+		}
+		let isFullscreenShortcut = !!(
+			!event?.ctrlKey &&
+			!event?.altKey &&
+			!event?.metaKey &&
+			!event?.shiftKey &&
+			(event?.code === "Backquote" || event?.key === "`" || event?.keyCode === 192 || event?.which === 192)
+		);
+		if (
+			isFullscreenShortcut &&
+			state.graphVisible !== false &&
+			state.pointerInCanvas &&
+			!this.isEditableEventTarget(event?.target)
+		) {
+			event.preventDefault();
+			event.stopPropagation();
+			this.toggleWorkspaceFullscreen(window);
 			return;
 		}
 		if (!event?.key) return;
