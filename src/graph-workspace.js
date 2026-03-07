@@ -164,16 +164,20 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		elem.hidden = nextHidden;
 		if (nextHidden) {
 			elem.setAttribute("hidden", "true");
+			elem.setAttribute("collapsed", "true");
 			elem.style.display = "none";
+			elem.style.visibility = "collapse";
 			return;
 		}
 		elem.removeAttribute("hidden");
+		elem.removeAttribute("collapsed");
 		if (displayWhenVisible) {
 			elem.style.display = displayWhenVisible;
 		}
 		else {
 			elem.style.removeProperty("display");
 		}
+		elem.style.removeProperty("visibility");
 	},
 
 	getGraphWorkspaceHostRefs(window, state = null) {
@@ -269,6 +273,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		this.setWorkspaceElementHidden(refs.contextPaneSidenav, true);
 		this.setWorkspaceElementHidden(refs.itemToolbar, true);
 		this.setWorkspaceElementHidden(refs.itemsPane, true);
+		window.document?.documentElement?.classList.add("paper-connections-window-fullscreen");
 		refs.itemsContainer?.classList.add("paper-connections-graph-host-fullscreen");
 		state.pane?.classList.add("paper-connections-fullscreen");
 		state.canvas?.classList.add("paper-connections-fullscreen");
@@ -327,6 +332,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 		this.setWorkspaceElementHidden(refs.contextPaneSidenav, !!snapshot.contextPaneSidenavHidden);
 		this.setWorkspaceElementHidden(refs.itemToolbar, !!snapshot.itemToolbarHidden);
 		this.setWorkspaceElementHidden(refs.itemsPane, !!snapshot.itemsPaneHidden);
+		window.document?.documentElement?.classList.remove("paper-connections-window-fullscreen");
 		refs.itemsContainer?.classList.remove("paper-connections-graph-host-fullscreen");
 		state.pane?.classList.remove("paper-connections-fullscreen");
 		state.canvas?.classList.remove("paper-connections-fullscreen");

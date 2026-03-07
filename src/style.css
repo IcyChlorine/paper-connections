@@ -3,6 +3,18 @@ item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] 
 	line-height: 1.45;
 }
 
+.paper-connections-window-fullscreen {
+	--width-of-fixed-components: 0px !important;
+}
+
+.paper-connections-window-fullscreen #zotero-title-bar,
+.paper-connections-window-fullscreen #zotero-toolbar-item-tree,
+.paper-connections-window-fullscreen #zotero-view-item-sidenav,
+.paper-connections-window-fullscreen #zotero-context-pane-sidenav {
+	display: none !important;
+	visibility: collapse !important;
+}
+
 #paper-connections-graph-toggle-btn {
 	list-style-image: url("assets/code-merge-svgrepo-com.svg");
 	-moz-box-pack: center;
