@@ -31,7 +31,7 @@
 - Project-local skills live under `./.codex/skills/`.
 - `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
 - Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
-- `paper-connections-zotero-screenshot`: use when Zotero UI verification needs robust screenshots or window enumeration, especially for independent dialogs like Plugins Manager or Preferences that do not include `Zotero` in the title.
+- `paper-connections-zotero-screenshot`: use when Zotero UI verification needs robust screenshots or window enumeration, especially for independent dialogs like Plugins Manager or Preferences that do not include `Zotero` in the title; the default capture writes all visible Zotero windows to `tools/screenshots/` for debugging.
 - Explicit trigger examples: `$paper-connections-zotero-screenshot`, `use paper-connections-zotero-screenshot`, `capture zotero screenshot`.
 - `paper-connections-wt-sync`: use after syncing another worktree into the current one so the session can rescan merge history, reread workflow/docs, and rerun the repo build-check flow.
 - Explicit trigger examples: `$paper-connections-wt-sync`, `use paper-connections-wt-sync`, `wtsync`.

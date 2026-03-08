@@ -13,7 +13,6 @@ from zotero_window_capture import (
     find_zotero_windows,
     format_window_line,
     take_all_window_screenshots,
-    take_screenshot,
 )
 
 
@@ -38,9 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="List matched Zotero top-level windows and exit",
     )
     parser.add_argument(
-        "--all-windows",
+        "--single-window",
         action="store_true",
-        help="Capture every matched Zotero top-level window into separate PNG files",
+        help="Capture only the best-matched Zotero window instead of every matched window",
     )
     return parser
 
@@ -59,29 +58,42 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        if args.all_windows:
-            results = take_all_window_screenshots(
+        if args.full_screen:
+            from zotero_window_capture import take_screenshot
+
+            output_path, method = take_screenshot(
                 output_path=args.output_path,
                 window_query=args.window_query,
+                prefer_window=False,
             )
-            for output_path, method, window in results:
-                print(output_path)
-                sys.stderr.write(f"[screenshot] saved via {method}: {output_path}\n")
-                sys.stderr.write(f"[screenshot] matched {format_window_line(window)}\n")
+            print(output_path)
+            sys.stderr.write(f"[screenshot] saved via {method}: {output_path}\n")
             return 0
 
-        output_path, method = take_screenshot(
+        if args.single_window:
+            from zotero_window_capture import take_screenshot
+
+            output_path, method = take_screenshot(
+                output_path=args.output_path,
+                window_query=args.window_query,
+                prefer_window=True,
+            )
+            print(output_path)
+            sys.stderr.write(f"[screenshot] saved via {method}: {output_path}\n")
+            return 0
+
+        results = take_all_window_screenshots(
             output_path=args.output_path,
             window_query=args.window_query,
-            prefer_window=not args.full_screen,
         )
+        for output_path, method, window in results:
+            print(output_path)
+            sys.stderr.write(f"[screenshot] saved via {method}: {output_path}\n")
+            sys.stderr.write(f"[screenshot] matched {format_window_line(window)}\n")
+        return 0
     except Exception as error:
         sys.stderr.write(f"Error: {error}\n")
         return 1
-
-    print(output_path)
-    sys.stderr.write(f"[screenshot] saved via {method}: {output_path}\n")
-    return 0
 
 
 if __name__ == "__main__":

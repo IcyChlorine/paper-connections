@@ -8,7 +8,6 @@ from __future__ import annotations
 import ctypes
 import os
 import re
-import tempfile
 from ctypes import wintypes
 from dataclasses import dataclass
 from datetime import datetime
@@ -173,13 +172,10 @@ class _PROCESSENTRY32W(ctypes.Structure):
 
 
 def _repo_root() -> str:
-    return os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))
-            )
-        )
-    )
+    path = os.path.abspath(__file__)
+    for _ in range(5):
+        path = os.path.dirname(path)
+    return path
 
 
 def _screenshots_dir() -> str:
@@ -541,18 +537,13 @@ def capture_window_image(hwnd: int):
 
 def resolve_default_output_path(prefix: str = "screenshot") -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    fallback_dir = os.path.join(tempfile.gettempdir(), "paper-connections-screenshots")
-    for directory in (_screenshots_dir(), fallback_dir):
-        try:
-            os.makedirs(directory, exist_ok=True)
-            probe = os.path.join(directory, ".write_probe")
-            with open(probe, "wb"):
-                pass
-            os.remove(probe)
-            return os.path.join(directory, f"{prefix}_{timestamp}.png")
-        except Exception:
-            continue
-    raise RuntimeError("No writable output directory available for screenshot.")
+    directory = _screenshots_dir()
+    os.makedirs(directory, exist_ok=True)
+    probe = os.path.join(directory, ".write_probe")
+    with open(probe, "wb"):
+        pass
+    os.remove(probe)
+    return os.path.join(directory, f"{prefix}_{timestamp}.png")
 
 
 def capture_full_screen():
