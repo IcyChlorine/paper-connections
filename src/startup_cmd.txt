@@ -1,3 +1,4 @@
-# program installation path
-$ .\zotero.exe --jsdebugger -p develop -purgecache
-# jsdebugger for the extra toolkit F12-like window
+# Canonical dev workflow from repo root
+.\tools\setup-dev-plugin.ps1 -ProfileName develop -WhatIf
+.\tools\setup-dev-plugin.ps1 -ProfileName develop
+.\tools\restart-zotero-dev.ps1 -ProfileName develop -JsDebugger

@@ -1,7 +1,7 @@
 # Paper Connections - Current Features
 
 ## Snapshot
-- Date: 2026-03-07
+- Date: 2026-03-08
 - Target: Zotero 7 (`src`)
 - Plugin id: `paper-connections@example.com`
 - Storage backend: `Zotero.SyncedSettings` (`paper-connections.graph.v1`)
@@ -113,12 +113,18 @@
   - documents `refreshGraph(window)` heavy refresh vs `updateNodeDOM(...)` / `updateEdgeDOM(...)` incremental updates.
 
 ## Build/Package
+- Source-loaded dev setup: `.\tools\setup-dev-plugin.ps1 -ProfileName default|develop`
+- Source-loaded dev restart: `.\tools\restart-zotero-dev.ps1 -ProfileName default|develop`
+- Daily frontend testing should prefer source-loaded profiles over repeated XPI uninstall/reinstall.
 - Build command (Git Bash): `./make-zips.sh`
 - Build command (PowerShell): `.\make-zips.ps1`
 - Output xpi: `build/paper-connections.xpi`
 - Update template: `updates.json.tmpl`
+- Packaged XPI builds remain the verification/release path.
 
 ## Developer Tooling
+- `tools/setup-dev-plugin.ps1` configures a Zotero `default` or `develop` profile to load `paper-connections` directly from the repo `src` directory.
+- `tools/restart-zotero-dev.ps1` asks before closing running Zotero, then relaunches the selected profile with `-purgecaches` by default and optional `-jsdebugger`.
 - `tools/screenshot.py` prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
 - `tools/screenshot.py --list-windows` lists matched top-level windows for debugging.
 - `tools/screenshot_server.py` mirrors the same behavior in MCP tools and adds `list_windows`.

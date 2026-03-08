@@ -21,6 +21,34 @@ Paper Connections adds a relation graph workspace to Zotero so you can organize 
 
 ## Development
 
-Build with `./make-zips.sh` (Git Bash) or `./make-zips.ps1` (PowerShell), then install the generated XPI from Zotero's Add-ons window.
+For day-to-day development, load the plugin directly from source instead of reinstalling the XPI after every change.
 
-To run from source instead, see [Setting Up a Plugin Development Environment](https://www.zotero.org/support/dev/client_coding/plugin_development#setting_up_a_plugin_development_environment).
+One-time setup for a Zotero profile:
+
+```powershell
+.\tools\setup-dev-plugin.ps1 -ProfileName default -WhatIf
+.\tools\setup-dev-plugin.ps1 -ProfileName default
+```
+
+Daily restart after code changes:
+
+```powershell
+.\tools\restart-zotero-dev.ps1 -ProfileName default
+.\tools\restart-zotero-dev.ps1 -ProfileName develop -JsDebugger
+```
+
+`setup-dev-plugin.ps1` removes this plugin's installed XPI from the selected profile, writes an extension proxy file that points at the repo `src` directory, and clears the two `extensions.lastApp*` cache markers in that profile's `prefs.js`. `restart-zotero-dev.ps1` asks before closing any running Zotero instance and relaunches Zotero with `-p <ProfileName>` and `-purgecaches` by default so source changes are picked up reliably.
+
+Keep packaged XPI builds for packaging and release verification:
+
+```powershell
+.\make-zips.ps1
+```
+
+Git Bash remains available as a fallback:
+
+```bash
+./make-zips.sh
+```
+
+Reference: [Setting Up a Plugin Development Environment](https://www.zotero.org/support/dev/client_coding/plugin_development#setting_up_a_plugin_development_environment).
