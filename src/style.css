@@ -1,4 +1,3 @@
-item-pane-custom-section[data-pane="paper-connections-topic-context-section"] [data-type="body"],
 item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] [data-type="body"] {
 	line-height: 1.45;
 }
@@ -460,32 +459,5 @@ item-pane-custom-section[data-pane="paper-connections-selection-debug-section"] 
 	border-color: #2b6fae;
 	background: #2f79bc;
 	color: #ffffff;
-}
-
-.paper-connections-pane-actions {
-	margin-top: 10px;
-	display: flex;
-	gap: 6px;
-	flex-wrap: wrap;
-}
-
-.paper-connections-create-topic-btn,
-.paper-connections-remove-topic-btn {
-	padding: 3px 8px;
-	border: 1px solid #a4b1bf;
-	border-radius: 6px;
-	background: #f4f8fb;
-	color: #23384b;
-	font-size: 11px;
-}
-
-.paper-connections-create-topic-btn:hover:not(:disabled),
-.paper-connections-remove-topic-btn:hover:not(:disabled) {
-	background: #e7f0f8;
-}
-
-.paper-connections-create-topic-btn:disabled,
-.paper-connections-remove-topic-btn:disabled {
-	opacity: 0.6;
 }
 

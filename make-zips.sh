@@ -24,6 +24,8 @@ zip -r ../build/paper-connections.xpi \
 	graph-export.js \
 	paper-connections.js \
 	manifest.json \
+	preferences.xhtml \
+	preferences.js \
 	prefs.js \
 	style.css
 cd ../build

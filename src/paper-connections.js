@@ -5,23 +5,24 @@ PaperConnections = {
 	initialized: false,
 	addedElementIDs: [],
 
-	topicContextSectionID: "paper-connections-topic-context-section",
 	selectionDebugSectionID: "paper-connections-selection-debug-section",
-	sectionRegistered: false,
+	selectionDebugSectionRegistered: false,
 	remarkColumnDataKey: "remark",
 	remarkInfoRowID: "paper-connections-remark-row",
 	remarkColumnRegisteredKey: null,
 	remarkInfoRowRegisteredID: null,
 	remarkIntegrationRegistered: false,
 	notifierObserverID: null,
+	prefObserverRegistered: false,
 
 	graphStates: null,
 	selectionDebugSectionListeners: null,
-	topicContextSectionListeners: null,
 	selectionItemsByWindow: null,
 	syncedSettingsLoadedLibraries: null,
 
 	storeSettingKey: "paper-connections.graph.v1",
+	prefBranch: "extensions.paper-connections.",
+	showSelectionDebugSectionPref: "showSelectionDebugSection",
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,
@@ -40,10 +41,10 @@ PaperConnections = {
 		this.rootURI = rootURI;
 		this.graphStates = new WeakMap();
 		this.selectionDebugSectionListeners = new WeakMap();
-		this.topicContextSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
 		this.notifierObserverID = null;
+		this.prefObserverRegistered = false;
 		this.initialized = true;
 	},
 
@@ -134,6 +135,58 @@ PaperConnections = {
 
 	getRemarkDisplayLabel() {
 		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PC)" : "Remark(PC)";
+	},
+
+	getShowSelectionDebugSectionPrefKey() {
+		return `${this.prefBranch}${this.showSelectionDebugSectionPref}`;
+	},
+
+	isSelectionDebugSectionEnabled() {
+		try {
+			return !!Services.prefs.getBoolPref(this.getShowSelectionDebugSectionPrefKey(), false);
+		}
+		catch (error) {
+			Zotero.logError(error);
+			return false;
+		}
+	},
+
+	registerPrefObserver() {
+		if (this.prefObserverRegistered) return;
+		Services.prefs.addObserver(this.prefBranch, this);
+		this.prefObserverRegistered = true;
+	},
+
+	unregisterPrefObserver() {
+		if (!this.prefObserverRegistered) return;
+		try {
+			Services.prefs.removeObserver(this.prefBranch, this);
+		}
+		catch (error) {
+			Zotero.logError(error);
+		}
+		this.prefObserverRegistered = false;
+	},
+
+	observe(subject, topic, data) {
+		if (topic !== "nsPref:changed") return;
+		if (data === this.showSelectionDebugSectionPref) {
+			this.syncSelectionDebugSectionRegistration();
+		}
+	},
+
+	syncSelectionDebugSectionRegistration() {
+		if (this.isSelectionDebugSectionEnabled()) {
+			this.registerSelectionDebugSection();
+		}
+		else {
+			this.unregisterSelectionDebugSection();
+		}
+
+		for (let win of Zotero.getMainWindows()) {
+			if (!win?.ZoteroPane) continue;
+			win.dispatchEvent(new win.CustomEvent("paper-connections:graph-selection-changed"));
+		}
 	},
 
 	normalizeRemarkValue(value) {
@@ -759,98 +812,14 @@ PaperConnections = {
 	},
 
 
-	registerItemPaneSections() {
-		if (this.sectionRegistered) return;
+	registerSelectionDebugSection() {
+		if (this.selectionDebugSectionRegistered) return;
 		if (!Zotero.ItemPaneManager?.registerSection) {
 			this.log("ItemPaneManager API is not available");
 			return;
 		}
 
 		const XHTML_NS = "http://www.w3.org/1999/xhtml";
-
-		Zotero.ItemPaneManager.registerSection({
-			paneID: this.topicContextSectionID,
-			pluginID: this.id,
-			header: {
-				l10nID: "paper-connections-topic-context-header",
-				icon: "chrome://zotero/skin/itempane/16/related.svg",
-			},
-			sidenav: {
-				l10nID: "paper-connections-topic-context-sidenav",
-				icon: "chrome://zotero/skin/itempane/20/related.svg",
-			},
-			onInit: ({ doc, body, refresh }) => {
-				let win = doc.defaultView;
-				let listener = () => refresh();
-				win.addEventListener("paper-connections:graph-context-changed", listener);
-				this.topicContextSectionListeners.set(body, { win, listener });
-			},
-			onDestroy: ({ body }) => {
-				let data = this.topicContextSectionListeners.get(body);
-				if (!data) return;
-				data.win.removeEventListener("paper-connections:graph-context-changed", data.listener);
-				this.topicContextSectionListeners.delete(body);
-			},
-			onItemChange: ({ doc, item, setEnabled, setSectionSummary }) => {
-				setEnabled(!!item);
-				setSectionSummary(item ? `Item: ${item.key}` : "");
-				if (doc?.defaultView) {
-					this.selectionItemsByWindow.set(doc.defaultView, item || null);
-					this.handlePrimaryItemChanged(doc.defaultView, item).catch((error) => Zotero.logError(error));
-				}
-			},
-			onRender: ({ doc, body, item }) => {
-				body.replaceChildren();
-				let win = doc.defaultView;
-				this.selectionItemsByWindow.set(win, item || null);
-
-				const title = doc.createElementNS(XHTML_NS, "div");
-				title.textContent = "Topic Context";
-				title.style.fontWeight = "700";
-				title.style.marginBottom = "8px";
-
-				const desc = doc.createElementNS(XHTML_NS, "div");
-				desc.textContent = "Topic context and actions";
-				desc.style.marginBottom = "8px";
-
-				const list = doc.createElementNS(XHTML_NS, "ul");
-				list.style.margin = "0";
-				list.style.paddingInlineStart = "18px";
-
-				const row1 = doc.createElementNS(XHTML_NS, "li");
-				row1.textContent = `Current Zotero item key: ${item?.key || "-"}`;
-				const row2 = doc.createElementNS(XHTML_NS, "li");
-				let summary = this.getGraphContextSummary(win);
-				row2.textContent = summary.topicLabel;
-				const row3 = doc.createElementNS(XHTML_NS, "li");
-				row3.textContent = summary.topicStatus;
-
-				list.append(row1, row2, row3);
-
-				const buttonWrap = doc.createElementNS(XHTML_NS, "div");
-				buttonWrap.className = "paper-connections-pane-actions";
-				const createTopicBtn = doc.createElementNS(XHTML_NS, "button");
-				createTopicBtn.type = "button";
-				createTopicBtn.className = "paper-connections-create-topic-btn";
-				createTopicBtn.textContent = "Create topic from selected paper";
-				createTopicBtn.disabled = !item;
-				createTopicBtn.addEventListener("click", () => {
-					this.promptCreateTopicFromItem(win, item).catch((error) => Zotero.logError(error));
-				});
-				const removeTopicBtn = doc.createElementNS(XHTML_NS, "button");
-				removeTopicBtn.type = "button";
-				removeTopicBtn.className = "paper-connections-remove-topic-btn";
-				removeTopicBtn.textContent = "Remove topic";
-				removeTopicBtn.disabled = !this.canRemoveActiveTopic(win);
-				removeTopicBtn.addEventListener("click", () => {
-					this.promptRemoveActiveTopic(win, item).catch((error) => Zotero.logError(error));
-				});
-				buttonWrap.append(createTopicBtn, removeTopicBtn);
-
-				body.append(title, desc, list, buttonWrap);
-			},
-		});
-
 		Zotero.ItemPaneManager.registerSection({
 			paneID: this.selectionDebugSectionID,
 			pluginID: this.id,
@@ -934,15 +903,14 @@ PaperConnections = {
 			},
 		});
 
-		this.sectionRegistered = true;
+		this.selectionDebugSectionRegistered = true;
 	},
 
-	unregisterItemPaneSections() {
-		if (!this.sectionRegistered) return;
+	unregisterSelectionDebugSection() {
+		if (!this.selectionDebugSectionRegistered) return;
 		if (!Zotero.ItemPaneManager?.unregisterSection) return;
-		Zotero.ItemPaneManager.unregisterSection(this.topicContextSectionID);
 		Zotero.ItemPaneManager.unregisterSection(this.selectionDebugSectionID);
-		this.sectionRegistered = false;
+		this.selectionDebugSectionRegistered = false;
 	},
 
 	addToWindow(window) {
@@ -1007,13 +975,15 @@ PaperConnections = {
 			this.removeFromWindow(win);
 		}
 		this.unregisterNotifierObserver();
-		this.unregisterItemPaneSections();
+		this.unregisterSelectionDebugSection();
+		this.unregisterPrefObserver();
 		this.unregisterRemarkIntegration();
 	},
 
 	async main() {
 		this.registerRemarkIntegration();
-		this.registerItemPaneSections();
+		this.registerPrefObserver();
+		this.syncSelectionDebugSectionRegistration();
 		this.registerNotifierObserver();
 
 		let host = new URL("https://foo.com/path").host;

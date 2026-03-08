@@ -178,11 +178,34 @@ function Remove-ExtensionLastAppPrefs {
 	}
 }
 
-function Stop-ZoteroProcesses {
+function Get-RunningZoteroProcesses {
+	$processes = @(Get-Process -Name zotero -ErrorAction SilentlyContinue)
+	return $processes
+}
+
+function Wait-ForZoteroExit {
 	param(
-		[Parameter(Mandatory = $true)]
-		[System.Diagnostics.Process[]]$Processes
+		[int]$TimeoutSeconds = 15
 	)
+
+	$deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+	do {
+		$remaining = @(Get-RunningZoteroProcesses)
+		if ($remaining.Count -eq 0) {
+			return $true
+		}
+
+		Start-Sleep -Milliseconds 500
+	} while ((Get-Date) -lt $deadline)
+
+	return (@(Get-RunningZoteroProcesses)).Count -eq 0
+}
+
+function Stop-ZoteroProcesses {
+	$processes = @(Get-RunningZoteroProcesses)
+	if ($processes.Count -eq 0) {
+		return
+	}
 
 	foreach ($process in $Processes) {
 		try {
@@ -194,25 +217,45 @@ function Stop-ZoteroProcesses {
 		}
 	}
 
-	$deadline = (Get-Date).AddSeconds(15)
-	do {
-		Start-Sleep -Milliseconds 500
-		$remaining = @(
-			foreach ($process in $Processes) {
-				try {
-					$refreshed = Get-Process -Id $process.Id -ErrorAction Stop
-					if ($refreshed) {
-						$refreshed
-					}
-				}
-				catch {
-				}
-			}
-		)
-	} while ($remaining.Count -gt 0 -and (Get-Date) -lt $deadline)
+	if (Wait-ForZoteroExit -TimeoutSeconds 15) {
+		return
+	}
 
+	$remaining = @(Get-RunningZoteroProcesses)
 	if ($remaining.Count -gt 0) {
-		$remaining | Stop-Process -Force
+		$remaining | Stop-Process -Force -ErrorAction Stop
+		if (-not (Wait-ForZoteroExit -TimeoutSeconds 15)) {
+			$processList = ((@(Get-RunningZoteroProcesses)).Id | Sort-Object) -join ", "
+			throw "Failed to stop all Zotero processes. Remaining PIDs: $processList"
+		}
+	}
+}
+
+function Copy-FileWithRetry {
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$SourcePath,
+
+		[Parameter(Mandatory = $true)]
+		[string]$DestinationPath,
+
+		[int]$MaxAttempts = 10,
+
+		[int]$DelayMilliseconds = 500
+	)
+
+	for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+		try {
+			Copy-Item -LiteralPath $SourcePath -Destination $DestinationPath -Force
+			return
+		}
+		catch {
+			if ($attempt -eq $MaxAttempts) {
+				throw
+			}
+
+			Start-Sleep -Milliseconds $DelayMilliseconds
+		}
 	}
 }
 
@@ -243,7 +286,7 @@ $extensionsDir = Join-Path $profile.Directory "extensions"
 $targetXpiPath = Join-Path $extensionsDir "$pluginID.xpi"
 $targetProxyPath = Join-Path $extensionsDir $pluginID
 $prefsPath = Join-Path $profile.Directory "prefs.js"
-$runningZotero = @(Get-Process -Name zotero -ErrorAction SilentlyContinue)
+$runningZotero = @(Get-RunningZoteroProcesses)
 
 Write-Host "Target profile: $($profile.Name)"
 Write-Host "Profile directory: $($profile.Directory)"
@@ -269,14 +312,14 @@ if (-not (Test-Path -LiteralPath $extensionsDir -PathType Container)) {
 }
 
 if ($runningZotero.Count -gt 0) {
-	Stop-ZoteroProcesses -Processes $runningZotero
+	Stop-ZoteroProcesses
 }
 
 if (Test-Path -LiteralPath $targetProxyPath -PathType Leaf) {
 	Remove-Item -LiteralPath $targetProxyPath -Force
 }
 
-Copy-Item -LiteralPath $xpiFullPath -Destination $targetXpiPath -Force
+Copy-FileWithRetry -SourcePath $xpiFullPath -DestinationPath $targetXpiPath
 Remove-ExtensionLastAppPrefs -PrefsPath $prefsPath
 
 $argumentList = @("-p", $ProfileName)
@@ -287,6 +330,11 @@ if ($JsDebugger) {
 	$argumentList += "-jsdebugger"
 }
 
-$started = Start-Process -FilePath $ZoteroExePath -ArgumentList $argumentList -PassThru
+$started = Start-Process -FilePath $ZoteroExePath -ArgumentList $argumentList -PassThru -ErrorAction Stop
 Write-Host "Installed $pluginID to $targetXpiPath"
-Write-Host "Started Zotero (PID $($started.Id)) with arguments: $($argumentList -join ' ')"
+if ($started -and ($started | Get-Member -Name Id -ErrorAction SilentlyContinue)) {
+	Write-Host "Started Zotero (PID $($started.Id)) with arguments: $($argumentList -join ' ')"
+}
+else {
+	Write-Host "Started Zotero with arguments: $($argumentList -join ' ')"
+}

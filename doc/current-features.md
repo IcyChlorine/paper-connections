@@ -9,11 +9,12 @@
 - Add-on package icon: `assets/paper-connections-svgrepo-com.svg`
 
 ## Implemented Features
-- Right item-pane custom section: `Topic Context Section`
-  - Shows current item key and active graph context summary.
-  - Provides `Create topic from selected paper` button.
-  - Provides `Remove topic` button with confirm dialog (enabled only when active saved topic exists).
+- Plugin preferences
+  - Zotero `Edit -> Settings` includes a Paper Connections preferences pane.
+  - Provides a `Show Selection Debug section in the right item panes` checkbox.
+  - Default is off.
 - Right item-pane custom section: `Selection Debug Section`
+  - Hidden by default and shown only when enabled in plugin preferences.
   - Shows selected graph node label/id.
   - Shows incoming and outgoing linked nodes for debug.
 - Remark system
@@ -60,7 +61,7 @@
     - saved topic: `Rename`, `Delete`, separator, `Export as SVG`, `Export as JSON`.
     - no topic loaded: menu suppressed (no disabled placeholder entries).
   - Topic-menu `Rename` updates active saved topic name.
-  - Topic-menu `Delete` uses same confirm/remove flow as right-pane `Remove topic`.
+  - Topic-menu `Delete` uses the shared topic delete confirm/remove flow.
   - Topic-menu `Create topic from this paper` reuses the same create-topic flow.
   - Topic-menu `Export as SVG`:
     - opens SVG export settings dialog (`SVG 导出设置`: include grid + margin),

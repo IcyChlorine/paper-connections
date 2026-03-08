@@ -21,6 +21,8 @@ $packList = @(
 	"graph-export.js",
 	"paper-connections.js",
 	"manifest.json",
+	"preferences.xhtml",
+	"preferences.js",
 	"prefs.js",
 	"style.css"
 )
