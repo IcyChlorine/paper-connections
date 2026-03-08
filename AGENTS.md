@@ -31,6 +31,7 @@
 - Project-local skills live under `./.codex/skills/`.
 - `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
 - Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
+- `build-install-restart` script: `.\tools\build-install-restart.ps1 -ProfileName default|develop` is the current machine's primary dev-install workflow after functional changes that need Zotero verification.
 - `paper-connections-wt-sync`: use after syncing another worktree into the current one so the session can rescan merge history, reread workflow/docs, and rerun the repo build-check flow.
 - Explicit trigger examples: `$paper-connections-wt-sync`, `use paper-connections-wt-sync`, `wtsync`.
 - `paper-connections-session-summary`: use near session close-out when Codex should update `AGENTS.md` or other docs with repeatable lessons and create a new session summary file for the current worktree session.
@@ -65,6 +66,8 @@
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
 - If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in the packaging whitelist used by `make-zips.sh` / `make-zips.ps1`.
 - In PowerShell, prefer native build script: `.\make-zips.ps1`; Git Bash fallback: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips.sh`.
+- On this machine, prefer `.\tools\build-install-restart.ps1 -ProfileName default` as the end-to-end dev loop after functional changes; it builds, replaces the profile XPI, and restarts Zotero after confirmation.
+- Before any script-driven Zotero shutdown/restart, explicitly obtain or confirm the user's consent for that run, because they may be testing another worktree or actively using Zotero.
 - For SVG canvas overlay controls, call a post-render position sync (for example via `requestAnimationFrame` + delayed retries) so top-right placement is correct on first mount before topic/context switches.
 - For right-click gestures (for example Alt + RMB cut), explicitly handle `contextmenu` suppression and window-level key/mouse cleanup to prevent browser menu interference and stale interaction state.
 - Keep canvas cursor fully state-driven: show grab/grabbing only when background panning is available; use default pointer on nodes and during cut gestures.
@@ -79,7 +82,10 @@
 
 ## Build and Packaging
 - Build with `make-zips.sh` (Git Bash) or `make-zips.ps1` (PowerShell) from repo root.
-- After any task that changes source files under `src`, rebuild before close-out so the latest `xpi` is ready for Zotero testing.
+- After any task that changes source files under `src`, default close-out flow is:
+  1) run the repo build-check flow
+  2) if the change is meant for immediate Zotero verification, run `.\tools\build-install-restart.ps1 -ProfileName default` after confirming the user wants Zotero closed/restarted
+- Use restart-only flow `.\tools\restart-zotero-dev.ps1 -ProfileName default|develop` only when the user wants a relaunch without reinstalling the plugin XPI.
 - Use `paper-connections-build-check` for the repo-specific close-out/build verification flow instead of restating the detailed checklist here.
 
 ## Token/Time Saving
