@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paper Connections Zotero Screenshot"
+  short_description: "Capture Zotero windows robustly, including dialogs and config popups."
+  default_prompt: "Use $paper-connections-zotero-screenshot to inspect and capture the current Zotero UI state."

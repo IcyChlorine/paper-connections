@@ -129,9 +129,13 @@
 - `tools/setup-dev-plugin.ps1` configures a Zotero `default` or `develop` profile to load `paper-connections` directly from the repo `src` directory.
 - `tools/restart-zotero-dev.ps1` asks before closing running Zotero, then relaunches the selected profile with `-purgecaches` by default and optional `-jsdebugger`.
 - `tools/setup-dev-plugin.ps1` remains in the repo for source-loading experiments, but that path is not the default tested workflow on this machine.
-- `tools/screenshot.py` prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
-- `tools/screenshot.py --list-windows` lists matched top-level windows for debugging.
-- `tools/screenshot_server.py` mirrors the same behavior in MCP tools and adds `list_windows`.
+- Repo-local skill `.codex/skills/paper-connections-zotero-screenshot` is the source of truth for Zotero UI screenshots.
+- The screenshot matcher scopes to visible top-level windows owned by the `zotero.exe` process tree, so dialogs like `Plugins Manager` or `Preferences` are still discoverable even when their titles do not contain `Zotero`.
+- The screenshot scripts enable per-monitor DPI awareness before calling `GetWindowRect` and `PrintWindow`, avoiding right/bottom cropping on Windows display scaling such as 125%.
+- The default capture writes every visible Zotero top-level window to `tools/screenshots/`, which is the preferred debug flow for multi-window Zotero UI state.
+- `--single-window` prefers the foreground Zotero root window, then owned/dialog windows, then other matched windows.
+- `tools/screenshot.py` and `tools/screenshot_server.py` are compatibility wrappers over the skill scripts.
+- `tools/screenshot.py --list-windows` lists matched Zotero top-level windows for debugging.
 
 ## Pending TODO (Next Stage)
 - Topic chooser UI when a paper belongs to multiple topics.

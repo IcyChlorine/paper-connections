@@ -32,6 +32,8 @@
 - `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
 - Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
 - `build-install-restart` script: `.\tools\build-install-restart.ps1 -ProfileName default|develop` is the current machine's primary dev-install workflow after functional changes that need Zotero verification.
+- `paper-connections-zotero-screenshot`: use when Zotero UI verification needs robust screenshots or window enumeration, especially for independent dialogs like Plugins Manager or Preferences that do not include `Zotero` in the title; the default capture writes all visible Zotero windows to `tools/screenshots/` for debugging.
+- Explicit trigger examples: `$paper-connections-zotero-screenshot`, `use paper-connections-zotero-screenshot`, `capture zotero screenshot`.
 - `paper-connections-wt-sync`: use after syncing another worktree into the current one so the session can rescan merge history, reread workflow/docs, and rerun the repo build-check flow.
 - Explicit trigger examples: `$paper-connections-wt-sync`, `use paper-connections-wt-sync`, `wtsync`.
 - `paper-connections-session-summary`: use near session close-out when Codex should update `AGENTS.md` or other docs with repeatable lessons and create a new session summary file for the current worktree session.
@@ -91,5 +93,7 @@
 ## Token/Time Saving
 - Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
 - Avoid re-discovering DOM structure from screenshots repeatedly; use official extension APIs where possible.
+- For Zotero UI screenshots on Windows, prefer the repo-local `paper-connections-zotero-screenshot` skill or its `tools/screenshot.py` wrapper, which matches `zotero.exe` windows by process tree instead of title text only.
+- For Windows `PrintWindow` screenshot capture, enable process DPI awareness before reading window rects; otherwise 125%/150% display scaling can crop the right and bottom edges.
 - When renaming plugin identity, run a repo-wide search for old identifiers before build.
 - Keep this file concise and update only with repeatable pitfalls and doc index changes.
