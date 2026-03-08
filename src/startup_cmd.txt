@@ -1,4 +1,2 @@
 # Canonical dev workflow from repo root
-.\tools\setup-dev-plugin.ps1 -ProfileName develop -WhatIf
-.\tools\setup-dev-plugin.ps1 -ProfileName develop
-.\tools\restart-zotero-dev.ps1 -ProfileName develop -JsDebugger
+.\tools\build-install-restart.ps1 -ProfileName develop -JsDebugger

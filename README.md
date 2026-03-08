@@ -21,23 +21,22 @@ Paper Connections adds a relation graph workspace to Zotero so you can organize 
 
 ## Development
 
-For day-to-day development, load the plugin directly from source instead of reinstalling the XPI after every change.
+For day-to-day development on this machine, build the XPI, copy it straight into the target Zotero profile, and restart Zotero in one step.
 
-One-time setup for a Zotero profile:
+Recommended daily workflow:
 
 ```powershell
-.\tools\setup-dev-plugin.ps1 -ProfileName default -WhatIf
-.\tools\setup-dev-plugin.ps1 -ProfileName default
+.\tools\build-install-restart.ps1 -ProfileName default
+.\tools\build-install-restart.ps1 -ProfileName develop -JsDebugger
 ```
 
-Daily restart after code changes:
+`build-install-restart.ps1` asks for confirmation first, runs `.\make-zips.ps1`, closes any running Zotero instance, removes any leftover source-proxy file for this plugin, copies `build/paper-connections.xpi` into the selected profile's `extensions` directory as `paper-connections@example.com.xpi`, clears the two `extensions.lastApp*` cache markers in that profile's `prefs.js`, and relaunches Zotero with `-p <ProfileName>` and `-purgecaches` by default.
+
+`restart-zotero-dev.ps1` remains available when you only want to relaunch Zotero without rebuilding or reinstalling the plugin:
 
 ```powershell
 .\tools\restart-zotero-dev.ps1 -ProfileName default
-.\tools\restart-zotero-dev.ps1 -ProfileName develop -JsDebugger
 ```
-
-`setup-dev-plugin.ps1` removes this plugin's installed XPI from the selected profile, writes an extension proxy file that points at the repo `src` directory, and clears the two `extensions.lastApp*` cache markers in that profile's `prefs.js`. `restart-zotero-dev.ps1` asks before closing any running Zotero instance and relaunches Zotero with `-p <ProfileName>` and `-purgecaches` by default so source changes are picked up reliably.
 
 Keep packaged XPI builds for packaging and release verification:
 

@@ -113,9 +113,10 @@
   - documents `refreshGraph(window)` heavy refresh vs `updateNodeDOM(...)` / `updateEdgeDOM(...)` incremental updates.
 
 ## Build/Package
-- Source-loaded dev setup: `.\tools\setup-dev-plugin.ps1 -ProfileName default|develop`
-- Source-loaded dev restart: `.\tools\restart-zotero-dev.ps1 -ProfileName default|develop`
-- Daily frontend testing should prefer source-loaded profiles over repeated XPI uninstall/reinstall.
+- Automated build/install/restart: `.\tools\build-install-restart.ps1 -ProfileName default|develop`
+- The install script builds a fresh XPI, overwrites the matching profile `extensions\paper-connections@example.com.xpi`, clears the two `extensions.lastApp*` cache markers, and relaunches Zotero after confirmation.
+- `.\tools\restart-zotero-dev.ps1 -ProfileName default|develop` remains available for restart-only runs.
+- Daily frontend testing should prefer direct profile XPI replacement over manual uninstall/reinstall in the Zotero add-ons UI.
 - Build command (Git Bash): `./make-zips.sh`
 - Build command (PowerShell): `.\make-zips.ps1`
 - Output xpi: `build/paper-connections.xpi`
@@ -123,8 +124,10 @@
 - Packaged XPI builds remain the verification/release path.
 
 ## Developer Tooling
+- `tools/build-install-restart.ps1` is the primary Windows dev-install workflow for this repo.
 - `tools/setup-dev-plugin.ps1` configures a Zotero `default` or `develop` profile to load `paper-connections` directly from the repo `src` directory.
 - `tools/restart-zotero-dev.ps1` asks before closing running Zotero, then relaunches the selected profile with `-purgecaches` by default and optional `-jsdebugger`.
+- `tools/setup-dev-plugin.ps1` remains in the repo for source-loading experiments, but that path is not the default tested workflow on this machine.
 - `tools/screenshot.py` prefers window-targeted capture on Windows (`--window-query` default `Zotero`) and falls back to full-screen.
 - `tools/screenshot.py --list-windows` lists matched top-level windows for debugging.
 - `tools/screenshot_server.py` mirrors the same behavior in MCP tools and adds `list_windows`.
