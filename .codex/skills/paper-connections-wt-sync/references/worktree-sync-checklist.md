@@ -25,7 +25,7 @@ Read these first if they changed:
 
 - `AGENTS.md`
 - `.codex/skills/`
-- `doc/session-*.md`
+- `doc/devhist/session-*.md`
 - `doc/current-features.md`
 - `doc/storage-crud.md`
 - `README.md`

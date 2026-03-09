@@ -19,10 +19,15 @@
 - `Selection Debug Section`: right item-pane custom section showing selected node details for debug. Runtime id: `paper-connections-selection-debug-section`.
 - `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions. Core ids: `paper-connections-graph-pane`, `paper-connections-graph-canvas`.
 
+## Persistent Docs
+- Persistent docs are the repository files used to record development history and support future development.
+- They include `AGENTS.md`, current documentation under `doc/`, and development history under `doc/devhist/`.
+
 ## Development Docs Index (Read in Order)
-- Session summary (latest relevant summary for current worktree): `doc/session-*.md`.
+- Session summary (latest relevant summary for current worktree): `doc/devhist/session-*.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
+- Development history index: `doc/devhist/README.md`.
 - Product/user docs: `README.md`.
 
 ## Project Skills
@@ -41,12 +46,12 @@
 - Before implementing any feature, read:
   1) `doc/current-features.md`
   2) `doc/storage-crud.md` (if data related)
-  3) latest relevant `doc/session-*.md` for the current worktree; if recent merges brought in other worktree progress relevant to the task, also review those merged summaries
+  3) latest relevant `doc/devhist/session-*.md` for the current worktree; if recent merges brought in other worktree progress relevant to the task, also review those merged summaries
 - If behavior changes, update `doc/current-features.md` in the same task.
 - If data model/API changes, update `doc/storage-crud.md` in the same task.
-- Session summary naming under worktree development is `session-yyyy-mm-dd-[session order:a-z][worktree suffix]-summary.md`.
-- Main worktree omits the worktree suffix. Example: `session-2026-03-06a-summary.md`.
-- Secondary worktrees include the suffix from the branch/worktree identity. Example: `session-2026-03-05bwt2-summary.md`.
+- Session summary naming under worktree development is `session-yyyy-mm-dd-[session order:a-z][worktree suffix]-summary.md`, stored under `doc/devhist/`.
+- Main worktree omits the worktree suffix. Example: `doc/devhist/session-2026-03-06a-summary.md`.
+- Secondary worktrees include the suffix from the branch/worktree identity. Example: `doc/devhist/session-2026-03-05bwt2-summary.md`.
 - If progress is synchronized between worktrees by merge, use git merge history to understand which updates came from other worktrees and avoid duplicating or overwriting summary content.
 
 ## Commit Rule

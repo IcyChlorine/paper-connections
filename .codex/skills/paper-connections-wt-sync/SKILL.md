@@ -16,7 +16,7 @@ Rebuild session context after a worktree-to-worktree sync. Focus on workflow and
    - Use the commands and checklist in [references/worktree-sync-checklist.md](references/worktree-sync-checklist.md).
    - Find the relevant recent merge commit or, if the sync was not recorded as a merge commit, inspect the recent commit range that brought the other worktree's changes in.
 3. Review what changed with the right priority.
-   - First review workflow/documentation changes, especially `AGENTS.md`, `.codex/skills/`, `doc/session-*.md`, `doc/current-features.md`, and `doc/storage-crud.md`.
+   - First review workflow/documentation changes, especially `AGENTS.md`, `.codex/skills/`, `doc/devhist/session-*.md`, `doc/current-features.md`, and `doc/storage-crud.md`.
    - Then skim the merged code and summarize newly landed functionality at a high level only. Do not spend most of the effort on feature archaeology.
 4. Re-run repository verification.
    - Open `.codex/skills/paper-connections-build-check/SKILL.md` and follow it.

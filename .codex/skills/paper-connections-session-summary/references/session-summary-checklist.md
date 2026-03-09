@@ -3,8 +3,8 @@
 ## Worktree Identity
 
 - Read the current branch name first.
-- Main worktree summaries omit a worktree suffix: `doc/session-YYYY-MM-DDa-summary.md`.
-- Secondary worktrees include the branch suffix immediately before `-summary`: `doc/session-YYYY-MM-DDawt2-summary.md`.
+- Main worktree summaries omit a worktree suffix: `doc/devhist/session-YYYY-MM-DDa-summary.md`.
+- Secondary worktrees include the branch suffix immediately before `-summary`: `doc/devhist/session-YYYY-MM-DDawt2-summary.md`.
 - Keep the session order letter local to that date and worktree.
 
 ## Session Scope Scan
