@@ -12,9 +12,10 @@ async function startup({ id, version, rootURI }) {
 	log(`Starting ${version}`);
 	
 	Zotero.PreferencePanes.register({
+		id: 'paper-connections-prefpane',
 		pluginID: 'paper-connections@example.com',
 		src: rootURI + 'preferences.xhtml',
-		scripts: [rootURI + 'preferences.js']
+		label: 'Paper Connections'
 	});
 	
 	Services.scriptloader.loadSubScript(rootURI + 'storage.js');

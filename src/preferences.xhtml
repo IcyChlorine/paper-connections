@@ -1,50 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-	<meta charset="utf-8" />
-	<title>Paper Connections Preferences</title>
-	<style>
-		body {
-			margin: 0;
-			padding: 16px;
-			font: message-box;
-			color: var(--in-content-page-color, #15141a);
-			background: transparent;
-		}
-
-		.paper-connections-preferences {
-			display: grid;
-			gap: 10px;
-			max-width: 560px;
-		}
-
-		.paper-connections-preferences h2 {
-			margin: 0;
-			font-size: 1.1em;
-		}
-
-		.paper-connections-preferences label {
-			display: flex;
-			align-items: flex-start;
-			gap: 8px;
-		}
-
-		.paper-connections-preferences p {
-			margin: 0;
-			opacity: 0.8;
-			line-height: 1.45;
-		}
-	</style>
-</head>
-<body>
-	<section class="paper-connections-preferences">
-		<h2 id="paper-connections-pref-title">Paper Connections</h2>
-		<label for="show-selection-debug-section">
-			<input id="show-selection-debug-section" type="checkbox" />
-			<span id="show-selection-debug-section-label">Show Selection Debug section in the right item panes</span>
-		</label>
-		<p id="show-selection-debug-section-help">When enabled, the Selection Debug section appears in the right-side item panes for graph debugging.</p>
-	</section>
-</body>
-</html>
+<vbox id="paper-connections-prefpane">
+	<vbox class="main-section">
+		<groupbox>
+			<label>
+				<html:h2>Paper Connections</html:h2>
+			</label>
+			<checkbox
+				id="show-selection-debug-section"
+				native="true"
+				preference="extensions.paper-connections.showSelectionDebugSection"
+				label="Show Selection Debug section in the right item panes"
+			/>
+			<description>
+				When enabled, the Selection Debug section appears in the right-side item panes for graph debugging.
+			</description>
+		</groupbox>
+	</vbox>
+</vbox>

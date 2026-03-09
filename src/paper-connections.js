@@ -18,6 +18,7 @@ PaperConnections = {
 	graphStates: null,
 	selectionDebugSectionListeners: null,
 	selectionItemsByWindow: null,
+	itemSelectionHooks: null,
 	syncedSettingsLoadedLibraries: null,
 
 	storeSettingKey: "paper-connections.graph.v1",
@@ -42,9 +43,11 @@ PaperConnections = {
 		this.graphStates = new WeakMap();
 		this.selectionDebugSectionListeners = new WeakMap();
 		this.selectionItemsByWindow = new WeakMap();
+		this.itemSelectionHooks = new WeakMap();
 		this.syncedSettingsLoadedLibraries = new Set();
 		this.notifierObserverID = null;
 		this.prefObserverRegistered = false;
+		this.selectionDebugSectionRegisteredID = null;
 		this.initialized = true;
 	},
 
@@ -134,7 +137,7 @@ PaperConnections = {
 	},
 
 	getRemarkDisplayLabel() {
-		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PC)" : "Remark(PC)";
+		return this.getCurrentLocaleTag().startsWith("zh") ? "缂備胶濮崑鎾绘偣?PC)" : "Remark(PC)";
 	},
 
 	getShowSelectionDebugSectionPrefKey() {
@@ -170,23 +173,41 @@ PaperConnections = {
 
 	observe(subject, topic, data) {
 		if (topic !== "nsPref:changed") return;
-		if (data === this.showSelectionDebugSectionPref) {
+		let prefKey = this.getShowSelectionDebugSectionPrefKey();
+		if (
+			data === prefKey
+			|| data === this.showSelectionDebugSectionPref
+			|| data === prefKey.replace(this.prefBranch, "")
+		) {
 			this.syncSelectionDebugSectionRegistration();
 		}
 	},
 
+	refreshItemPaneSections() {
+		for (let win of Zotero.getMainWindows()) {
+			if (!win?.ZoteroPane) continue;
+			let itemPane = win.document?.getElementById("zotero-item-pane");
+			if (!itemPane?.render) continue;
+			try {
+				let maybePromise = itemPane.render();
+				if (maybePromise?.catch) {
+					maybePromise.catch((error) => Zotero.logError(error));
+				}
+			}
+			catch (error) {
+				Zotero.logError(error);
+			}
+		}
+	},
+
 	syncSelectionDebugSectionRegistration() {
-		if (this.isSelectionDebugSectionEnabled()) {
-			this.registerSelectionDebugSection();
-		}
-		else {
-			this.unregisterSelectionDebugSection();
-		}
+		this.registerSelectionDebugSection();
 
 		for (let win of Zotero.getMainWindows()) {
 			if (!win?.ZoteroPane) continue;
 			win.dispatchEvent(new win.CustomEvent("paper-connections:graph-selection-changed"));
 		}
+		this.refreshItemPaneSections();
 	},
 
 	normalizeRemarkValue(value) {
@@ -820,7 +841,7 @@ PaperConnections = {
 		}
 
 		const XHTML_NS = "http://www.w3.org/1999/xhtml";
-		Zotero.ItemPaneManager.registerSection({
+		let registeredPaneID = Zotero.ItemPaneManager.registerSection({
 			paneID: this.selectionDebugSectionID,
 			pluginID: this.id,
 			header: {
@@ -844,7 +865,7 @@ PaperConnections = {
 				this.selectionDebugSectionListeners.delete(body);
 			},
 			onItemChange: ({ item, setEnabled, setSectionSummary }) => {
-				setEnabled(!!item);
+				setEnabled(!!item && this.isSelectionDebugSectionEnabled());
 				setSectionSummary("Selection Debug");
 			},
 			onRender: ({ doc, body }) => {
@@ -913,6 +934,44 @@ PaperConnections = {
 		this.selectionDebugSectionRegistered = false;
 	},
 
+	installItemSelectionHook(window) {
+		if (!window?.ZoteroPane || typeof window.ZoteroPane.itemSelected !== "function") return;
+		if (this.itemSelectionHooks.has(window)) return;
+
+		let original = window.ZoteroPane.itemSelected;
+		let wrapped = (...args) => {
+			let result = original.apply(window.ZoteroPane, args);
+			return Zotero.Promise.resolve(result)
+				.then(async (value) => {
+					let selectedItem = this.getCurrentSelectedItem(window);
+					if (selectedItem) {
+						this.selectionItemsByWindow.set(window, selectedItem);
+					}
+					else {
+						this.selectionItemsByWindow.delete(window);
+					}
+					await this.handlePrimaryItemChanged(window, selectedItem);
+					return value;
+				})
+				.catch((error) => {
+					Zotero.logError(error);
+					throw error;
+				});
+		};
+
+		window.ZoteroPane.itemSelected = wrapped;
+		this.itemSelectionHooks.set(window, { original });
+	},
+
+	uninstallItemSelectionHook(window) {
+		let data = this.itemSelectionHooks.get(window);
+		if (!data) return;
+		if (window?.ZoteroPane) {
+			window.ZoteroPane.itemSelected = data.original;
+		}
+		this.itemSelectionHooks.delete(window);
+	},
+
 	addToWindow(window) {
 		let doc = window.document;
 
@@ -927,6 +986,7 @@ PaperConnections = {
 		}
 
 		window.MozXULElement.insertFTLIfNeeded("paper-connections.ftl");
+		this.installItemSelectionHook(window);
 		this.addGraphPane(window);
 	},
 
@@ -960,6 +1020,7 @@ PaperConnections = {
 		}
 		this.graphStates.delete(window);
 		this.selectionItemsByWindow.delete(window);
+		this.uninstallItemSelectionHook(window);
 
 		let doc = window.document;
 		for (let id of this.addedElementIDs) {
