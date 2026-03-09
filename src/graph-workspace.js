@@ -47,15 +47,16 @@ var PaperConnectionsGraphWorkspaceMixin = {
 	},
 
 	getGraphWorkspaceToggleTooltip(graphVisible) {
+		let shortcut = this.getToggleGraphShortcutLabel();
 		let isZh = this.getCurrentLocaleTag().startsWith("zh");
 		if (isZh) {
 			return graphVisible
-				? "\u9690\u85cf\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (Ctrl+`)"
-				: "\u663e\u793a\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (Ctrl+`)";
+				? `\u9690\u85cf\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (${shortcut})`
+				: `\u663e\u793a\u5173\u7cfb\u56fe\u5de5\u4f5c\u533a (${shortcut})`;
 		}
 		return graphVisible
-			? "Hide Relation Graph Workspace (Ctrl+`)"
-			: "Show Relation Graph Workspace (Ctrl+`)";
+			? `Hide Relation Graph Workspace (${shortcut})`
+			: `Show Relation Graph Workspace (${shortcut})`;
 	},
 
 	getGraphWorkspaceToggleButton(window) {
@@ -688,6 +689,7 @@ var PaperConnectionsGraphWorkspaceMixin = {
 			bundleHoverRadiusPx: 14,
 			altModifierPressed: false,
 			shiftModifierPressed: false,
+			ctrlModifierPressed: false,
 			pointerInCanvas: false,
 			pointerOverNode: false,
 			pointerOverControl: false,

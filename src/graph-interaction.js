@@ -38,14 +38,16 @@ var PaperConnectionsGraphInteractionMixin = {
 	updateCanvasCursorState(window) {
 		let state = this.graphStates.get(window);
 		if (!state?.canvas) return;
+		let cutModifierActive = this.isShortcutModifierPressed(state, this.getEdgeCutModifier());
+		let bundleModifierActive = this.isShortcutModifierPressed(state, this.getEdgeBundleModifier());
 		let hoverBundleActive = !!(
 			state.hoverBundleID &&
 			!state.dragMode
 		);
 		let panReady = !!(
 			state.pointerInCanvas &&
-			!state.altModifierPressed &&
-			!state.shiftModifierPressed &&
+			!cutModifierActive &&
+			!bundleModifierActive &&
 			!state.dragMode &&
 			!state.pointerOverNode &&
 			!state.pointerOverControl &&
@@ -53,17 +55,29 @@ var PaperConnectionsGraphInteractionMixin = {
 		);
 		let cutReady = !!(
 			state.pointerInCanvas &&
-			(state.altModifierPressed || state.dragMode === "edge-cut")
+			(cutModifierActive || state.dragMode === "edge-cut")
 		);
 		let bundleReady = !!(
 			state.pointerInCanvas &&
-			!state.altModifierPressed &&
-			(state.shiftModifierPressed || hoverBundleActive || state.dragMode === "edge-bundle" || state.dragMode === "bundle-node")
+			!cutModifierActive &&
+			(bundleModifierActive || hoverBundleActive || state.dragMode === "edge-bundle" || state.dragMode === "bundle-node")
 		);
 		state.canvas.classList.toggle("paper-connections-pan-ready", panReady);
 		state.canvas.classList.toggle("paper-connections-panning", state.dragMode === "pan");
 		state.canvas.classList.toggle("paper-connections-cut-ready", cutReady);
 		state.canvas.classList.toggle("paper-connections-bundle-ready", bundleReady);
+	},
+
+	isShortcutModifierPressed(state, modifierValue) {
+		if (!state) return false;
+		switch (this.normalizeShortcutModifierValue(modifierValue, "ctrl")) {
+			case "shift":
+				return !!state.shiftModifierPressed;
+			case "alt":
+				return !!state.altModifierPressed;
+			default:
+				return !!state.ctrlModifierPressed;
+		}
 	},
 
 	updatePointerContextFromEvent(window, event) {
@@ -81,9 +95,15 @@ var PaperConnectionsGraphInteractionMixin = {
 		if (!state) return;
 		let nextAlt = !!event?.altKey;
 		let nextShift = !!event?.shiftKey;
-		if (state.altModifierPressed === nextAlt && state.shiftModifierPressed === nextShift) return;
+		let nextCtrl = !!(event?.ctrlKey || event?.getModifierState?.("Control"));
+		if (
+			state.altModifierPressed === nextAlt &&
+			state.shiftModifierPressed === nextShift &&
+			state.ctrlModifierPressed === nextCtrl
+		) return;
 		state.altModifierPressed = nextAlt;
 		state.shiftModifierPressed = nextShift;
+		state.ctrlModifierPressed = nextCtrl;
 		this.updateCanvasCursorState(window);
 	},
 
@@ -108,18 +128,11 @@ var PaperConnectionsGraphInteractionMixin = {
 		if (!state) return;
 		this.syncModifierStateByEvent(window, event);
 		if (event?.type === "keypress") return;
-		let isBackquoteLike = !!(
-			event?.code === "Backquote" ||
-			event?.key === "`" ||
-			event?.key === "~" ||
-			event?.keyCode === 192 ||
-			event?.which === 192
-		);
-		let isToggleShortcut = !!(
-			(event?.ctrlKey || event?.getModifierState?.("Control")) &&
-			!event?.altKey &&
-			!event?.metaKey &&
-			isBackquoteLike
+		let isToggleShortcut = this.matchesConfiguredShortcut(
+			event,
+			this.getToggleGraphModifier(),
+			this.getToggleGraphKey(),
+			"`",
 		);
 		if (isToggleShortcut) {
 			event.preventDefault();
@@ -127,12 +140,10 @@ var PaperConnectionsGraphInteractionMixin = {
 			this.toggleGraphWorkspaceVisibility(window);
 			return;
 		}
-		let isFullscreenShortcut = !!(
-			!event?.ctrlKey &&
-			!event?.altKey &&
-			!event?.metaKey &&
-			!event?.shiftKey &&
-			(event?.code === "Backquote" || event?.key === "`" || event?.keyCode === 192 || event?.which === 192)
+		let isFullscreenShortcut = this.matchesConfiguredSingleKeyShortcut(
+			event,
+			this.getFullscreenKey(),
+			"`",
 		);
 		if (
 			isFullscreenShortcut &&
@@ -181,6 +192,7 @@ var PaperConnectionsGraphInteractionMixin = {
 		this.cancelNodeRename(window);
 		state.altModifierPressed = false;
 		state.shiftModifierPressed = false;
+		state.ctrlModifierPressed = false;
 		state.pointerInCanvas = false;
 		state.pointerOverNode = false;
 		state.pointerOverControl = false;
@@ -886,9 +898,9 @@ var PaperConnectionsGraphInteractionMixin = {
 		if (
 			state.dragMode === "edge-cut" ||
 			state.dragMode === "edge-bundle" ||
-			(event.altKey && event.button === 2) ||
-			((event.shiftKey || state.shiftModifierPressed) && event.button === 2) ||
-			(event.shiftKey && state.edgeBundleDraft)
+			(this.eventHasModifier(event, this.getEdgeCutModifier()) && event.button === 2) ||
+			(this.eventHasModifier(event, this.getEdgeBundleModifier()) && event.button === 2) ||
+			(this.eventHasModifier(event, this.getEdgeBundleModifier()) && state.edgeBundleDraft)
 		) {
 			event.preventDefault();
 			return;
@@ -927,7 +939,7 @@ var PaperConnectionsGraphInteractionMixin = {
 		this.hideGraphContextMenus(window);
 		this.syncModifierStateByEvent(window, event);
 		this.updatePointerContextFromEvent(window, event);
-		if (event.button === 2 && event.altKey) {
+		if (event.button === 2 && this.eventHasModifier(event, this.getEdgeCutModifier())) {
 			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
 			state.dragMode = "edge-cut";
 			state.dragNodeID = null;
@@ -957,7 +969,7 @@ var PaperConnectionsGraphInteractionMixin = {
 
 		if (
 			event.button === 2 &&
-			(event.shiftKey || state.shiftModifierPressed) &&
+			this.eventHasModifier(event, this.getEdgeBundleModifier()) &&
 			this.isSavedTopicMutableState(state)
 		) {
 			let start = this.clientToGraphPoint(state, event.clientX, event.clientY);
@@ -1112,6 +1124,7 @@ var PaperConnectionsGraphInteractionMixin = {
 
 		this.hideGraphContextMenus(window);
 		this.selectGraphNode(window, nodeID);
+		if (!this.isDoubleClickOpenNodePdfEnabled()) return;
 		this.openGraphNodeItem(window, node, event).catch((error) => Zotero.logError(error));
 		event?.preventDefault?.();
 		event?.stopPropagation?.();
@@ -1444,7 +1457,9 @@ var PaperConnectionsGraphInteractionMixin = {
 		}
 		if (nodeID) {
 			this.updateNodeDOM(window, nodeID, { propagate: false });
-			this.syncSelectedGraphNodeToItemList(window, nodeID);
+			if (this.isSelectionSyncToItemListEnabled()) {
+				this.syncSelectedGraphNodeToItemList(window, nodeID);
+			}
 		}
 		if (!previousNodeID && !nodeID) {
 			this.applySelectedNodeStateToDOM(state);

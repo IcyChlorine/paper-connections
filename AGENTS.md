@@ -62,6 +62,10 @@
 - For item pane extension, use `Zotero.ItemPaneManager.registerSection()`. Do not manually append panes to parent layout.
 - For custom item pane sections, always define both `header` and `sidenav` with valid `l10nID` and icons.
 - For plugin preference panes, `Zotero.PreferencePanes.register()` `src` must be an XHTML fragment, not a full HTML document; prefer a XUL-root fragment (`vbox`, `groupbox`, native controls) and direct `preference` bindings for simple settings.
+- For plugin preference panes inside Zotero Settings, rely on the host-provided pane title; do not duplicate the plugin title again inside the fragment.
+- Settings helper copy should stay visually secondary (smaller font, lighter color, similar to VS Code setting hints).
+- For this repo's settings pane UI, prefer Chinese user-facing copy unless a specific control should retain product branding in English.
+- For settings that configure gestures or shortcuts, validate conflicts in the pane immediately and enforce the same constraint again in runtime pref handling.
 - For plugin-controlled custom item-pane sections, prefer registering the section once and toggling visibility in `onItemChange` plus an item-pane refresh, rather than repeatedly register/unregister on pref flips.
 - For section UI that depends on external context, refresh section via explicit custom event + `onInit` listener.
 - Keep `onRender` lightweight. Put heavy work in `onAsyncRender` if needed.

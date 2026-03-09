@@ -11,8 +11,19 @@
 ## Implemented Features
 - Plugin preferences
   - Zotero `Edit -> Settings` includes a Paper Connections preferences pane.
-  - Provides a `Show Selection Debug section in the right item panes` checkbox.
-  - Default is off.
+  - The pane relies on the host-provided plugin title and does not repeat an in-pane `Paper Connections` heading.
+  - Uses Chinese UI copy throughout the pane.
+  - Provides graph-interaction settings for:
+    - reverse-syncing selected paper nodes back to the Zotero item list,
+    - opening the linked paper/PDF on node double-click,
+    - cut-edge gesture modifier (`Shift` / `Ctrl` / `Alt` + right-drag),
+    - bundle-edge gesture modifier (`Shift` / `Ctrl` / `Alt` + right-drag),
+    - graph workspace toggle shortcut (modifier + key text),
+    - graph workspace fullscreen toggle key (single key text).
+  - Edge-cut and edge-bundle gesture modifiers are kept conflict-free and cannot persist to the same modifier at once.
+  - Keeps the debug-pane visibility toggle in the same settings pane.
+  - Helper hints use a smaller, lighter secondary text style.
+  - Defaults: reverse-sync on, double-click open on, cut modifier `Alt`, bundle modifier `Shift`, graph toggle `Ctrl+\``, fullscreen key `` ` ``, Selection Debug toggle off.
 - Right item-pane custom section: `Selection Debug Section`
   - Hidden by default and shown only when enabled in plugin preferences.
   - Shows selected graph node label/id.
@@ -27,8 +38,9 @@
   - Grid board and nodes pan together.
   - Pane resize does not auto-scale graph objects.
   - Item-list toolbar includes a graph workspace toggle button to show/hide workspace.
-  - Keyboard shortcut `Ctrl+\`` also toggles graph workspace visibility.
-  - When the pointer is over the graph workspace, pressing `` ` `` toggles a workspace fullscreen mode:
+  - A configurable keyboard shortcut also toggles graph workspace visibility. Default: `Ctrl+\``.
+  - When the pointer is over the graph workspace, a configurable single-key shortcut toggles workspace fullscreen. Default: `` ` ``.
+  - Fullscreen still:
     - hides collections pane, tag selector, title/tabs toolbar, item-pane sidenav icons, item toolbar, and item list,
     - keeps the right item info pane visible and resizable while the graph fills the remaining main area,
     - keeps Zotero title/menu chrome visible,
@@ -52,8 +64,8 @@
   - Mouse wheel zoom around cursor.
   - Drag blank canvas to pan.
   - Click node to select; click blank area to clear selection.
-  - Selecting a graph node reverse-syncs selection to Zotero item list.
-  - Double-clicking a paper node attempts to open its best attachment/PDF using the same Zotero item-open flow as double-clicking the item in the item list.
+  - Selecting a graph node can reverse-sync selection to the Zotero item list; this is enabled by default and configurable in plugin preferences.
+  - Double-clicking a paper node can open its best attachment/PDF using the same Zotero item-open flow as double-clicking the item in the item list; this is enabled by default and configurable in plugin preferences.
   - If a paper node no longer resolves to a live Zotero item, selection shows a small lower-left canvas warning; reverse-sync to the item list, node open, and rename are disabled for that node.
   - Right-click node menu: `Remove`, `Rename`.
   - Right-click blank-canvas menu is context-aware:
@@ -73,8 +85,8 @@
   - Node left/right anchors appear near cursor and support drag-to-create edge.
   - Edge creation only allows left-right anchor pairing.
   - Backward links use wrap-around bezier routing with rightward endpoint tangents.
-  - Hold `Alt` + right-drag to cut intersected edges.
-  - Hold `Shift` + right-drag (saved topics only) to edge-bundle intersected edges:
+  - Hold the configured cut-edge modifier plus right-drag to cut intersected edges. Default: `Alt` + right-drag.
+  - Hold the configured bundle-edge modifier plus right-drag (saved topics only) to edge-bundle intersected edges. Default: `Shift` + right-drag.
     - shows a dotted bundle path while dragging.
     - groups hits by same source node.
     - any non-empty group creates a real bundle node (`nodeType=bundle`), including single-edge groups.

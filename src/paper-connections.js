@@ -24,6 +24,14 @@ PaperConnections = {
 	storeSettingKey: "paper-connections.graph.v1",
 	prefBranch: "extensions.paper-connections.",
 	showSelectionDebugSectionPref: "showSelectionDebugSection",
+	syncGraphSelectionToItemsPref: "syncGraphSelectionToItems",
+	openNodePdfOnDoubleClickPref: "openNodePdfOnDoubleClick",
+	edgeCutModifierPref: "edgeCutModifier",
+	edgeBundleModifierPref: "edgeBundleModifier",
+	toggleGraphModifierPref: "toggleGraphModifier",
+	toggleGraphKeyPref: "toggleGraphKey",
+	fullscreenKeyPref: "fullscreenKey",
+	shortcutModifierOptions: ["shift", "ctrl", "alt"],
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
 	nodeDefaultHeight: 50,
@@ -141,17 +149,293 @@ PaperConnections = {
 	},
 
 	getShowSelectionDebugSectionPrefKey() {
-		return `${this.prefBranch}${this.showSelectionDebugSectionPref}`;
+		return this.getPrefKey(this.showSelectionDebugSectionPref);
 	},
 
-	isSelectionDebugSectionEnabled() {
+	getPrefKey(prefName) {
+		return `${this.prefBranch}${prefName}`;
+	},
+
+	getBoolPref(prefName, fallback = false) {
 		try {
-			return !!Services.prefs.getBoolPref(this.getShowSelectionDebugSectionPrefKey(), false);
+			return !!Services.prefs.getBoolPref(this.getPrefKey(prefName), fallback);
+		}
+		catch (error) {
+			return !!fallback;
+		}
+	},
+
+	getStringPref(prefName, fallback = "") {
+		try {
+			return String(Services.prefs.getStringPref(this.getPrefKey(prefName), fallback) || fallback);
+		}
+		catch (error) {
+			return String(fallback || "");
+		}
+	},
+
+	setStringPref(prefName, value) {
+		try {
+			Services.prefs.setStringPref(this.getPrefKey(prefName), String(value || ""));
 		}
 		catch (error) {
 			Zotero.logError(error);
+		}
+	},
+
+	normalizeShortcutModifierValue(value, fallback = "alt") {
+		let normalized = String(value || "").trim().toLowerCase();
+		if (normalized === "control") {
+			normalized = "ctrl";
+		}
+		if (!this.shortcutModifierOptions.includes(normalized)) {
+			return fallback;
+		}
+		return normalized;
+	},
+
+	getShortcutModifierDisplayLabel(value) {
+		switch (this.normalizeShortcutModifierValue(value, "ctrl")) {
+			case "shift":
+				return "Shift";
+			case "alt":
+				return "Alt";
+			default:
+				return "Ctrl";
+		}
+	},
+
+	getAlternateShortcutModifier(excludedModifier, preferredModifier = "shift") {
+		let excluded = this.normalizeShortcutModifierValue(excludedModifier, "alt");
+		let preferred = this.normalizeShortcutModifierValue(preferredModifier, "shift");
+		for (let candidate of [preferred, ...this.shortcutModifierOptions]) {
+			let normalized = this.normalizeShortcutModifierValue(candidate, preferred);
+			if (normalized !== excluded) {
+				return normalized;
+			}
+		}
+		return excluded === "alt" ? "shift" : "alt";
+	},
+
+	ensureDistinctGestureModifiers(changedPrefName = "") {
+		let cut = this.normalizeShortcutModifierValue(this.getStringPref(this.edgeCutModifierPref, "alt"), "alt");
+		let bundle = this.normalizeShortcutModifierValue(this.getStringPref(this.edgeBundleModifierPref, "shift"), "shift");
+		this.setStringPref(this.edgeCutModifierPref, cut);
+		this.setStringPref(this.edgeBundleModifierPref, bundle);
+
+		if (cut === bundle) {
+			if (changedPrefName === this.edgeCutModifierPref) {
+				cut = this.getAlternateShortcutModifier(bundle, "alt");
+				this.setStringPref(this.edgeCutModifierPref, cut);
+			}
+			else {
+				bundle = this.getAlternateShortcutModifier(cut, "shift");
+				this.setStringPref(this.edgeBundleModifierPref, bundle);
+			}
+		}
+
+		return { cut, bundle };
+	},
+
+	normalizeShortcutKeyToken(value, fallback = "`") {
+		let raw = String(value || "").trim();
+		if (!raw) {
+			raw = fallback;
+		}
+		let normalized = raw.toLowerCase();
+		if (["`", "~", "backquote", "backtick", "grave"].includes(normalized)) {
+			return "backquote";
+		}
+		if (["ctrl", "control"].includes(normalized)) {
+			return "control";
+		}
+		if (normalized === "shift") {
+			return "shift";
+		}
+		if (["alt", "option"].includes(normalized)) {
+			return "alt";
+		}
+		if (["esc", "escape"].includes(normalized)) {
+			return "escape";
+		}
+		return normalized;
+	},
+
+	getShortcutKeyDisplayLabel(value, fallback = "`") {
+		let token = this.normalizeShortcutKeyToken(value, fallback);
+		switch (token) {
+			case "backquote":
+				return "`";
+			case "control":
+				return "Ctrl";
+			case "shift":
+				return "Shift";
+			case "alt":
+				return "Alt";
+			case "escape":
+				return "Esc";
+			default:
+				if (token.length === 1) {
+					return token.toUpperCase();
+				}
+				return token.charAt(0).toUpperCase() + token.slice(1);
+		}
+	},
+
+	getEdgeCutModifier() {
+		return this.ensureDistinctGestureModifiers(this.edgeCutModifierPref).cut;
+	},
+
+	getEdgeBundleModifier() {
+		return this.ensureDistinctGestureModifiers(this.edgeBundleModifierPref).bundle;
+	},
+
+	getToggleGraphModifier() {
+		let normalized = this.normalizeShortcutModifierValue(this.getStringPref(this.toggleGraphModifierPref, "ctrl"), "ctrl");
+		this.setStringPref(this.toggleGraphModifierPref, normalized);
+		return normalized;
+	},
+
+	getToggleGraphKey() {
+		return this.getStringPref(this.toggleGraphKeyPref, "`").trim() || "`";
+	},
+
+	getFullscreenKey() {
+		return this.getStringPref(this.fullscreenKeyPref, "`").trim() || "`";
+	},
+
+	getToggleGraphShortcutLabel() {
+		return `${this.getShortcutModifierDisplayLabel(this.getToggleGraphModifier())}+${this.getShortcutKeyDisplayLabel(this.getToggleGraphKey(), "`")}`;
+	},
+
+	getFullscreenShortcutLabel() {
+		return this.getShortcutKeyDisplayLabel(this.getFullscreenKey(), "`");
+	},
+
+	isSelectionSyncToItemListEnabled() {
+		return this.getBoolPref(this.syncGraphSelectionToItemsPref, true);
+	},
+
+	isDoubleClickOpenNodePdfEnabled() {
+		return this.getBoolPref(this.openNodePdfOnDoubleClickPref, true);
+	},
+
+	eventHasModifier(event, modifierValue) {
+		switch (this.normalizeShortcutModifierValue(modifierValue, "ctrl")) {
+			case "shift":
+				return !!(event?.shiftKey || event?.getModifierState?.("Shift"));
+			case "alt":
+				return !!(event?.altKey || event?.getModifierState?.("Alt"));
+			default:
+				return !!(event?.ctrlKey || event?.getModifierState?.("Control"));
+		}
+	},
+
+	getAllowedModifierSetForShortcut(requiredModifier = "", keyValue = "`") {
+		let allowed = new Set();
+		let required = requiredModifier
+			? this.normalizeShortcutModifierValue(requiredModifier, "ctrl")
+			: "";
+		if (required) {
+			allowed.add(required);
+		}
+		let token = this.normalizeShortcutKeyToken(keyValue, "`");
+		if (token === "control") {
+			allowed.add("ctrl");
+		}
+		else if (token === "shift") {
+			allowed.add("shift");
+		}
+		else if (token === "alt") {
+			allowed.add("alt");
+		}
+		return allowed;
+	},
+
+	eventHasOnlyAllowedModifiers(event, allowedModifiers = new Set()) {
+		if (event?.metaKey || event?.getModifierState?.("Meta") || event?.getModifierState?.("OS")) {
 			return false;
 		}
+		let activeModifiers = {
+			shift: !!(event?.shiftKey || event?.getModifierState?.("Shift")),
+			ctrl: !!(event?.ctrlKey || event?.getModifierState?.("Control")),
+			alt: !!(event?.altKey || event?.getModifierState?.("Alt")),
+		};
+		for (let [name, active] of Object.entries(activeModifiers)) {
+			if (active && !allowedModifiers.has(name)) {
+				return false;
+			}
+		}
+		return true;
+	},
+
+	eventMatchesShortcutKey(event, keyValue, fallback = "`") {
+		let token = this.normalizeShortcutKeyToken(keyValue, fallback);
+		let key = String(event?.key || "").toLowerCase();
+		let code = String(event?.code || "").toLowerCase();
+		switch (token) {
+			case "backquote":
+				return !!(
+					event?.code === "Backquote" ||
+					key === "`" ||
+					key === "~" ||
+					event?.keyCode === 192 ||
+					event?.which === 192
+				);
+			case "control":
+				return key === "control" || code === "controlleft" || code === "controlright";
+			case "shift":
+				return key === "shift" || code === "shiftleft" || code === "shiftright";
+			case "alt":
+				return key === "alt" || code === "altleft" || code === "altright";
+			case "escape":
+				return key === "escape" || key === "esc" || code === "escape";
+			default:
+				if (key === token || code === token) {
+					return true;
+				}
+				if (/^[a-z]$/.test(token) && code === `key${token}`) {
+					return true;
+				}
+				if (/^[0-9]$/.test(token) && code === `digit${token}`) {
+					return true;
+				}
+				return false;
+		}
+	},
+
+	matchesConfiguredShortcut(event, modifierValue, keyValue, fallbackKey = "`") {
+		let requiredModifier = this.normalizeShortcutModifierValue(modifierValue, "ctrl");
+		let allowedModifiers = this.getAllowedModifierSetForShortcut(requiredModifier, keyValue);
+		if (!this.eventHasOnlyAllowedModifiers(event, allowedModifiers)) {
+			return false;
+		}
+		if (!this.eventHasModifier(event, requiredModifier)) {
+			return false;
+		}
+		return this.eventMatchesShortcutKey(event, keyValue, fallbackKey);
+	},
+
+	matchesConfiguredSingleKeyShortcut(event, keyValue, fallbackKey = "`") {
+		let allowedModifiers = this.getAllowedModifierSetForShortcut("", keyValue);
+		if (!this.eventHasOnlyAllowedModifiers(event, allowedModifiers)) {
+			return false;
+		}
+		return this.eventMatchesShortcutKey(event, keyValue, fallbackKey);
+	},
+
+	refreshPreferenceDrivenUI() {
+		for (let win of Zotero.getMainWindows()) {
+			if (!win?.ZoteroPane) continue;
+			let state = this.graphStates?.get(win);
+			if (!state) continue;
+			this.refreshGraphChrome?.(win);
+			this.updateCanvasCursorState?.(win);
+		}
+	},
+
+	isSelectionDebugSectionEnabled() {
+		return this.getBoolPref(this.showSelectionDebugSectionPref, false);
 	},
 
 	registerPrefObserver() {
@@ -180,6 +464,24 @@ PaperConnections = {
 			|| data === prefKey.replace(this.prefBranch, "")
 		) {
 			this.syncSelectionDebugSectionRegistration();
+			return;
+		}
+
+		let normalizedKey = String(data || "").replace(this.prefBranch, "");
+		let interactionPrefNames = new Set([
+			this.syncGraphSelectionToItemsPref,
+			this.openNodePdfOnDoubleClickPref,
+			this.edgeCutModifierPref,
+			this.edgeBundleModifierPref,
+			this.toggleGraphModifierPref,
+			this.toggleGraphKeyPref,
+			this.fullscreenKeyPref,
+		]);
+		if (interactionPrefNames.has(normalizedKey)) {
+			if (normalizedKey === this.edgeCutModifierPref || normalizedKey === this.edgeBundleModifierPref) {
+				this.ensureDistinctGestureModifiers(normalizedKey);
+			}
+			this.refreshPreferenceDrivenUI();
 		}
 	},
 
@@ -1044,6 +1346,7 @@ PaperConnections = {
 	async main() {
 		this.registerRemarkIntegration();
 		this.registerPrefObserver();
+		this.ensureDistinctGestureModifiers();
 		this.syncSelectionDebugSectionRegistration();
 		this.registerNotifierObserver();
 
