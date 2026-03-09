@@ -18,7 +18,10 @@ from zotero_window_capture import (
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Capture Zotero screenshots by process-aware window targeting."
+        description=(
+            "Capture Zotero screenshots by process-aware window targeting. "
+            "Default mode saves every matched visible Zotero top-level window."
+        )
     )
     parser.add_argument("output_path", nargs="?", default=None, help="Output PNG path")
     parser.add_argument(
@@ -34,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--list-windows",
         action="store_true",
-        help="List matched Zotero top-level windows and exit",
+        help="List matched Zotero top-level windows and exit (debugging only)",
     )
     parser.add_argument(
         "--single-window",
