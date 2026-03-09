@@ -32,7 +32,7 @@
 - `paper-connections-build-check`: use after changes are made and before close-out, especially when `src` changed and a fresh `xpi` is needed for Zotero testing.
 - Explicit trigger examples: `$paper-connections-build-check`, `use paper-connections-build-check`, `run build check`.
 - `build-install-restart` script: `.\tools\build-install-restart.ps1 -ProfileName default|develop` is the current machine's primary dev-install workflow after functional changes that need Zotero verification.
-- `paper-connections-zotero-screenshot`: use when Zotero UI verification needs robust screenshots or window enumeration, especially for independent dialogs like Plugins Manager or Preferences that do not include `Zotero` in the title; the default capture writes all visible Zotero windows to `tools/screenshots/` for debugging.
+- `paper-connections-zotero-screenshot`: use when the user explicitly asks for screenshots/UI verification or when window enumeration is itself the task; do not use it by default for normal close-out, because frontend/plugin testing is usually confirmed by the user manually.
 - Explicit trigger examples: `$paper-connections-zotero-screenshot`, `use paper-connections-zotero-screenshot`, `capture zotero screenshot`.
 - `paper-connections-wt-sync`: use after syncing another worktree into the current one so the session can rescan merge history, reread workflow/docs, and rerun the repo build-check flow.
 - Explicit trigger examples: `$paper-connections-wt-sync`, `use paper-connections-wt-sync`, `wtsync`.
@@ -58,6 +58,8 @@
 ## High-Value Lessons
 - For item pane extension, use `Zotero.ItemPaneManager.registerSection()`. Do not manually append panes to parent layout.
 - For custom item pane sections, always define both `header` and `sidenav` with valid `l10nID` and icons.
+- For plugin preference panes, `Zotero.PreferencePanes.register()` `src` must be an XHTML fragment, not a full HTML document; prefer a XUL-root fragment (`vbox`, `groupbox`, native controls) and direct `preference` bindings for simple settings.
+- For plugin-controlled custom item-pane sections, prefer registering the section once and toggling visibility in `onItemChange` plus an item-pane refresh, rather than repeatedly register/unregister on pref flips.
 - For section UI that depends on external context, refresh section via explicit custom event + `onInit` listener.
 - Keep `onRender` lightweight. Put heavy work in `onAsyncRender` if needed.
 - Use `item.id` / `item.key` / `libraryID + itemKey` as stable identifiers; never use title as identity.
