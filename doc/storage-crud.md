@@ -9,6 +9,8 @@ Target: Zotero 7 (`src`)
 - Setting key: `paper-connections.graph.v1`
 - Scope: per `libraryID` (not global preference)
 - Sync behavior: uses Zotero synced settings channel (library-scoped)
+- Native Zotero related items (`dc:relation`) are not the primary backend because they do not preserve typed edges or graph-local metadata.
+- Direct Zotero SQLite writes are out of scope; storage mutation goes through Zotero APIs.
 
 ## 2. Store shape
 

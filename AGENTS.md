@@ -15,16 +15,14 @@
 - When recent progress may have been merged in from another worktree, inspect git merge history before starting or resuming work so you understand what already landed.
 
 ## UI Terminology
-- `Topic Context Section`: right item-pane custom section with context summary and create/remove topic actions.
-- `Selection Debug Section`: right item-pane custom section showing selected node details for debug.
-- `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions.
+- `Topic Context Section`: right item-pane custom section with context summary and create/remove topic actions. Runtime id: `paper-connections-topic-context-section`.
+- `Selection Debug Section`: right item-pane custom section showing selected node details for debug. Runtime id: `paper-connections-selection-debug-section`.
+- `Relation Graph Workspace`: middle graph pane/canvas for core relation visualization and interactions. Core ids: `paper-connections-graph-pane`, `paper-connections-graph-canvas`.
 
 ## Development Docs Index (Read in Order)
 - Session summary (latest relevant summary for current worktree): `doc/session-*.md`.
 - Current feature baseline: `doc/current-features.md`.
 - Storage model + CRUD API: `doc/storage-crud.md`.
-- Storage evaluation note (legacy filename): `assesment.md`.
-- Early feasibility/background: `zotero-plugin-assessment.md`.
 - Product/user docs: `README.md`.
 
 ## Project Skills
@@ -65,6 +63,7 @@
 - Use `item.id` / `item.key` / `libraryID + itemKey` as stable identifiers; never use title as identity.
 - For data writes, use Zotero APIs. Do not write Zotero SQLite directly.
 - For relation graph storage, use `Zotero.SyncedSettings` with `loadAll(libraryID)` before `get/set`.
+- Zotero native related items are `dc:relation` style links and are not rich enough to serve as the primary typed graph-edge store.
 - Keep relation data topic-centered; use `itemTopicIndex` as reverse mapping.
 - Main item drag payload uses `dataTransfer` type `zotero/item` (comma-separated itemIDs).
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
@@ -93,7 +92,7 @@
 - Use `paper-connections-build-check` for the repo-specific close-out/build verification flow instead of restating the detailed checklist here.
 
 ## Token/Time Saving
-- Reuse local references first: `zotero-plugin-assessment.md` and local Zotero `app/omni.ja` API source.
+- Reuse local references first: `doc/current-features.md`, `doc/storage-crud.md`, and local Zotero `app/omni.ja` API source.
 - Avoid re-discovering DOM structure from screenshots repeatedly; use official extension APIs where possible.
 - For Zotero UI screenshots on Windows, prefer the repo-local `paper-connections-zotero-screenshot` skill or its `tools/screenshot.py` wrapper, which matches `zotero.exe` windows by process tree instead of title text only.
 - For Windows `PrintWindow` screenshot capture, enable process DPI awareness before reading window rects; otherwise 125%/150% display scaling can crop the right and bottom edges.
