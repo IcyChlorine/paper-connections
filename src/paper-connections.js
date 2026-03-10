@@ -31,6 +31,16 @@ PaperConnections = {
 	toggleGraphModifierPref: "toggleGraphModifier",
 	toggleGraphKeyPref: "toggleGraphKey",
 	fullscreenKeyPref: "fullscreenKey",
+	defaultInteractionPrefs: {
+		showSelectionDebugSection: false,
+		syncGraphSelectionToItems: true,
+		openNodePdfOnDoubleClick: true,
+		edgeCutModifier: "alt",
+		edgeBundleModifier: "shift",
+		toggleGraphModifier: "ctrl",
+		toggleGraphKey: "`",
+		fullscreenKey: "`",
+	},
 	shortcutModifierOptions: ["shift", "ctrl", "alt"],
 	nodeDefaultWidth: 208,
 	nodeMaxWidth: 320,
@@ -165,6 +175,15 @@ PaperConnections = {
 		}
 	},
 
+	setBoolPref(prefName, value) {
+		try {
+			Services.prefs.setBoolPref(this.getPrefKey(prefName), !!value);
+		}
+		catch (error) {
+			Zotero.logError(error);
+		}
+	},
+
 	getStringPref(prefName, fallback = "") {
 		try {
 			return String(Services.prefs.getStringPref(this.getPrefKey(prefName), fallback) || fallback);
@@ -181,6 +200,54 @@ PaperConnections = {
 		catch (error) {
 			Zotero.logError(error);
 		}
+	},
+
+	ensureDefaultInteractionPrefs() {
+		for (let [prefName, fallback] of Object.entries(this.defaultInteractionPrefs)) {
+			let prefKey = this.getPrefKey(prefName);
+			let prefType = Services.prefs.getPrefType(prefKey);
+			if (typeof fallback === "boolean") {
+				if (prefType === Services.prefs.PREF_INVALID) {
+					this.setBoolPref(prefName, fallback);
+				}
+				continue;
+			}
+			if (prefType === Services.prefs.PREF_INVALID) {
+				this.setStringPref(prefName, fallback);
+			}
+		}
+
+		this.setStringPref(
+			this.edgeCutModifierPref,
+			this.normalizeShortcutModifierValue(
+				this.getStringPref(this.edgeCutModifierPref, this.defaultInteractionPrefs.edgeCutModifier),
+				this.defaultInteractionPrefs.edgeCutModifier,
+			),
+		);
+		this.setStringPref(
+			this.edgeBundleModifierPref,
+			this.normalizeShortcutModifierValue(
+				this.getStringPref(this.edgeBundleModifierPref, this.defaultInteractionPrefs.edgeBundleModifier),
+				this.defaultInteractionPrefs.edgeBundleModifier,
+			),
+		);
+		this.setStringPref(
+			this.toggleGraphModifierPref,
+			this.normalizeShortcutModifierValue(
+				this.getStringPref(this.toggleGraphModifierPref, this.defaultInteractionPrefs.toggleGraphModifier),
+				this.defaultInteractionPrefs.toggleGraphModifier,
+			),
+		);
+		this.setStringPref(
+			this.toggleGraphKeyPref,
+			this.getStringPref(this.toggleGraphKeyPref, this.defaultInteractionPrefs.toggleGraphKey).trim()
+				|| this.defaultInteractionPrefs.toggleGraphKey,
+		);
+		this.setStringPref(
+			this.fullscreenKeyPref,
+			this.getStringPref(this.fullscreenKeyPref, this.defaultInteractionPrefs.fullscreenKey).trim()
+				|| this.defaultInteractionPrefs.fullscreenKey,
+		);
 	},
 
 	normalizeShortcutModifierValue(value, fallback = "alt") {
@@ -1344,6 +1411,7 @@ PaperConnections = {
 	},
 
 	async main() {
+		this.ensureDefaultInteractionPrefs();
 		this.registerRemarkIntegration();
 		this.registerPrefObserver();
 		this.ensureDistinctGestureModifiers();

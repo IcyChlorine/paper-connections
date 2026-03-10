@@ -1,284 +1,182 @@
 <vbox id="paper-connections-prefpane">
+	<preferences>
+		<preference
+			id="paper-connections-pref-sync-selection"
+			name="extensions.paper-connections.syncGraphSelectionToItems"
+			type="bool"
+		/>
+		<preference
+			id="paper-connections-pref-open-pdf"
+			name="extensions.paper-connections.openNodePdfOnDoubleClick"
+			type="bool"
+		/>
+		<preference
+			id="paper-connections-pref-edge-cut-modifier"
+			name="extensions.paper-connections.edgeCutModifier"
+			type="string"
+		/>
+		<preference
+			id="paper-connections-pref-edge-bundle-modifier"
+			name="extensions.paper-connections.edgeBundleModifier"
+			type="string"
+		/>
+		<preference
+			id="paper-connections-pref-toggle-graph-modifier"
+			name="extensions.paper-connections.toggleGraphModifier"
+			type="string"
+		/>
+		<preference
+			id="paper-connections-pref-toggle-graph-key"
+			name="extensions.paper-connections.toggleGraphKey"
+			type="string"
+		/>
+		<preference
+			id="paper-connections-pref-fullscreen-key"
+			name="extensions.paper-connections.fullscreenKey"
+			type="string"
+		/>
+		<preference
+			id="paper-connections-pref-show-selection-debug"
+			name="extensions.paper-connections.showSelectionDebugSection"
+			type="bool"
+		/>
+	</preferences>
+
 	<vbox class="main-section">
-		<label value="关系图交互" style="margin: 0 0 6px; font-weight: 600;" />
+		<hbox align="center" style="margin: 2px 0 6px;">
+			<separator class="thin" flex="1" style="opacity: 0.35;" />
+			<label
+				value="&#x5173;&#x7CFB;&#x56FE;&#x4EA4;&#x4E92;"
+				style="margin: 0 10px; font-weight: 600; color: #5f6b76;"
+			/>
+			<separator class="thin" flex="1" style="opacity: 0.35;" />
+		</hbox>
 
 		<checkbox
 			id="sync-selected-node-to-item-list"
 			native="true"
-			label="将节点选择反向同步到论文条目"
+			preference="paper-connections-pref-sync-selection"
+			label="&#x5C06;&#x8282;&#x70B9;&#x9009;&#x62E9;&#x53CD;&#x5411;&#x540C;&#x6B65;&#x5230;&#x8BBA;&#x6587;&#x6761;&#x76EE;"
 		/>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
-			选中关系图中论文节点时，将选择反向同步到论文列表。
+			&#x9009;&#x4E2D;&#x5173;&#x7CFB;&#x56FE;&#x4E2D;&#x8BBA;&#x6587;&#x8282;&#x70B9;&#x65F6;&#xFF0C;&#x5C06;&#x9009;&#x62E9;&#x53CD;&#x5411;&#x540C;&#x6B65;&#x5230;&#x8BBA;&#x6587;&#x5217;&#x8868;&#x3002;
 		</description>
 
 		<checkbox
 			id="open-node-pdf-on-double-click"
 			native="true"
-			label="双击节点打开关联论文 PDF"
+			preference="paper-connections-pref-open-pdf"
+			label="&#x53CC;&#x51FB;&#x8282;&#x70B9;&#x6253;&#x5F00;&#x5173;&#x8054;&#x8BBA;&#x6587; PDF"
 			style="margin-top: 8px;"
 		/>
 
 		<hbox align="center" style="margin-top: 10px;">
-			<label value="切割论文关系连边" style="min-width: 140px;" />
-			<menulist id="edge-cut-modifier" style="min-width: 92px;">
+			<label
+				value="&#x5207;&#x5272;&#x8BBA;&#x6587;&#x5173;&#x7CFB;&#x8FDE;&#x8FB9;"
+				style="min-width: 140px;"
+			/>
+			<menulist
+				id="edge-cut-modifier"
+				preference="paper-connections-pref-edge-cut-modifier"
+				style="min-width: 92px;"
+				oncommand="(function(){let other=document.getElementById('edge-bundle-modifier');let note=document.getElementById('gesture-modifier-note');let options=['alt','shift','ctrl'];if(other &amp;&amp; this.value===other.value){this.value=options.find((value)=&gt;value!==other.value)||'alt';}if(note){note.textContent='&#x5207;&#x8FB9;&#x4E0E;&#x805A;&#x8FB9;&#x4E0D;&#x80FD;&#x7ED1;&#x5B9A;&#x5230;&#x540C;&#x4E00;&#x4E2A;&#x4FEE;&#x9970;&#x952E;&#x3002;';}}).call(this);"
+			>
 				<menupopup>
+					<menuitem label="Alt" value="alt" />
 					<menuitem label="Shift" value="shift" />
 					<menuitem label="Ctrl" value="ctrl" />
-					<menuitem label="Alt" value="alt" />
 				</menupopup>
 			</menulist>
-			<label value="+ 鼠标右键拖拽" style="margin-inline-start: 8px;" />
+			<label value="+ &#x9F20;&#x6807;&#x53F3;&#x952E;&#x62D6;&#x62FD;" style="margin-inline-start: 8px;" />
 		</hbox>
 
 		<hbox align="center" style="margin-top: 8px;">
-			<label value="将论文连边聚成点" style="min-width: 140px;" />
-			<menulist id="edge-bundle-modifier" style="min-width: 92px;">
+			<label
+				value="&#x5C06;&#x8BBA;&#x6587;&#x8FDE;&#x8FB9;&#x805A;&#x6210;&#x70B9;"
+				style="min-width: 140px;"
+			/>
+			<menulist
+				id="edge-bundle-modifier"
+				preference="paper-connections-pref-edge-bundle-modifier"
+				style="min-width: 92px;"
+				oncommand="(function(){let other=document.getElementById('edge-cut-modifier');let note=document.getElementById('gesture-modifier-note');let options=['shift','alt','ctrl'];if(other &amp;&amp; this.value===other.value){this.value=options.find((value)=&gt;value!==other.value)||'shift';}if(note){note.textContent='&#x5207;&#x8FB9;&#x4E0E;&#x805A;&#x8FB9;&#x4E0D;&#x80FD;&#x7ED1;&#x5B9A;&#x5230;&#x540C;&#x4E00;&#x4E2A;&#x4FEE;&#x9970;&#x952E;&#x3002;';}}).call(this);"
+			>
 				<menupopup>
 					<menuitem label="Shift" value="shift" />
-					<menuitem label="Ctrl" value="ctrl" />
 					<menuitem label="Alt" value="alt" />
+					<menuitem label="Ctrl" value="ctrl" />
 				</menupopup>
 			</menulist>
-			<label value="+ 鼠标右键拖拽" style="margin-inline-start: 8px;" />
+			<label value="+ &#x9F20;&#x6807;&#x53F3;&#x952E;&#x62D6;&#x62FD;" style="margin-inline-start: 8px;" />
 		</hbox>
 		<description
 			id="gesture-modifier-note"
 			style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;"
 		>
-			切边与聚边不能绑定到同一个修饰键。
+			&#x5207;&#x8FB9;&#x4E0E;&#x805A;&#x8FB9;&#x4E0D;&#x80FD;&#x7ED1;&#x5B9A;&#x5230;&#x540C;&#x4E00;&#x4E2A;&#x4FEE;&#x9970;&#x952E;&#x3002;
 		</description>
 
 		<hbox align="center" style="margin-top: 10px;">
-			<label value="切换显示关系图" style="min-width: 140px;" />
-			<menulist id="toggle-graph-modifier" style="min-width: 92px;">
+			<label
+				value="&#x5207;&#x6362;&#x663E;&#x793A;&#x5173;&#x7CFB;&#x56FE;"
+				style="min-width: 140px;"
+			/>
+			<menulist
+				id="toggle-graph-modifier"
+				preference="paper-connections-pref-toggle-graph-modifier"
+				style="min-width: 92px;"
+			>
 				<menupopup>
-					<menuitem label="Shift" value="shift" />
 					<menuitem label="Ctrl" value="ctrl" />
+					<menuitem label="Shift" value="shift" />
 					<menuitem label="Alt" value="alt" />
 				</menupopup>
 			</menulist>
 			<label value="+" style="margin-inline: 8px 6px;" />
-			<textbox id="toggle-graph-key" maxlength="16" style="width: 72px;" />
+			<textbox
+				id="toggle-graph-key"
+				preference="paper-connections-pref-toggle-graph-key"
+				maxlength="16"
+				style="width: 72px;"
+			/>
 		</hbox>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
-			默认为 Ctrl+`。文本框填写单个按键对应的字符串，例如 `、a 或 A。
+			&#x9ED8;&#x8BA4;&#x4E3A; Ctrl+`&#x3002;&#x6587;&#x672C;&#x6846;&#x586B;&#x5199;&#x5355;&#x4E2A;&#x6309;&#x952E;&#x5BF9;&#x5E94;&#x7684;&#x5B57;&#x7B26;&#x4E32;&#xFF0C;&#x4F8B;&#x5982; `&#x3001;a &#x6216; A&#x3002;
 		</description>
 
 		<hbox align="center" style="margin-top: 8px;">
-			<label value="切换关系图全屏" style="min-width: 140px;" />
-			<textbox id="fullscreen-key" maxlength="16" style="width: 72px;" />
+			<label
+				value="&#x5207;&#x6362;&#x5173;&#x7CFB;&#x56FE;&#x5168;&#x5C4F;"
+				style="min-width: 140px;"
+			/>
+			<textbox
+				id="fullscreen-key"
+				preference="paper-connections-pref-fullscreen-key"
+				maxlength="16"
+				style="width: 72px;"
+			/>
 		</hbox>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
-			默认为 `。可填写 `、a、A、ctrl、Ctrl 或 CTRL 等单个按键字符串。
+			&#x9ED8;&#x8BA4;&#x4E3A; `&#x3002;&#x53EF;&#x586B;&#x5199; `&#x3001;a&#x3001;A&#x3001;ctrl&#x3001;Ctrl &#x6216; CTRL &#x7B49;&#x5355;&#x4E2A;&#x6309;&#x952E;&#x5B57;&#x7B26;&#x4E32;&#x3002;
 		</description>
 
-		<separator class="thin" style="margin: 12px 0;" />
+		<hbox align="center" style="margin: 12px 0 6px;">
+			<separator class="thin" flex="1" style="opacity: 0.35;" />
+			<label
+				value="&#x8C03;&#x8BD5;"
+				style="margin: 0 10px; font-weight: 600; color: #5f6b76;"
+			/>
+			<separator class="thin" flex="1" style="opacity: 0.35;" />
+		</hbox>
 
-		<label value="调试" style="margin: 0 0 6px; font-weight: 600;" />
 		<checkbox
 			id="show-selection-debug-section"
 			native="true"
-			label="在右侧条目面板中显示“选择调试”分区"
+			preference="paper-connections-pref-show-selection-debug"
+			label="&#x5728;&#x53F3;&#x4FA7;&#x6761;&#x76EE;&#x9762;&#x677F;&#x4E2D;&#x663E;&#x793A;&#x201C;&#x9009;&#x62E9;&#x8C03;&#x8BD5;&#x201D;&#x5206;&#x533A;"
 		/>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
-			启用后，右侧条目面板会显示“选择调试”分区，用于关系图调试。
+			&#x542F;&#x7528;&#x540E;&#xFF0C;&#x53F3;&#x4FA7;&#x6761;&#x76EE;&#x9762;&#x677F;&#x4F1A;&#x663E;&#x793A;&#x201C;&#x9009;&#x62E9;&#x8C03;&#x8BD5;&#x201D;&#x5206;&#x533A;&#xFF0C;&#x7528;&#x4E8E;&#x5173;&#x7CFB;&#x56FE;&#x8C03;&#x8BD5;&#x3002;
 		</description>
 	</vbox>
-
-	<html:script><![CDATA[
-	(() => {
-		const PREF_BRANCH = "extensions.paper-connections.";
-		const PREFS = {
-			showSelectionDebugSection: "showSelectionDebugSection",
-			syncGraphSelectionToItems: "syncGraphSelectionToItems",
-			openNodePdfOnDoubleClick: "openNodePdfOnDoubleClick",
-			edgeCutModifier: "edgeCutModifier",
-			edgeBundleModifier: "edgeBundleModifier",
-			toggleGraphModifier: "toggleGraphModifier",
-			toggleGraphKey: "toggleGraphKey",
-			fullscreenKey: "fullscreenKey",
-		};
-		const DEFAULTS = {
-			showSelectionDebugSection: false,
-			syncGraphSelectionToItems: true,
-			openNodePdfOnDoubleClick: true,
-			edgeCutModifier: "alt",
-			edgeBundleModifier: "shift",
-			toggleGraphModifier: "ctrl",
-			toggleGraphKey: "`",
-			fullscreenKey: "`",
-		};
-		const MODIFIERS = ["shift", "ctrl", "alt"];
-		let initialized = false;
-
-		function prefKey(name) {
-			return PREF_BRANCH + name;
-		}
-
-		function getBool(name) {
-			try {
-				return !!Services.prefs.getBoolPref(prefKey(name), DEFAULTS[name]);
-			}
-			catch (error) {
-				return !!DEFAULTS[name];
-			}
-		}
-
-		function setBool(name, value) {
-			Services.prefs.setBoolPref(prefKey(name), !!value);
-		}
-
-		function getString(name) {
-			try {
-				return String(Services.prefs.getStringPref(prefKey(name), DEFAULTS[name]) || DEFAULTS[name]);
-			}
-			catch (error) {
-				return String(DEFAULTS[name] || "");
-			}
-		}
-
-		function setString(name, value) {
-			Services.prefs.setStringPref(prefKey(name), String(value || ""));
-		}
-
-		function normalizeModifier(value, fallback) {
-			let normalized = String(value || "").trim().toLowerCase();
-			if (normalized === "control") {
-				normalized = "ctrl";
-			}
-			return MODIFIERS.includes(normalized) ? normalized : fallback;
-		}
-
-		function normalizeKeyText(value, fallback) {
-			let text = String(value || "").trim();
-			return text || fallback;
-		}
-
-		function getModifierLabel(value) {
-			switch (normalizeModifier(value, "ctrl")) {
-				case "shift":
-					return "Shift";
-				case "alt":
-					return "Alt";
-				default:
-					return "Ctrl";
-			}
-		}
-
-		function pickAvailableModifier(disallowed, preferred) {
-			let blocked = normalizeModifier(disallowed, "alt");
-			for (let candidate of [preferred, ...MODIFIERS]) {
-				let normalized = normalizeModifier(candidate, preferred);
-				if (normalized !== blocked) {
-					return normalized;
-				}
-			}
-			return MODIFIERS[0];
-		}
-
-		function byId(id) {
-			return document.getElementById(id);
-		}
-
-		function updateGestureNote(resolvedLabel = "") {
-			let note = byId("gesture-modifier-note");
-			if (!note) return;
-			note.textContent = resolvedLabel
-				? `切边与聚边不能绑定到同一个修饰键；已自动改为 ${resolvedLabel}。`
-				: "切边与聚边不能绑定到同一个修饰键。";
-		}
-
-		function syncModifierConflict(changedPrefName = "") {
-			let cutEl = byId("edge-cut-modifier");
-			let bundleEl = byId("edge-bundle-modifier");
-			if (!cutEl || !bundleEl) return;
-
-			let cut = normalizeModifier(cutEl.value, DEFAULTS.edgeCutModifier);
-			let bundle = normalizeModifier(bundleEl.value, DEFAULTS.edgeBundleModifier);
-			let resolvedLabel = "";
-
-			if (cut === bundle) {
-				if (changedPrefName === PREFS.edgeCutModifier) {
-					cut = pickAvailableModifier(bundle, DEFAULTS.edgeCutModifier);
-					cutEl.value = cut;
-					resolvedLabel = getModifierLabel(cut);
-				}
-				else {
-					bundle = pickAvailableModifier(cut, DEFAULTS.edgeBundleModifier);
-					bundleEl.value = bundle;
-					resolvedLabel = getModifierLabel(bundle);
-				}
-			}
-
-			setString(PREFS.edgeCutModifier, cut);
-			setString(PREFS.edgeBundleModifier, bundle);
-			updateGestureNote(resolvedLabel);
-		}
-
-		function loadValues() {
-			byId("sync-selected-node-to-item-list").checked = getBool(PREFS.syncGraphSelectionToItems);
-			byId("open-node-pdf-on-double-click").checked = getBool(PREFS.openNodePdfOnDoubleClick);
-			byId("show-selection-debug-section").checked = getBool(PREFS.showSelectionDebugSection);
-
-			byId("edge-cut-modifier").value = normalizeModifier(getString(PREFS.edgeCutModifier), DEFAULTS.edgeCutModifier);
-			byId("edge-bundle-modifier").value = normalizeModifier(getString(PREFS.edgeBundleModifier), DEFAULTS.edgeBundleModifier);
-			byId("toggle-graph-modifier").value = normalizeModifier(getString(PREFS.toggleGraphModifier), DEFAULTS.toggleGraphModifier);
-			byId("toggle-graph-key").value = normalizeKeyText(getString(PREFS.toggleGraphKey), DEFAULTS.toggleGraphKey);
-			byId("fullscreen-key").value = normalizeKeyText(getString(PREFS.fullscreenKey), DEFAULTS.fullscreenKey);
-
-			syncModifierConflict();
-		}
-
-		function bindEvents() {
-			byId("sync-selected-node-to-item-list").addEventListener("command", (event) => {
-				setBool(PREFS.syncGraphSelectionToItems, !!event.currentTarget.checked);
-			});
-			byId("open-node-pdf-on-double-click").addEventListener("command", (event) => {
-				setBool(PREFS.openNodePdfOnDoubleClick, !!event.currentTarget.checked);
-			});
-			byId("show-selection-debug-section").addEventListener("command", (event) => {
-				setBool(PREFS.showSelectionDebugSection, !!event.currentTarget.checked);
-			});
-
-			byId("edge-cut-modifier").addEventListener("command", () => {
-				syncModifierConflict(PREFS.edgeCutModifier);
-			});
-			byId("edge-bundle-modifier").addEventListener("command", () => {
-				syncModifierConflict(PREFS.edgeBundleModifier);
-			});
-			byId("toggle-graph-modifier").addEventListener("command", (event) => {
-				setString(
-					PREFS.toggleGraphModifier,
-					normalizeModifier(event.currentTarget.value, DEFAULTS.toggleGraphModifier),
-				);
-			});
-
-			let bindTextPref = (id, prefName, fallback) => {
-				let field = byId(id);
-				let commit = () => {
-					let normalized = normalizeKeyText(field.value, fallback);
-					field.value = normalized;
-					setString(prefName, normalized);
-				};
-				field.addEventListener("change", commit);
-				field.addEventListener("blur", commit);
-			};
-
-			bindTextPref("toggle-graph-key", PREFS.toggleGraphKey, DEFAULTS.toggleGraphKey);
-			bindTextPref("fullscreen-key", PREFS.fullscreenKey, DEFAULTS.fullscreenKey);
-		}
-
-		function init() {
-			if (initialized) return;
-			initialized = true;
-			bindEvents();
-			loadValues();
-		}
-
-		if (document.readyState === "loading") {
-			document.addEventListener("DOMContentLoaded", init, { once: true });
-		}
-		window.setTimeout(init, 0);
-	})();
-	]]></html:script>
 </vbox>
