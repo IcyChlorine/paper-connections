@@ -1,127 +1,129 @@
 #!/usr/bin/env python3
 """
-Generate the README banner title SVG.
+Generate a minimal README banner image.
 
-Visual reference:
-- Taichi README hero image usage in the official repo README:
-  https://github.com/taichi-dev/taichi
-- Raw README source showing the top banner image:
-  https://raw.githubusercontent.com/taichi-dev/taichi/master/README.md
+The visual structure is intentionally simple:
+- logo on the left
+- title text on the right
 
-This script keeps the output self-contained by embedding the local icon SVG
-as a data URI inside the generated banner.
+Unlike the previous generator, this script uses Pillow to compose the banner
+on a raster canvas instead of hardcoding the full output SVG markup.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 from pathlib import Path
-from xml.sax.saxutils import escape
+
+from PIL import Image, ImageDraw, ImageFont
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_ICON = REPO_ROOT / "assets" / "paper-connections-svgrepo-com.svg"
-DEFAULT_OUTPUT = REPO_ROOT / "assets" / "readme-banner-title.svg"
+DEFAULT_OUTPUT = REPO_ROOT / "assets" / "readme-banner-title.png"
+
+FONT_REGULAR = Path("C:/Windows/Fonts/segoeui.ttf")
+FONT_BOLD = Path("C:/Windows/Fonts/segoeuib.ttf")
+
+BG = "#FFFFFF"
+TEXT = "#1F2937"
+ACCENT = "#00ACBA"
+ACCENT_DARK = "#0181B0"
+DOT = "#F5D803"
+RING = "#EAF8FA"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate the README banner SVG.")
-    parser.add_argument(
-        "--title",
-        default="Paper Connections",
-        help="Banner title text.",
-    )
-    parser.add_argument(
-        "--icon",
-        type=Path,
-        default=DEFAULT_ICON,
-        help="Path to the source icon SVG.",
-    )
+    parser = argparse.ArgumentParser(description="Generate the README banner PNG.")
+    parser.add_argument("--title", default="Paper Connections", help="Banner title text.")
     parser.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT,
-        help="Path to the generated banner SVG.",
+        help="Output PNG path.",
     )
     return parser.parse_args()
 
 
-def svg_to_data_uri(svg_path: Path) -> str:
-    payload = svg_path.read_bytes()
-    encoded = base64.b64encode(payload).decode("ascii")
-    return f"data:image/svg+xml;base64,{encoded}"
+def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    preferred = FONT_BOLD if bold else FONT_REGULAR
+    if preferred.exists():
+        return ImageFont.truetype(str(preferred), size=size)
+    return ImageFont.load_default()
 
 
-def build_svg(title: str, icon_uri: str) -> str:
-    safe_title = escape(title)
-    title_width = max(420, len(title) * 42)
-    width = 280 + title_width
-    height = 220
-    icon_size = 124
-    icon_x = 60
-    icon_y = 48
-    title_x = 220
-    title_y = 118
+def draw_logo(draw: ImageDraw.ImageDraw, origin_x: int, origin_y: int, scale: float) -> None:
+    cx = origin_x + 72 * scale
+    cy = origin_y + 72 * scale
 
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-labelledby="banner-title">
-  <title id="banner-title">{safe_title}</title>
-  <defs>
-    <linearGradient id="banner-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00ACBA" />
-      <stop offset="100%" stop-color="#1D4ED8" />
-    </linearGradient>
-    <linearGradient id="underline-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00ACBA" />
-      <stop offset="100%" stop-color="#7DD3FC" />
-    </linearGradient>
-    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.10" />
-    </filter>
-  </defs>
+    # soft base ring
+    draw.ellipse((cx - 66 * scale, cy - 66 * scale, cx + 66 * scale, cy + 66 * scale), fill=RING)
+    draw.ellipse((cx - 52 * scale, cy - 52 * scale, cx + 52 * scale, cy + 52 * scale), fill=BG)
 
-  <rect width="{width}" height="{height}" fill="#FFFFFF" rx="24" ry="24" />
+    # connectors
+    draw.line((cx + 10 * scale, cy - 22 * scale, cx + 82 * scale, cy - 84 * scale), fill=ACCENT, width=max(2, int(7 * scale)))
+    draw.line((cx + 12 * scale, cy + 22 * scale, cx + 82 * scale, cy + 82 * scale), fill=ACCENT, width=max(2, int(7 * scale)))
+    draw.line((cx - 22 * scale, cy - 22 * scale, cx - 52 * scale, cy - 52 * scale), fill=ACCENT, width=max(2, int(6 * scale)))
+    draw.line((cx - 22 * scale, cy + 22 * scale, cx - 52 * scale, cy + 52 * scale), fill=ACCENT, width=max(2, int(6 * scale)))
+    draw.line((cx + 28 * scale, cy, cx + 70 * scale, cy), fill=ACCENT, width=max(2, int(6 * scale)))
 
-  <g filter="url(#soft-shadow)">
-    <rect x="24" y="24" width="{width - 48}" height="{height - 48}" rx="22" ry="22" fill="#F8FAFC" />
-  </g>
+    # center node
+    draw.ellipse((cx - 24 * scale, cy - 24 * scale, cx + 24 * scale, cy + 24 * scale), fill=BG, outline=ACCENT_DARK, width=max(2, int(5 * scale)))
 
-  <rect x="24" y="24" width="10" height="{height - 48}" rx="5" ry="5" fill="url(#banner-accent)" opacity="0.95" />
+    # side nodes
+    for px, py, radius in [
+        (cx - 78 * scale, cy - 78 * scale, 18 * scale),
+        (cx - 78 * scale, cy + 78 * scale, 18 * scale),
+        (cx + 92 * scale, cy - 92 * scale, 14 * scale),
+        (cx + 82 * scale, cy, 14 * scale),
+        (cx + 92 * scale, cy + 92 * scale, 14 * scale),
+    ]:
+        draw.ellipse((px - radius, py - radius, px + radius, py + radius), fill=DOT)
+        inner = radius * 0.45
+        draw.ellipse((px - inner, py - inner, px + inner, py + inner), fill=BG)
 
-  <circle cx="{icon_x + icon_size / 2}" cy="{icon_y + icon_size / 2}" r="72" fill="#EAF8FA" />
-  <circle cx="{icon_x + icon_size / 2}" cy="{icon_y + icon_size / 2}" r="58" fill="#FFFFFF" opacity="0.96" />
-  <image href="{icon_uri}" x="{icon_x}" y="{icon_y}" width="{icon_size}" height="{icon_size}" />
 
-  <text
-    x="{title_x}"
-    y="{title_y}"
-    fill="#0F172A"
-    font-family="'Avenir Next', 'Segoe UI', Helvetica, Arial, sans-serif"
-    font-size="72"
-    font-weight="800"
-    letter-spacing="-1.4"
-  >{safe_title}</text>
+def measure_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> tuple[int, int]:
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    return right - left, bottom - top
 
-  <rect x="{title_x}" y="136" width="{min(title_width - 40, 420)}" height="8" rx="4" ry="4" fill="url(#underline-accent)" />
 
-  <g fill="#94A3B8" opacity="0.55">
-    <circle cx="{title_x + 8}" cy="166" r="4" />
-    <circle cx="{title_x + 30}" cy="166" r="4" />
-    <circle cx="{title_x + 52}" cy="166" r="4" />
-  </g>
-</svg>
-"""
+def build_banner(title: str) -> Image.Image:
+    text_font = load_font(62, bold=False)
+    label_font = load_font(20, bold=False)
+
+    probe = Image.new("RGB", (1, 1), BG)
+    probe_draw = ImageDraw.Draw(probe)
+    title_w, title_h = measure_text(probe_draw, title, text_font)
+    subtitle = "Zotero 7 plugin"
+    sub_w, sub_h = measure_text(probe_draw, subtitle, label_font)
+
+    width = max(760, 260 + title_w + 80)
+    height = 210
+    image = Image.new("RGB", (width, height), BG)
+    draw = ImageDraw.Draw(image)
+
+    draw_logo(draw, origin_x=44, origin_y=33, scale=0.95)
+
+    text_x = 220
+    title_y = 72
+    subtitle_y = title_y + title_h + 10
+    draw.text((text_x, title_y), title, font=text_font, fill=TEXT)
+    draw.text((text_x + 2, subtitle_y), subtitle, font=label_font, fill=ACCENT_DARK)
+
+    underline_y = subtitle_y + sub_h + 16
+    draw.rounded_rectangle((text_x, underline_y, text_x + max(160, sub_w + 20), underline_y + 6), radius=3, fill=ACCENT)
+    return image
 
 
 def main() -> int:
     args = parse_args()
-    icon_path = args.icon.resolve()
-    output_path = args.output.resolve()
+    output_path = args.output
+    if not output_path.is_absolute():
+        output_path = REPO_ROOT / output_path
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    icon_uri = svg_to_data_uri(icon_path)
-    svg = build_svg(args.title, icon_uri)
-    output_path.write_text(svg, encoding="utf-8", newline="\n")
+    image = build_banner(args.title)
+    image.save(output_path, format="PNG")
     print(output_path)
     return 0
 

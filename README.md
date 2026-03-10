@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/readme-banner-title.svg" alt="Paper Connections banner title" width="760" />
+  <img src="assets/readme-banner-title.png" alt="Paper Connections banner title" width="760" />
 </p>
 
 <p align="center">A Zotero 7 plugin for building and browsing hand-crafted paper relation graphs.</p>
