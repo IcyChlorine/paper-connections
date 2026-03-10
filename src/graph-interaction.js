@@ -1421,6 +1421,8 @@ var PaperConnectionsGraphInteractionMixin = {
 		event.preventDefault();
 		let itemIDs = this.parseDraggedItemIDs(event.dataTransfer);
 		if (!itemIDs.length) return;
+		let dropPoint = this.clientToGraphPoint(state, event.clientX, event.clientY);
+		let placementIndex = 0;
 
 		let added = false;
 		for (let itemID of itemIDs) {
@@ -1429,11 +1431,36 @@ var PaperConnectionsGraphInteractionMixin = {
 			if (item.libraryID !== state.activeLibraryID) continue;
 			let exists = state.nodes.some((node) => node.itemKey === item.key && node.libraryID === item.libraryID);
 			if (exists) continue;
+			let nodeInput = {
+				libraryID: item.libraryID,
+				itemKey: item.key,
+				title: this.getItemTitle(item),
+			};
+			let itemStatus = this.resolveNodeItemStatus(nodeInput);
+			let nodeLabel = this.getNodeLabelForDisplay(nodeInput, itemStatus);
+			let metrics = this.getNodeRenderMetrics({ label: nodeLabel });
+			let basePos = {
+				x: dropPoint.x - metrics.width / 2 + placementIndex * 18,
+				y: dropPoint.y - metrics.height / 2 + placementIndex * 18,
+			};
+			let nodePos = state.snapToGrid
+				? this.snapNodePositionToGrid(basePos, {
+					label: nodeLabel,
+				})
+				: basePos;
 			let node = await this.addNode(state.activeLibraryID, state.activeTopicID, {
 				itemKey: item.key,
 				title: this.getItemTitle(item),
+				x: nodePos.x,
+				y: nodePos.y,
+			}, {
+				snapPosition: !!state.snapToGrid,
+				snapLabel: nodeLabel,
 			});
-			if (node) added = true;
+			if (node) {
+				added = true;
+				placementIndex += 1;
+			}
 		}
 
 		if (!added) return;

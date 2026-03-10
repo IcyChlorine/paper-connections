@@ -309,7 +309,7 @@ var PaperConnectionsStorageMixin = {
 		return topicIDs.map((id) => store.topics[id]).filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 	},
 
-	async createTopic(libraryID, { name, centerItem, centerNodePosition = null }) {
+	async createTopic(libraryID, { name, centerItem, centerNodePosition = null, centerNodeSnapLabel = "" }) {
 		let store = await this.loadStore(libraryID);
 		let topicID = this.generateID("topic");
 		let now = this.now();
@@ -333,7 +333,7 @@ var PaperConnectionsStorageMixin = {
 				shortLabel: "",
 				x: Number.isFinite(centerNodePosition?.x) ? centerNodePosition.x : 80,
 				y: Number.isFinite(centerNodePosition?.y) ? centerNodePosition.y : 120,
-			}, { store, skipSave: true });
+			}, { store, skipSave: true, snapLabel: centerNodeSnapLabel || "" });
 		}
 
 		topic.updatedAt = this.now();
@@ -387,7 +387,7 @@ var PaperConnectionsStorageMixin = {
 	},
 
 	async addNode(libraryID, topicID, nodeInput, options = {}) {
-		let { store = null, skipSave = false } = options;
+		let { store = null, skipSave = false, snapPosition = true, snapLabel = "" } = options;
 		let localStore = store || await this.loadStore(libraryID);
 		let topic = localStore.topics[topicID];
 		if (!topic) return null;
@@ -406,10 +406,10 @@ var PaperConnectionsStorageMixin = {
 			let pos = Number.isFinite(nodeInput.x) && Number.isFinite(nodeInput.y)
 				? { x: nodeInput.x, y: nodeInput.y }
 				: this.computeAutoNodePosition(topic);
-			let nodeLabel = nodeInput.shortLabel || nodeInput.title || nodeInput.itemKey;
-			let snappedPos = this.snapNodePositionToGrid(pos, {
-				label: nodeLabel,
-			});
+			let nodeLabel = String(snapLabel || nodeInput.shortLabel || nodeInput.title || nodeInput.itemKey || "").trim();
+			let finalPos = snapPosition
+				? this.snapNodePositionToGrid(pos, { label: nodeLabel })
+				: pos;
 			let nodeID = this.generateID("node");
 			while (topic.nodes[nodeID]) nodeID = this.generateID("node");
 			node = {
@@ -420,8 +420,8 @@ var PaperConnectionsStorageMixin = {
 				title: nodeInput.title || itemKey,
 				shortLabel: nodeInput.shortLabel || "",
 				note: nodeInput.note || "",
-				x: snappedPos.x,
-				y: snappedPos.y,
+				x: finalPos.x,
+				y: finalPos.y,
 				createdAt: now,
 				updatedAt: now,
 			};

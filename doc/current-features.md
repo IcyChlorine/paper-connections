@@ -59,6 +59,7 @@
   - Removing topic deletes topic and item-index mappings, then reloads context.
 - Drag-and-drop behavior
   - Drag Zotero items from main list into graph canvas to add nodes to active saved topic.
+  - New dropped paper nodes are created with their node center aligned to the mouse release position; when magnetic snap-to-grid is enabled, the drop lands on the nearest grid point before persistence.
   - Temporary topic and no-topic state reject drop.
   - Duplicate item nodes in same topic are skipped.
 - Graph interactions

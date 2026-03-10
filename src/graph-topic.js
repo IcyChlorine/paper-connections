@@ -274,6 +274,7 @@ var PaperConnectionsGraphTopicMixin = {
 				name: inputName || defaultName,
 				centerItem: item,
 				centerNodePosition: currentNode ? { x: currentNode.x, y: currentNode.y } : null,
+				centerNodeSnapLabel: currentNode?.label || "",
 			});
 			let savedTopic = await this.getTopic(item.libraryID, topic.id);
 			if (!savedTopic) {
