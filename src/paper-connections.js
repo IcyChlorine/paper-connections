@@ -155,7 +155,7 @@ PaperConnections = {
 	},
 
 	getRemarkDisplayLabel() {
-		return this.getCurrentLocaleTag().startsWith("zh") ? "缂備胶濮崑鎾绘偣?PC)" : "Remark(PC)";
+		return this.getCurrentLocaleTag().startsWith("zh") ? "简记(PC)" : "Remark(PC)";
 	},
 
 	getShowSelectionDebugSectionPrefKey() {
