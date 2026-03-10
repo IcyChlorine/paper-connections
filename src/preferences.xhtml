@@ -1,6 +1,8 @@
 <vbox
 	id="paper-connections-prefpane"
 	xmlns:html="http://www.w3.org/1999/xhtml"
+	onmouseover="if (!this.dataset.paperConnectionsPrefInit) { let toggle=document.getElementById('toggle-graph-key'); let fullscreen=document.getElementById('fullscreen-key'); if (toggle) { toggle.value = Services.prefs.getStringPref('extensions.paper-connections.toggleGraphKey', '`') || '`'; } if (fullscreen) { fullscreen.value = Services.prefs.getStringPref('extensions.paper-connections.fullscreenKey', '`') || '`'; } this.dataset.paperConnectionsPrefInit = '1'; }"
+	onfocusin="if (!this.dataset.paperConnectionsPrefInit) { let toggle=document.getElementById('toggle-graph-key'); let fullscreen=document.getElementById('fullscreen-key'); if (toggle) { toggle.value = Services.prefs.getStringPref('extensions.paper-connections.toggleGraphKey', '`') || '`'; } if (fullscreen) { fullscreen.value = Services.prefs.getStringPref('extensions.paper-connections.fullscreenKey', '`') || '`'; } this.dataset.paperConnectionsPrefInit = '1'; }"
 >
 	<preferences>
 		<preference
@@ -79,7 +81,7 @@
 				id="edge-cut-modifier"
 				preference="paper-connections-pref-edge-cut-modifier"
 				style="min-width: 92px;"
-				oncommand="window.paperConnectionsHandleModifierConflict &amp;&amp; window.paperConnectionsHandleModifierConflict('edge-cut-modifier', 'edge-bundle-modifier', ['alt','shift','ctrl']);"
+				oncommand="let other=document.getElementById('edge-bundle-modifier'); let note=document.getElementById('gesture-modifier-note'); if (other &amp;&amp; this.value===other.value) { let options=['alt','shift','ctrl']; this.value = options.find((value)=&gt;value!==other.value) || 'alt'; Services.prompt.alert(null, '\u5FEB\u6377\u952E\u51B2\u7A81', '\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\uff0c\u5DF2\u81EA\u52A8\u8C03\u6574\u4E3A\u53E6\u4E00\u4E2A\u53EF\u7528\u952E\u4F4D\u3002'); } if (note) { note.textContent='\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\u3002'; }"
 			>
 				<menupopup>
 					<menuitem label="Alt" value="alt" />
@@ -99,7 +101,7 @@
 				id="edge-bundle-modifier"
 				preference="paper-connections-pref-edge-bundle-modifier"
 				style="min-width: 92px;"
-				oncommand="window.paperConnectionsHandleModifierConflict &amp;&amp; window.paperConnectionsHandleModifierConflict('edge-bundle-modifier', 'edge-cut-modifier', ['shift','alt','ctrl']);"
+				oncommand="let other=document.getElementById('edge-cut-modifier'); let note=document.getElementById('gesture-modifier-note'); if (other &amp;&amp; this.value===other.value) { let options=['shift','alt','ctrl']; this.value = options.find((value)=&gt;value!==other.value) || 'shift'; Services.prompt.alert(null, '\u5FEB\u6377\u952E\u51B2\u7A81', '\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\uff0c\u5DF2\u81EA\u52A8\u8C03\u6574\u4E3A\u53E6\u4E00\u4E2A\u53EF\u7528\u952E\u4F4D\u3002'); } if (note) { note.textContent='\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\u3002'; }"
 			>
 				<menupopup>
 					<menuitem label="Shift" value="shift" />
@@ -135,9 +137,15 @@
 			<label value="+" style="margin-inline: 8px 6px;" />
 			<html:input
 				id="toggle-graph-key"
+				preference="paper-connections-pref-toggle-graph-key"
 				maxlength="16"
 				style="width: 72px; box-sizing: border-box; padding: 2px 6px; border: 1px solid #c5ccd3; border-radius: 4px; background: #ffffff; color: #101214;"
 				type="text"
+				value="`"
+				onfocus="this.select();"
+				oninput="let nextValue=(this.value||'').trim() || '`'; Services.prefs.setStringPref('extensions.paper-connections.toggleGraphKey', nextValue);"
+				onchange="let nextValue=(this.value||'').trim() || '`'; this.value = nextValue; Services.prefs.setStringPref('extensions.paper-connections.toggleGraphKey', nextValue);"
+				onblur="let nextValue=(this.value||'').trim() || '`'; this.value = nextValue; Services.prefs.setStringPref('extensions.paper-connections.toggleGraphKey', nextValue);"
 			/>
 		</hbox>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
@@ -151,9 +159,15 @@
 			/>
 			<html:input
 				id="fullscreen-key"
+				preference="paper-connections-pref-fullscreen-key"
 				maxlength="16"
 				style="width: 72px; box-sizing: border-box; padding: 2px 6px; border: 1px solid #c5ccd3; border-radius: 4px; background: #ffffff; color: #101214;"
 				type="text"
+				value="`"
+				onfocus="this.select();"
+				oninput="let nextValue=(this.value||'').trim() || '`'; Services.prefs.setStringPref('extensions.paper-connections.fullscreenKey', nextValue);"
+				onchange="let nextValue=(this.value||'').trim() || '`'; this.value = nextValue; Services.prefs.setStringPref('extensions.paper-connections.fullscreenKey', nextValue);"
+				onblur="let nextValue=(this.value||'').trim() || '`'; this.value = nextValue; Services.prefs.setStringPref('extensions.paper-connections.fullscreenKey', nextValue);"
 			/>
 		</hbox>
 		<description style="font-size: 11px; color: #8a8f98; margin-inline-start: 28px; margin-top: 2px;">
@@ -176,88 +190,4 @@
 			&#x542F;&#x7528;&#x540E;&#xFF0C;&#x53F3;&#x4FA7;&#x6761;&#x76EE;&#x9762;&#x677F;&#x4F1A;&#x663E;&#x793A;&#x201C;&#x9009;&#x62E9;&#x8C03;&#x8BD5;&#x201D;&#x5206;&#x533A;&#xFF0C;&#x7528;&#x4E8E;&#x5173;&#x7CFB;&#x56FE;&#x8C03;&#x8BD5;&#x3002;
 		</description>
 	</vbox>
-
-	<html:script><![CDATA[
-	(() => {
-		const PROMPT_TITLE = "\u5FEB\u6377\u952E\u51B2\u7A81";
-		const PROMPT_BODY = "\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\uff0c\u5DF2\u81EA\u52A8\u8C03\u6574\u4E3A\u53E6\u4E00\u4E2A\u53EF\u7528\u952E\u4F4D\u3002";
-		const GESTURE_NOTE = "\u5207\u8FB9\u4E0E\u805A\u8FB9\u4E0D\u80FD\u7ED1\u5B9A\u5230\u540C\u4E00\u4E2A\u4FEE\u9970\u952E\u3002";
-		const TEXT_PREFS = [
-			{
-				id: "toggle-graph-key",
-				pref: "extensions.paper-connections.toggleGraphKey",
-				fallback: "`",
-			},
-			{
-				id: "fullscreen-key",
-				pref: "extensions.paper-connections.fullscreenKey",
-				fallback: "`",
-			},
-		];
-
-		function byId(id) {
-			return document.getElementById(id);
-		}
-
-		function setGestureNote() {
-			let note = byId("gesture-modifier-note");
-			if (note) {
-				note.textContent = GESTURE_NOTE;
-			}
-		}
-
-		window.paperConnectionsHandleModifierConflict = (currentID, otherID, orderedValues) => {
-			let current = byId(currentID);
-			let other = byId(otherID);
-			if (!current || !other) return;
-			if (current.value !== other.value) {
-				setGestureNote();
-				return;
-			}
-			let fallback = orderedValues.find((value) => value !== other.value) || orderedValues[0];
-			current.value = fallback;
-			Services.prompt.alert(window, PROMPT_TITLE, PROMPT_BODY);
-			setGestureNote();
-		};
-
-		function initTextPref(fieldID, prefKey, fallback) {
-			let field = byId(fieldID);
-			if (!field) return;
-			let currentValue = fallback;
-			try {
-				currentValue = Services.prefs.getStringPref(prefKey, fallback) || fallback;
-			}
-			catch (error) {
-				currentValue = fallback;
-			}
-			field.value = String(currentValue || "").trim() || fallback;
-
-			let commit = () => {
-				let nextValue = String(field.value || "").trim() || fallback;
-				field.value = nextValue;
-				Services.prefs.setStringPref(prefKey, nextValue);
-			};
-			field.addEventListener("input", commit);
-			field.addEventListener("change", commit);
-			field.addEventListener("blur", commit);
-			field.addEventListener("keydown", (event) => {
-				if (event.key === "Enter") {
-					commit();
-				}
-			});
-		}
-
-		function init() {
-			setGestureNote();
-			for (let item of TEXT_PREFS) {
-				initTextPref(item.id, item.pref, item.fallback);
-			}
-		}
-
-		if (document.readyState === "loading") {
-			document.addEventListener("DOMContentLoaded", init, { once: true });
-		}
-		window.setTimeout(init, 0);
-	})();
-	]]></html:script>
 </vbox>
