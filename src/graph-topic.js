@@ -199,6 +199,13 @@ var PaperConnectionsGraphTopicMixin = {
 		let itemStatus = this.resolveNodeItemStatus(nodeInput);
 		let label = this.getNodeLabelForDisplay(nodeInput, itemStatus);
 		let nodeID = `temp_${item.libraryID}_${item.key}`;
+		let snappedRootPos = this.snapNodePositionToGrid({
+			x: 120,
+			y: 100,
+		}, {
+			label,
+			width: this.getNodeWidthForLabel(label),
+		});
 		state.nodes = [{
 			id: nodeID,
 			nodeType: "paper",
@@ -206,8 +213,8 @@ var PaperConnectionsGraphTopicMixin = {
 			libraryID: item.libraryID,
 			title,
 			label,
-			x: 120,
-			y: 100,
+			x: snappedRootPos.x,
+			y: snappedRootPos.y,
 			width: this.getNodeWidthForLabel(label),
 			height: this.nodeDefaultHeight,
 			kind: "root",
@@ -257,16 +264,28 @@ var PaperConnectionsGraphTopicMixin = {
 			let defaultName = this.getItemTitle(item);
 			let inputName = this.promptTopicNameInput(window, "Create Topic", defaultName);
 			if (inputName === null) return;
+			let selectedItemRef = this.getItemRef(item.libraryID, item.key);
+			let currentNode = (state.nodes || []).find((node) =>
+				node?.nodeType !== "bundle" &&
+				this.getItemRef(node.libraryID, node.itemKey) === selectedItemRef,
+			) || null;
+			let viewportCenterGraphPoint = this.captureGraphViewportCenterPoint?.(window) || null;
 			let topic = await this.createTopic(item.libraryID, {
 				name: inputName || defaultName,
 				centerItem: item,
+				centerNodePosition: currentNode ? { x: currentNode.x, y: currentNode.y } : null,
 			});
 			let savedTopic = await this.getTopic(item.libraryID, topic.id);
 			if (!savedTopic) {
 				throw new Error("Topic created but not found in storage");
 			}
 			this.applyTopicToGraphState(window, savedTopic, item);
+			if (viewportCenterGraphPoint) {
+				state.pendingViewportCenterGraphPoint = viewportCenterGraphPoint;
+				this.restoreGraphViewportCenterPoint?.(window, viewportCenterGraphPoint);
+			}
 			this.refreshGraphChrome(window);
+			this.scheduleGraphWorkspaceLayoutSync?.(window);
 			this.notifyGraphSelectionChanged(window);
 			this.notifyGraphContextChanged(window);
 		}

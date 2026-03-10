@@ -55,6 +55,7 @@
   - On item selection, if item belongs to topics, loads latest-updated topic.
   - If item belongs to no topic, renders a temporary in-memory topic (not persisted).
   - Creating topic from selected paper persists topic and switches graph context immediately.
+  - For the single-paper temporary-topic -> saved-topic transition, the paper node keeps the same snapped grid position and the workspace viewport stays visually stable across the creation step.
   - Removing topic deletes topic and item-index mappings, then reloads context.
 - Drag-and-drop behavior
   - Drag Zotero items from main list into graph canvas to add nodes to active saved topic.

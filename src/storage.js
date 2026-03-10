@@ -309,7 +309,7 @@ var PaperConnectionsStorageMixin = {
 		return topicIDs.map((id) => store.topics[id]).filter(Boolean).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 	},
 
-	async createTopic(libraryID, { name, centerItem }) {
+	async createTopic(libraryID, { name, centerItem, centerNodePosition = null }) {
 		let store = await this.loadStore(libraryID);
 		let topicID = this.generateID("topic");
 		let now = this.now();
@@ -331,8 +331,8 @@ var PaperConnectionsStorageMixin = {
 				itemKey: centerItem.key,
 				title: this.getItemTitle(centerItem),
 				shortLabel: "",
-				x: 80,
-				y: 120,
+				x: Number.isFinite(centerNodePosition?.x) ? centerNodePosition.x : 80,
+				y: Number.isFinite(centerNodePosition?.y) ? centerNodePosition.y : 120,
 			}, { store, skipSave: true });
 		}
 
