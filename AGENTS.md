@@ -78,6 +78,7 @@
 - For node labels, enforce wrapping/truncation and keep ASCII ellipsis (`...`) to avoid encoding issues in source files.
 - If splitting plugin code into multiple scripts, load dependency sub-scripts in `bootstrap.js` before main script, and include all new files in the packaging whitelist used by `make-zips.sh` / `make-zips.ps1`.
 - In PowerShell, prefer native build script: `.\make-zips.ps1`; Git Bash fallback: `& 'C:\\Program Files\\Git\\bin\\bash.exe' ./make-zips.sh`.
+- On Windows, avoid running `node --check` from a `\\?\`-prefixed working directory; use the normal drive path form or Node may fail with `EISDIR ... lstat 'C:'`.
 - On this machine, prefer `.\tools\build-install-restart.ps1 -ProfileName default` as the end-to-end dev loop after functional changes; it builds, replaces the profile XPI, and restarts Zotero after confirmation.
 - Before any script-driven Zotero shutdown/restart, explicitly obtain or confirm the user's consent for that run, because they may be testing another worktree or actively using Zotero.
 - For SVG canvas overlay controls, call a post-render position sync (for example via `requestAnimationFrame` + delayed retries) so top-right placement is correct on first mount before topic/context switches.
@@ -102,6 +103,7 @@
 
 ## Token/Time Saving
 - Reuse local references first: `doc/current-features.md`, `doc/storage-crud.md`, and local Zotero `app/omni.ja` API source.
+- For README banner assets, prefer scripts that render the existing logo SVG plus title text with a small set of tunable layout parameters, rather than hand-redrawing the logo or hardcoding full-scene SVG markup.
 - Avoid re-discovering DOM structure from screenshots repeatedly; use official extension APIs where possible.
 - For Zotero UI screenshots on Windows, prefer the repo-local `paper-connections-zotero-screenshot` skill or its `tools/screenshot.py` wrapper, which matches `zotero.exe` windows by process tree instead of title text only.
 - For Windows `PrintWindow` screenshot capture, enable process DPI awareness before reading window rects; otherwise 125%/150% display scaling can crop the right and bottom edges.
