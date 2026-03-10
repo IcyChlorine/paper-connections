@@ -237,6 +237,7 @@
 				field.value = nextValue;
 				Services.prefs.setStringPref(prefKey, nextValue);
 			};
+			field.addEventListener("input", commit);
 			field.addEventListener("change", commit);
 			field.addEventListener("blur", commit);
 			field.addEventListener("keydown", (event) => {
