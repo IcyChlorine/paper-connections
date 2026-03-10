@@ -14,10 +14,10 @@ TITLE = "Paper Connections"
 FONT_PATH = Path("C:/Windows/Fonts/candara.ttf")
 
 # Layout params to tweak later.
-BANNER_SIZE = (760, 190)
-SVG_BOX = (44, 33, 124)   # x, y, size
-TEXT_POS = (210, 98)      # x, baseline-y
-FONT_SIZE = 56
+BANNER_SIZE = (850, 170)
+SVG_BOX = (36, 25, 124)   # x, y, size
+TEXT_POS = (190, 110)      # x, baseline-y
+FONT_SIZE = 80
 
 
 def render_svg(svg_path: Path, size: int) -> Image.Image:

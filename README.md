@@ -1,7 +1,8 @@
-<p align="center">
-  <img src="assets/readme-banner-title.png" alt="Paper Connections banner title" width="760" />
-</p>
+<div align="center">
+  <img width="500px" src="assets/readme-banner-title.png"/>
+</div>
 
+---
 <p align="center">A Zotero 7 plugin for building and browsing hand-crafted paper relation graphs.</p>
 
 Paper Connections adds a relation graph workspace to Zotero so you can organize papers as nodes and edges, keep short paper remarks visible on nodes, and export the current topic as SVG or JSON.
