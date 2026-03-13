@@ -11,7 +11,7 @@
 + **Visualize** and interact with the topic nicely, and
 + **Export** the topic as reusable images (SVG).
 
-![ ](assets\demo.png)
+![demo](assets/demo.png)
 
 ## For Users
 
@@ -30,7 +30,7 @@ To install: open Zotero, open `Options` Menu->`Plugins`, then 1) drag and drop t
 3. Drag from anchors of a paper node to create connection edges,
 4. `Alt` + right click drag to cut (remove) edges.
 
-![](assets\gifs\new_topic.gif)
+![new_topic](assets/gifs/new_topic.gif)
 
 **Organize your topic:**
 
@@ -38,16 +38,16 @@ To install: open Zotero, open `Options` Menu->`Plugins`, then 1) drag and drop t
 2. Right click a paper node or `F2` to rename the node.
 3. `Shift`+right click drag to bundle multiple edges.
 
-![](assets\gifs\organize_topic.gif)
+![organize_topic](assets/gifs/organize_topic.gif)
 
-![](assets\gifs\bundle_connections.gif)
+![bundle_connections](assets/gifs/bundle_connections.gif)
 
 **Reverse selection:**
 
 + Selection of a node in the graph would be synchronized to the list.
 + Double-click a node would open the pdf file attached to the paper, just like double-clicking the item in the list.
 
-![](C:\StarSky\Study&Work\2025-8研四上\Zotero插件\paper-connections\assets\gifs\reverse_sel.gif)
+![reverse_sel](assets/gifs/reverse_sel.gif)
 
 **Export:** Right click in the graph workspace, choose "export as SVG".
 
@@ -75,10 +75,10 @@ For commonly requested features I may realize them in the future versions; but f
 
 ### Build
 
-The following script build a `.xpi` file at `build\` directory that is ready to install from the source codes:
+The following script build a `.xpi` file at `build/` directory that is ready to install from the source codes:
 
 ```bash
-.\make-zips.sh
+./make-zips.sh
 ```
 
 Or for powershell users:
