@@ -53,7 +53,7 @@ To install: open Zotero, open `Options` Menu->`Plugins`, then 1) drag and drop t
 
 Export image demo:
 
-![](assets\export_CNOT_linear.svg)
+![export_demo](assets/export_CNOT_linear.svg)
 
 Turn on/off the graph workspace: press '`' key.
 
