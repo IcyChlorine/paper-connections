@@ -11,7 +11,7 @@
 + **Visualize** and interact with the topic nicely, and
 + **Export** the topic as reusable images (SVG).
 
-![ ](assets\demo.png)
+![demo](assets/demo.png)
 
 ## For Users
 
