@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-560 -97 1526 386.6" width="1526" height="386.6">
+<defs>
+<marker id="paper-connections-export-arrow" markerWidth="11" markerHeight="8" refX="10" refY="4" orient="auto">
+<path d="M0,0 L11,4 L0,8 Z" fill="#4b6073" stroke="none"/>
+</marker>
+</defs>
+<rect x="-560" y="-97" width="1526" height="386.6" fill="#ffffff"/>
+<path d="M 560 144 C 632 144, 570 144, 642 144" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 560 240 C 632 240, 568 240, 640 240" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 560 240 C 632 240, 570 144, 642 144" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 248 72 C 320 72, 280 144, 352 144" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M -16 240 C 56 240, -32 240, 40 240" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 96 -48 C 243.6 -48, 276.4 -48, 424 -48" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M -16 240 C 56 240, 24 -48, 96 -48" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<path d="M 248 240 C 320 240, 280 240, 352 240" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 312 48 C 312 48, 352 -48, 424 -48" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 312 48 C 312 48, 352 24, 424 24" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 216 144 C 288 144, 280 144, 352 144" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M 216 144 C 288 144, 280 240, 352 240" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#paper-connections-export-arrow)" opacity="0.9"/>
+<path d="M -328 144 C -83.19999999999999 144, -28.80000000000001 144, 216 144" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<path d="M 216 144 C 288 144, 312 48, 312 48" fill="none" stroke="#5a6b7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+<g>
+<rect x="-536" y="119" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="-432" y="148.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="-432">PMH</tspan>
+</text>
+</g>
+<g>
+<rect x="352" y="119" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="456" y="148.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="456">GreedyGE</tspan>
+</text>
+</g>
+<g>
+<rect x="642" y="118.4" width="300" height="51.2" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="792" y="140.128" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="792">optimal、greedy与heuristic算法for</tspan>
+<tspan x="792" dy="17.6">CNOT(+Clifford) synthesis by UCL</tspan>
+</text>
+</g>
+<g>
+<rect x="40" y="214.4" width="208" height="51.2" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="144" y="236.128" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="144">Complexity(CNOT+Rz) &amp;</tspan>
+<tspan x="144" dy="17.6">GraySynth</tspan>
+</text>
+</g>
+<g>
+<rect x="352" y="214.4" width="208" height="51.2" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="456" y="236.128" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="456">Q-Synth (SAT, CF,</tspan>
+<tspan x="456" dy="17.6">QBF)</tspan>
+</text>
+</g>
+<g>
+<rect x="640" y="215" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="744" y="244.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="744">Isometry BFS</tspan>
+</text>
+</g>
+<g>
+<rect x="40" y="47" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="144" y="76.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="144">Syndrome Decoding</tspan>
+</text>
+</g>
+<g>
+<rect x="-224" y="215" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="-120" y="244.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="-120">t-par</tspan>
+</text>
+</g>
+<g>
+<rect x="424" y="-73" width="208" height="50" rx="10" ry="10" fill="#ffe7b8" stroke="#657a8f" stroke-width="1.4"/>
+<text x="528" y="-43.072" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="528">Steiner Tree 1</tspan>
+</text>
+</g>
+<g>
+<rect x="424" y="-1" width="208" height="50" rx="10" ry="10" fill="#e8f2ff" stroke="#657a8f" stroke-width="1.4"/>
+<text x="528" y="28.928" text-anchor="middle" font-size="15" font-weight="500" fill="#243444" font-family="sans-serif">
+<tspan x="528">Steiner Tree 2</tspan>
+</text>
+</g>
+</svg>
